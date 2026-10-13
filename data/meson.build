@@ -19,22 +19,26 @@ foreach name : [
   )
 endforeach
 
-desktop_file = i18n.merge_file(
-  input: configure_file(
-    input: 'io.github.zonaro.Jolven.desktop.in',
-    output: app_id + '.desktop.in',
-    configuration: conf,
-  ),
-  output: app_id + '.desktop',
-  type: 'desktop',
-  po_dir: '../po',
-  install: true,
-  install_dir: join_paths(get_option('datadir'), 'applications'),
-)
+# O arquivo .desktop e a integracao com o menu sao do Linux; no Windows a
+# entrada do aplicativo e criada pelo instalador.
+if host_machine.system() == 'linux'
+  desktop_file = i18n.merge_file(
+    input: configure_file(
+      input: 'io.github.zonaro.Jolven.desktop.in',
+      output: app_id + '.desktop.in',
+      configuration: conf,
+    ),
+    output: app_id + '.desktop',
+    type: 'desktop',
+    po_dir: '../po',
+    install: true,
+    install_dir: join_paths(get_option('datadir'), 'applications'),
+  )
 
-desktop_utils = find_program('desktop-file-validate', required: false)
-if desktop_utils.found()
-  test('Validate desktop file', desktop_utils, args: [desktop_file])
+  desktop_utils = find_program('desktop-file-validate', required: false)
+  if desktop_utils.found()
+    test('Validate desktop file', desktop_utils, args: [desktop_file])
+  endif
 endif
 
 appstream_file = i18n.merge_file(
@@ -94,7 +98,7 @@ endif
 
 subdir('icons')
 
-if get_option('prefix') in ['/usr', '/usr/local']
+if host_machine.system() == 'linux' and get_option('prefix') in ['/usr', '/usr/local']
   configure_file(
     input: 'io.github.zonaro.Jolven.GameMode.policy.in',
     output: app_id + '.GameMode.policy',
