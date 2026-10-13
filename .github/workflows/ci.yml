@@ -22,3 +22,36 @@ jobs:
         with:
           bundle: io.github.zonaro.Jolven.Devel.flatpak
           manifest-path: build-aux/flatpak/io.github.zonaro.Jolven.Devel.json
+
+  windows:
+    name: Windows
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            git
+            meson
+            gettext
+            mingw-w64-ucrt-x86_64-gtk4
+            mingw-w64-ucrt-x86_64-libadwaita
+            mingw-w64-ucrt-x86_64-blueprint-compiler
+            mingw-w64-ucrt-x86_64-python-gobject
+            mingw-w64-ucrt-x86_64-python-pillow
+            mingw-w64-ucrt-x86_64-python-requests
+            mingw-w64-ucrt-x86_64-python-yaml
+
+      # Fase 0: prova so a compilacao. O teste de abrir a janela entra quando o
+      # aplicativo conseguir iniciar no Windows.
+      - name: Compile
+        shell: msys2 {0}
+        run: |
+          export PYTHONUTF8=1
+          meson setup build
+          meson compile -C build

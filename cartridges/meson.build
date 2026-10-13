@@ -8,6 +8,7 @@ configure_file(
 
 install_subdir('importer', install_dir: moduledir)
 install_subdir('utils', install_dir: moduledir)
+install_subdir('platform', install_dir: moduledir)
 install_subdir('store', install_dir: moduledir)
 install_subdir('logging', install_dir: moduledir)
 install_subdir('errors', install_dir: moduledir)
