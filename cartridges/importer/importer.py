@@ -29,7 +29,7 @@ from cartridges.errors.error_producer import ErrorProducer
 from cartridges.errors.friendly_error import FriendlyError
 from cartridges.game import Game
 from cartridges.importer.location import UnresolvableLocationError
-from cartridges.importer.source import Source
+from cartridges.importer.source import Source, SourceScanError
 from cartridges.store.managers.async_manager import AsyncManager
 from cartridges.store.pipeline import Pipeline
 
@@ -257,11 +257,17 @@ class Importer(ErrorProducer):
 
         # Get games from source
         logging.info("Scanning source %s", source.source_id)
+        scan_complete = True
         while True:
             # Handle exceptions raised when iterating
             try:
                 iteration_result = next(iterator)
             except StopIteration:
+                break
+            except SourceScanError as error:
+                logging.exception("%s in %s", type(error).__name__, source.source_id)
+                self.report_error(error)
+                scan_complete = False
                 break
             except Exception as error:  # pylint: disable=broad-exception-caught
                 logging.exception("%s in %s", type(error).__name__, source.source_id)
@@ -296,7 +302,8 @@ class Importer(ErrorProducer):
                 )
                 self.game_pipelines.add(pipeline)
 
-        self.scanned_source_ids.add(source.source_id)
+        if scan_complete:
+            self.scanned_source_ids.add(source.source_id)
 
     def source_callback(self, _obj: Any, _result: Any, data: tuple) -> None:
         """Callback executed when a source is fully scanned"""

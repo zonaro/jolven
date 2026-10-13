@@ -182,6 +182,18 @@
     <key name="show-news-button" type="b">
       <default>false</default>
     </key>
+    <key name="shortcuts" type="b">
+      <default>true</default>
+      <summary>Import Windows Start Menu and desktop shortcuts</summary>
+    </key>
+    <key name="shortcuts-location" type="s">
+      <default>""</default>
+      <summary>Windows shortcuts scan location</summary>
+    </key>
+    <key name="shortcuts-recursive" type="b">
+      <default>false</default>
+      <summary>Scan Windows shortcuts subfolders recursively</summary>
+    </key>
     <key name="session-wallpaper" type="b">
       <default>false</default>
     </key>

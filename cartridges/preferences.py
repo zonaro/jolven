@@ -45,6 +45,7 @@ from cartridges.importer.legendary_source import LegendarySource
 from cartridges.importer.location import UnresolvableLocationError
 from cartridges.importer.lutris_source import LutrisSource
 from cartridges.importer.retroarch_source import RetroarchSource
+from cartridges.importer.shortcuts_source import ShortcutsSource
 from cartridges.importer.source import Source
 from cartridges.importer.steam_source import SteamSource
 from cartridges.importer.twintail_source import TwintailSource
@@ -175,6 +176,11 @@ class CartridgesPreferences(Adw.PreferencesDialog):
     twintail_data_action_row: Adw.ActionRow = Gtk.Template.Child()
     twintail_data_file_chooser_button: Gtk.Button = Gtk.Template.Child()
 
+    shortcuts_expander_row: Adw.ExpanderRow = Gtk.Template.Child()
+    shortcuts_location_action_row: Adw.ActionRow = Gtk.Template.Child()
+    shortcuts_location_button: Gtk.Button = Gtk.Template.Child()
+    shortcuts_recursive_switch: Adw.SwitchRow = Gtk.Template.Child()
+
     flatpak_expander_row: Adw.ExpanderRow = Gtk.Template.Child()
     flatpak_system_data_action_row: Adw.ActionRow = Gtk.Template.Child()
     flatpak_system_data_file_chooser_button: Gtk.Button = Gtk.Template.Child()
@@ -296,6 +302,7 @@ class CartridgesPreferences(Adw.PreferencesDialog):
             LegendarySource,
             LutrisSource,
             RetroarchSource,
+            ShortcutsSource,
             SteamSource,
             TwintailSource,
             WaydroidSource,
@@ -528,6 +535,7 @@ class CartridgesPreferences(Adw.PreferencesDialog):
                 "heroic-import-amazon",
                 "heroic-import-sideload",
                 "flatpak-import-launchers",
+                "shortcuts-recursive",
                 "sgdb",
                 "sgdb-prefer",
                 "sgdb-animated",
@@ -2077,6 +2085,11 @@ class CartridgesPreferences(Adw.PreferencesDialog):
             button = getattr(
                 self, f"{source.source_id}_{location_name}_file_chooser_button", None
             )
+            if button is None:
+                # Shorter chooser button id used by the shortcuts row.
+                button = getattr(
+                    self, f"{source.source_id}_{location_name}_button", None
+                )
             if button is not None:
                 button.connect("clicked", self.choose_folder, set_dir, location_name)
 

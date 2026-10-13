@@ -957,6 +957,38 @@ template $CartridgesPreferences: Adw.PreferencesDialog {
         }
       }
 
+      Adw.ExpanderRow shortcuts_expander_row {
+        title: _("Windows Shortcuts");
+        show-enable-switch: true;
+
+        [prefix]
+        Image {
+          icon-name: "application-x-executable-symbolic";
+        }
+
+        Adw.ActionRow shortcuts_location_action_row {
+          title: _("Install Location");
+
+          Button shortcuts_location_button {
+            icon-name: "folder-symbolic";
+            valign: center;
+
+            styles [
+              "flat"
+            ]
+          }
+
+          styles [
+            "property"
+          ]
+        }
+
+        Adw.SwitchRow shortcuts_recursive_switch {
+          title: _("Scan Subfolders");
+          subtitle: _("Also import shortcuts from subfolders");
+        }
+      }
+
       Adw.ExpanderRow flatpak_expander_row {
         title: _("Flatpak");
         show-enable-switch: true;
