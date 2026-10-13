@@ -66,6 +66,8 @@ class FileManager(AsyncManager):
             "tgdb_fanart",
             "steam_checked",
             "steam_appid",
+            "shortcut_path",
+            "shortcut_mtime",
             "hltb_id",
             "hltb_main",
             "hltb_main_extra",

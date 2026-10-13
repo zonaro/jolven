@@ -1,7 +1,7 @@
 import logging
 from os import PathLike
 from pathlib import Path
-from typing import Iterable, Mapping, NamedTuple, Optional
+from typing import Callable, Iterable, Mapping, NamedTuple, Optional
 
 from cartridges import shared
 
@@ -38,7 +38,7 @@ class Location:
     DATA_INVALID_SUBTITLE = _("Select the {} data directory.")
 
     schema_key: str
-    candidates: Iterable[Candidate]
+    candidates: Iterable[Candidate] | Callable[[], Iterable[Candidate]]
     paths: Mapping[str, LocationSubPath]
     invalid_subtitle: str
 
@@ -47,7 +47,7 @@ class Location:
     def __init__(
         self,
         schema_key: str,
-        candidates: Iterable[Candidate],
+        candidates: Iterable[Candidate] | Callable[[], Iterable[Candidate]],
         paths: Mapping[str, LocationSubPath],
         invalid_subtitle: str,
         optional: Optional[bool] = False,
@@ -78,11 +78,26 @@ class Location:
         if self.root is not None:
             return
 
-        # Get the schema candidate
+        # Get the schema candidate (an unset location is blank and must
+        # fall through to the declared candidates: Path("") is Path(".")
+        # and would wrongly resolve — and be written back — as the cwd)
         schema_candidate = shared.schema.get_string(self.schema_key)
+        if isinstance(schema_candidate, str) and not schema_candidate.strip():
+            schema_candidate = None
+
+        # Candidates may be a zero-arg callable returning the roots, so
+        # registry-derived roots are resolved lazily at scan time
+        candidates = (
+            self.candidates() if callable(self.candidates) else self.candidates
+        )
 
         # Find the first matching candidate
-        for candidate in (schema_candidate, *self.candidates):
+        ordered = (
+            [schema_candidate] if schema_candidate is not None else []
+        )
+        for candidate in (*ordered, *candidates):
+            if isinstance(candidate, str) and not candidate.strip():
+                continue
             candidate = Path(candidate).expanduser()
             if not self.check_candidate(candidate):
                 continue

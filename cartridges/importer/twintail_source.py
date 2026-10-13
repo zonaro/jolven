@@ -89,7 +89,7 @@ class TwintailSource(ExecutableFormatSource):
     name = _("TwinTail")
     iterable_class = TwintailSourceIterable
     executable_format = "twintaillauncher --install={install_id}"
-    available_on = {"linux"}
+    available_on = {"linux", "win32"}
 
     def make_executable(self, *args, **kwargs) -> str:
         install_id = kwargs.get("install_id", args[0] if args else "")

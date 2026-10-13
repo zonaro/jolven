@@ -66,6 +66,7 @@ from cartridges.importer.itch_source import ItchSource
 from cartridges.importer.legendary_source import LegendarySource
 from cartridges.importer.lutris_source import LutrisSource
 from cartridges.importer.retroarch_source import RetroarchSource
+from cartridges.importer.shortcuts_source import ShortcutsSource
 from cartridges.importer.steam_source import SteamSource
 from cartridges.importer.twintail_source import TwintailSource
 from cartridges.importer.waydroid_source import WaydroidSource
@@ -859,6 +860,9 @@ class CartridgesApplication(Adw.Application):
 
         if shared.schema.get_boolean("twintail"):
             shared.importer.add_source(TwintailSource())
+
+        if shared.schema.get_boolean("shortcuts"):
+            shared.importer.add_source(ShortcutsSource())
 
         shared.importer.run()
 

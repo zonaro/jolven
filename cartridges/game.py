@@ -122,6 +122,12 @@ class Game(Gtk.Box):
     # for every later refresh: resolving by name again could land on a
     # sequel or re-release, silently breaking a title corrected by hand.
     steam_appid: Optional[str] = None
+    # Windows start-menu shortcut this game was discovered from. The path is
+    # kept so later scans can match the game back to its .lnk file, and the
+    # mtime (epoch seconds, int-truncated) so rescans can skip re-reading
+    # shortcuts that have not changed since the last import.
+    shortcut_path: Optional[str] = None
+    shortcut_mtime: Optional[int] = None
     # HowLongToBeat completion estimates, in seconds (same unit as
     # `playtime`). None means "not looked up yet or nobody has submitted
     # that time", which is why they are nullable rather than defaulting
