@@ -13,6 +13,8 @@ contexto e as decisões.
   importação, pipeline, persistência e lançamento.
 - [Interface e interação](ui.md): Blueprint, navegação, responsividade,
   acessibilidade, gamepad e regras de thread.
+- [Temas e personalização visual](themes.md): ThemeManager do Jolven, catálogo de
+  temas, glows do tema padrão Jolven e a integração opcional com a skin da Steam.
 - [Compatibilidade e plataforma](compatibility.md): ambientes suportados,
   dependências opcionais, Flatpak, sessão e legado.
 - [Serviços e integrações](integrations.md): APIs, launchers, sistema operacional,

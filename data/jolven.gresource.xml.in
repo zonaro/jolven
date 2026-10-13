@@ -12,6 +12,9 @@
     <file preprocess="xml-stripblanks" alias="gtk/window.ui">window.ui</file>
     <file preprocess="xml-stripblanks" alias="shortcuts-dialog.ui">shortcuts-dialog.ui</file>
     <file alias="style.css">gtk/style.css</file>
+    <!-- Paletas de tema (cartridges/themes/catalog.py); preenchidas pelo Meson. -->
+@theme_files@    <!-- Previews SVG opcionais (lane de UI); o registro tolera o diretório vazio. -->
+@theme_previews@
     <file>library_placeholder.svg</file>
     <file>library_placeholder_small.svg</file>
     <!-- Logo Better-XCloud (branco sobre transparente) usado no card do

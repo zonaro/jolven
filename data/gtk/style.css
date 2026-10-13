@@ -361,3 +361,41 @@ flowboxchild:focus-visible {
 .game-mode .gamepad-dpad-arm {
   min-height: 44px;
 }
+
+/* ── Jolven: brilhos RGB (aplicados somente no tema jolven) ────────────────
+   Só box-shadow/border: não alteram o layout, portanto são seguros em telas
+   de 360px e na sessão Gamescope. O tema adiciona estas classes aos widgets
+   quando o brilho está ligado. */
+
+.jolven-glow-accent {
+  box-shadow: 0 0 6px 1px alpha(var(--accent-color, #813d9c), 0.55);
+}
+
+.jolven-glow-card {
+  box-shadow: 0 0 12px 2px alpha(var(--accent-color, #813d9c), 0.28);
+}
+
+.jolven-rgb-border {
+  border: 1px solid alpha(var(--accent-color, #813d9c), 0.6);
+  box-shadow: 0 0 8px alpha(var(--accent-color, #813d9c), 0.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jolven-glow-accent,
+  .jolven-glow-card,
+  .jolven-rgb-border {
+    transition: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .jolven-glow-accent,
+  .jolven-glow-card {
+    box-shadow: 0 0 0 3px currentColor;
+  }
+
+  .jolven-rgb-border {
+    border: 2px solid currentColor;
+    box-shadow: none;
+  }
+}

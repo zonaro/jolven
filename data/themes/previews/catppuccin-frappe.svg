@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="112" viewBox="0 0 180 112" role="img" aria-label="Catppuccin Frappé">
+<rect x="0" y="0" width="180" height="112" rx="10" fill="#1e1e2e"/>
+<path d="M0 10a10 10 0 0 1 10-10h160a10 10 0 0 1 10 10v12H0z" fill="#181825"/>
+<circle cx="12" cy="11" r="3" fill="#1a1a27"/>
+<circle cx="22" cy="11" r="3" fill="#1a1a27"/>
+<rect x="86" y="7" width="52" height="8" rx="4" fill="#343443"/>
+<rect x="0" y="22" width="34" height="90" fill="#1b1b2a"/>
+<rect x="9" y="34" width="16" height="5" rx="2.5" fill="#c6d0f5"/>
+<rect x="9" y="48" width="16" height="5" rx="2.5" fill="#343443"/>
+<rect x="9" y="62" width="16" height="5" rx="2.5" fill="#343443"/>
+<rect x="46" y="34" width="38" height="52" rx="5" fill="#36374a"/>
+<rect x="92" y="34" width="38" height="52" rx="5" fill="#2e2e40"/>
+<rect x="138" y="34" width="34" height="52" rx="5" fill="#36374a"/>
+<rect x="46" y="44" width="38" height="16" rx="0" fill="#c6d0f5" opacity="0.85"/>
+<rect x="46" y="93" width="46" height="12" rx="6" fill="#c6d0f5" stroke="#62626d" stroke-width="1"/>
+<circle cx="53" cy="99" r="2.5" fill="#c9d2f6"/>
+<rect x="104" y="93" width="34" height="12" rx="6" fill="#343443"/>
+</svg>

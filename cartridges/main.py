@@ -84,6 +84,7 @@ from cartridges.store.managers.steam_api_manager import SteamAPIManager
 from cartridges.store.managers.sunshine_manager import SunshineManager
 from cartridges.store.managers.thegamesdb_manager import TheGamesDBManager
 from cartridges.store.store import Store
+from cartridges.themes.manager import ThemeManager
 from cartridges.utils import backup, session_fita, session_wallpaper
 from cartridges.utils.install_size import InstallSizeSweep
 from cartridges.utils.na_tela import entregar_na_tela
@@ -130,6 +131,9 @@ class CartridgesApplication(Adw.Application):
     # O provider da cor de destaque, guardado para o watcher do registro poder
     # reescrever o CSS no lugar em vez de empilhar um provider por mudança.
     _accent_provider: Optional[Gtk.CssProvider] = None
+    # Coordenador de temas do Jolven (paleta, modo e brilho). Criado em
+    # `do_activate`; fica None se o sistema de temas falhar, sem quebrar o app.
+    theme_manager: Optional[ThemeManager] = None
 
     @GObject.Signal(name="emulate-key", arg_types=[int])
     def emulate_key(self, keyval) -> None:
@@ -438,6 +442,17 @@ class CartridgesApplication(Adw.Application):
 
         # A janela principal já nasce no tema do Windows.
         self.apply_windows_theme()
+
+        # Sistema de temas do Jolven: aplica a paleta escolhida no schema e
+        # acompanha mudanças sem reiniciar. Um provider dedicado (o mesmo motor
+        # do gtk_engine) é instalado em prioridade USER; o provider de destaque
+        # do Windows acima continua sendo reutilizado pela sua própria via.
+        try:
+            self.theme_manager = ThemeManager.instance()
+            self.theme_manager.bind_to_schema(shared.schema)
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.exception("Não foi possível iniciar o sistema de temas")
+            self.theme_manager = None
 
         # Setup gamepads
         if Manette is not None:

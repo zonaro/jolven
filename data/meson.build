@@ -53,12 +53,94 @@ appstream_file = i18n.merge_file(
   install_dir: join_paths(get_option('datadir'), 'metainfo'),
 )
 
+# ── Recursos de tema (paletas e previews) ────────────────────────────────
+# As paletas entram no GResource e sao instaladas como dados. Os previews SVG
+# sao produzidos pela lane de UI e podem ainda nao existir; a varredura abaixo
+# tolera o diretorio ausente ou vazio sem quebrar o build.
+theme_palette_slugs = [
+  'adwaita',
+  'adwaita-gray',
+  'breeze',
+  'canta',
+  'catppuccin-frappe',
+  'catppuccin-latte',
+  'catppuccin-macchiato',
+  'catppuccin-mocha',
+  'dracula',
+  'everforest',
+  'gruvbox',
+  'kate',
+  'metro',
+  'nord',
+  'oled',
+  'one-dark',
+  'pop',
+  'rose-pine',
+  'tokyo-night',
+  'tomorrow-night',
+  'vapor',
+  'vgui2',
+  'yaru',
+  'jolven',
+]
+
+theme_files_xml = ''
+foreach slug : theme_palette_slugs
+  _palette = 'themes/palettes/' + slug + '.css'
+  theme_files_xml += '    <file alias="' + _palette + '">' + _palette + '</file>\n'
+  install_data(
+    _palette,
+    install_dir: join_paths(pkgdatadir, 'themes', 'palettes'),
+  )
+endforeach
+
+# Previews opcionais: so entram quando existem, para o diretorio vazio do
+# inicio do desenvolvimento nao derrubar o gresource.
+_fs = import('fs')
+_previews_scan = run_command(
+  py_installation.full_path(),
+  '-c',
+  'import glob, os, sys; base = sys.argv[1]; ' +
+  'print("\\n".join(sorted(glob.glob(os.path.join(base, "themes/previews/*.svg")))))',
+  meson.current_source_dir(),
+  check: true,
+)
+theme_previews_xml = ''
+foreach _abs : _previews_scan.stdout().strip().split('\n')
+  if _abs != ''
+    _preview = 'themes/previews/' + _fs.name(_abs)
+    theme_previews_xml += '    <file alias="' + _preview + '">' + _preview + '</file>\n'
+    install_data(
+      _preview,
+      install_dir: join_paths(pkgdatadir, 'themes', 'previews'),
+    )
+  endif
+endforeach
+
+# O vendor do Adwaita-for-Steam e lido em tempo de execucao por
+# cartridges/integrations/steam_skin/vendor.py em <pkgdatadir>/vendor/adwaita-for-steam.
+# Instalado como dados comuns (nao vai no GResource: precisa ser inspecionavel
+# e atualizavel a mao, conforme UPSTREAM.md).
+install_subdir(
+  'vendor',
+  install_dir: pkgdatadir,
+  exclude_directories: ['__pycache__'],
+)
+
+# O `conf` global já foi consumido pelos configure_file acima; o gresource usa
+# um objeto próprio com as mesmas chaves do template.
+theme_conf = configuration_data()
+theme_conf.set('APP_ID', app_id)
+theme_conf.set('PREFIX', prefix)
+theme_conf.set('theme_files', theme_files_xml)
+theme_conf.set('theme_previews', theme_previews_xml)
+
 gnome.compile_resources(
   'jolven',
   configure_file(
     input: 'jolven.gresource.xml.in',
     output: 'cartridges.gresource.xml',
-    configuration: conf,
+    configuration: theme_conf,
   ),
   gresource_bundle: true,
   install: true,

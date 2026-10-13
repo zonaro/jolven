@@ -66,15 +66,6 @@ template $CartridgesPreferences: Adw.PreferencesDialog {
       }
     }
 
-    Adw.PreferencesGroup appearance_group {
-      title: _("Aparência");
-
-      Adw.ComboRow app_icon_row {
-        title: _("Ícone do aplicativo");
-        subtitle: _("Troca o ícone no menu e na grade. Pode ser preciso sair e entrar de novo para ver a mudança.");
-      }
-    }
-
     Adw.PreferencesGroup cloud_gaming_group {
       title: _("Cloud Gaming");
 
@@ -103,6 +94,217 @@ template $CartridgesPreferences: Adw.PreferencesDialog {
       }
     }
 
+  }
+
+  Adw.PreferencesPage appearance_page {
+    name: "appearance";
+    title: _("Aparência");
+    icon-name: "applications-graphics-symbolic";
+
+    Adw.PreferencesGroup appearance_group {
+      title: _("Tema do aplicativo");
+      description: _("A prévia aparece na hora, sem precisar reiniciar o Jolven.");
+
+      Adw.ComboRow app_icon_row {
+        title: _("Ícone do aplicativo");
+        subtitle: _("Troca o ícone no menu e na grade. Pode ser preciso sair e entrar de novo para ver a mudança.");
+      }
+
+      Stack tema_galeria_stack {
+        hexpand: true;
+        margin-top: 6;
+        margin-bottom: 6;
+
+        Adw.Spinner tema_galeria_spinner {
+          width-request: 32;
+          height-request: 32;
+          halign: center;
+          tooltip-text: _("Carregando os temas…");
+        }
+
+        Adw.StatusPage tema_galeria_erro {
+          visible: false;
+          icon-name: "network-error-symbolic";
+          title: _("Não foi possível carregar os temas");
+          description: _("Os arquivos de tema não foram encontrados. O Jolven continua com o tema atual.");
+        }
+
+        ScrolledWindow tema_galeria_scroll {
+          hscrollbar-policy: never;
+          vscrollbar-policy: automatic;
+          max-content-height: 360;
+          propagate-natural-height: true;
+          child: FlowBox temas_flowbox {
+            selection-mode: single;
+            homogeneous: true;
+            column-spacing: 12;
+            row-spacing: 12;
+            valign: start;
+            margin-start: 6;
+            margin-end: 6;
+          };
+        }
+      }
+
+      Adw.ActionRow tema_selecionado_row {
+        title: _("Tema selecionado");
+        subtitle: _("Jolven");
+      }
+
+      Adw.ComboRow tema_modo_row {
+        title: _("Modo");
+        subtitle: _("Claro, escuro ou seguindo o sistema");
+      }
+
+      Adw.ComboRow tema_destaque_row {
+        title: _("Cor de destaque");
+        subtitle: _("Vale para botões, seleção e realces");
+      }
+
+      Adw.ActionRow tema_cor_personalizada_row {
+        visible: false;
+        title: _("Cor personalizada");
+        subtitle: _("Toque no círculo para escolher");
+        activatable-widget: tema_cor_button;
+
+        [suffix]
+        ColorDialogButton tema_cor_button {
+          valign: center;
+          tooltip-text: _("Escolher a cor de destaque");
+
+          dialog: ColorDialog {
+            title: _("Escolher a cor de destaque");
+            with-alpha: false;
+          };
+        }
+      }
+
+      Adw.SwitchRow tema_cor_padrao_switch {
+        title: _("Usar a cor padrão do tema");
+        subtitle: _("Ignora a cor de destaque escolhida acima");
+      }
+
+      Adw.SwitchRow tema_glows_switch {
+        visible: false;
+        title: _("Brilhos RGB");
+        subtitle: _("Realce lilás nas bordas. Disponível só no tema Jolven");
+      }
+
+      Adw.ButtonRow tema_restaurar_row {
+        title: _("Restaurar padrão");
+      }
+    }
+
+    Adw.PreferencesGroup steam_group {
+      title: _("Integração com Steam");
+      description: _("Opcional. Aplica o tema à interface da Steam, sem mexer nos seus jogos.");
+
+      Adw.SwitchRow steam_skin_switch {
+        title: _("Aplicar skin à Steam");
+        subtitle: _("Desligado por padrão: nada muda sem a sua permissão");
+      }
+
+      Adw.ComboRow steam_instalacao_row {
+        visible: false;
+        title: _("Instalação da Steam");
+        subtitle: _("Escolha qual instalação receber a skin");
+      }
+
+      Adw.ActionRow steam_estado_row {
+        title: _("Estado");
+        subtitle: _("Verificando a Steam…");
+
+        [prefix]
+        Adw.Spinner steam_estado_spinner {
+          valign: center;
+        }
+      }
+
+      Adw.ActionRow steam_aplicar_row {
+        title: _("Aplicar agora");
+        subtitle: _("Copia o tema para a interface da Steam");
+        activatable-widget: steam_aplicar_button;
+
+        [suffix]
+        Button steam_aplicar_button {
+          label: _("Aplicar");
+          valign: center;
+
+          styles [
+            "suggested-action"
+          ]
+        }
+      }
+
+      Adw.ActionRow steam_reparar_row {
+        title: _("Reparar após atualização");
+        subtitle: _("A Steam devolve os arquivos originais a cada atualização");
+        activatable-widget: steam_reparar_button;
+
+        [suffix]
+        Button steam_reparar_button {
+          label: _("Reparar");
+          valign: center;
+        }
+      }
+
+      Adw.ActionRow steam_restaurar_row {
+        title: _("Restaurar a aparência original da Steam");
+        subtitle: _("Devolve os arquivos que existiam antes do Jolven");
+        activatable-widget: steam_restaurar_button;
+
+        [suffix]
+        Button steam_restaurar_button {
+          label: _("Restaurar");
+          valign: center;
+
+          styles [
+            "destructive-action"
+          ]
+        }
+      }
+
+      Adw.ExpanderRow steam_avancado_row {
+        title: _("Opções avançadas da Steam");
+        subtitle: _("Ajustes finos aplicados junto com a skin");
+
+        Adw.ComboRow steam_fonte_row {
+          title: _("Fonte da interface");
+        }
+
+        Adw.ComboRow steam_window_controls_theme_row {
+          title: _("Cor dos botões da janela");
+        }
+
+        Adw.ComboRow steam_window_controls_layout_row {
+          title: _("Posição dos botões da janela");
+        }
+
+        Adw.SwitchRow steam_rounded_corners_switch {
+          title: _("Cantos arredondados");
+        }
+
+        Adw.SwitchRow steam_cursor_pointer_switch {
+          title: _("Cursor de mão sobre os botões");
+        }
+
+        Adw.SwitchRow steam_hide_whats_new_switch {
+          title: _("Esconder “Novidades”");
+        }
+
+        Adw.SwitchRow steam_sidebar_hover_switch {
+          title: _("Expandir a barra lateral ao passar o mouse");
+        }
+
+        Adw.SwitchRow steam_uncrop_covers_switch {
+          title: _("Mostrar as capas sem cortes");
+        }
+
+        Adw.SwitchRow steam_hide_qr_switch {
+          title: _("Esconder o código QR de login");
+        }
+      }
+    }
   }
 
   Adw.PreferencesPage sunshine_page {

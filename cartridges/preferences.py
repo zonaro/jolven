@@ -29,7 +29,7 @@ from pathlib import Path
 from shutil import rmtree
 from typing import Any, Callable, Optional
 
-from gi.repository import Adw, Gio, GLib, Gtk
+from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 
 from cartridges import shared
 from cartridges.errors.friendly_error import FriendlyError
@@ -58,6 +58,227 @@ from cartridges.utils import global_shortcut
 from cartridges.utils import session_fita
 from cartridges.utils.create_dialog import create_dialog
 from cartridges.utils.na_tela import entregar_na_tela
+
+
+# ── Aparência: tema do aplicativo ─────────────────────────────────────────
+
+#: Tema padrão do Jolven; único que aceita os brilhos RGB.
+SLUG_PADRAO = "jolven"
+
+#: Modos de exibição, na ordem do seletor.
+MODOS = ("light", "dark", "auto")
+MODO_PADRAO = "auto"
+
+#: Cores de destaque oferecidas, na ordem do seletor. Os valores seguem a
+#: paleta de destaque do libadwaita para funcionarem em tema claro e escuro.
+DESTAQUES: tuple[tuple[str, str], ...] = (
+    ("Azul", "#3584e4"),
+    ("Verde-água", "#2190a4"),
+    ("Verde", "#33d17a"),
+    ("Amarelo", "#f5c211"),
+    ("Laranja", "#ff7800"),
+    ("Vermelho", "#e01b24"),
+    ("Rosa", "#d56199"),
+    ("Roxo", "#9141ac"),
+    ("Cinza-azulado", "#6f8396"),
+)
+
+#: Cor usada quando o usuário abre a cor personalizada sem ter escolhido uma.
+DESTAQUE_PADRAO = "#3584e4"
+
+
+def _estados_steam() -> dict[str, str]:
+    """Os oito estados possíveis da integração com a Steam (chave → texto)."""
+    return {
+        "not_found": _("Steam não encontrada"),
+        "not_installed": _("Skin não instalada"),
+        "synced": _("Sincronizada"),
+        "update_needed": _("Atualização necessária"),
+        "awaiting_restart": _("Aguarde reiniciar a Steam"),
+        "incompatible": _("Instalação incompatível"),
+        "permission_error": _("Erro de permissão"),
+        "conflict": _("Há outra personalização na Steam"),
+    }
+
+
+def _rgba_do_hex(hexcor: str) -> Gdk.RGBA:
+    """Converte ``#RRGGBB`` em :class:`Gdk.RGBA`, com recuo seguro."""
+    rgba = Gdk.RGBA()
+    if not hexcor or not rgba.parse(hexcor):
+        rgba.parse(DESTAQUE_PADRAO)
+    return rgba
+
+
+def _hex_do_rgba(rgba: Gdk.RGBA) -> str:
+    """Converte :class:`Gdk.RGBA` em ``#rrggbb``."""
+
+    def canal(valor: float) -> int:
+        return round(max(0.0, min(1.0, valor)) * 255)
+
+    return "#{:02x}{:02x}{:02x}".format(
+        canal(rgba.red), canal(rgba.green), canal(rgba.blue)
+    )
+
+
+class _CatalogoTemas:
+    """Leitura tolerante do catálogo da lane de temas.
+
+    O módulo ``cartridges.themes`` é opcional para esta página: importamos só
+    quando a página é construída e aceitamos tanto os nomes publicados
+    (``CATALOGO``, ``obter_tema``, ``tema_padrao``, ``nome_do_tema``,
+    ``slug_é_dark_only``) quanto os nomes atualmente presentes no módulo. Sem
+    catálogo, a galeria mostra o estado de erro e o restante da página
+    continua funcionando.
+    """
+
+    def __init__(self) -> None:
+        self._catalog: Any = None
+        self.slugs: list[str] = []
+        self._carregar()
+
+    # -- carregamento ----------------------------------------------------
+
+    def _carregar(self) -> None:
+        try:
+            from cartridges.themes import catalog as catalog_module  # noqa: PLC0415
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.warning("Catálogo de temas indisponível", exc_info=True)
+            return
+
+        self._catalog = catalog_module
+        brutos = (
+            getattr(catalog_module, "CATALOGO", None)
+            or getattr(catalog_module, "CATALOG_SLUGS", None)
+            or []
+        )
+        slugs: list[str] = []
+        for item in brutos:
+            slug = item if isinstance(item, str) else getattr(item, "slug", None)
+            if isinstance(slug, str) and slug and slug not in slugs:
+                slugs.append(slug)
+        if SLUG_PADRAO not in slugs:
+            slugs.append(SLUG_PADRAO)
+        self.slugs = slugs
+
+    @property
+    def disponivel(self) -> bool:
+        return bool(self.slugs)
+
+    # -- consultas -------------------------------------------------------
+
+    def _primeiro(self, *nomes: str) -> Any:
+        """Primeiro atributo presente no módulo, resolvendo callables."""
+        for nome in nomes:
+            valor = getattr(self._catalog, nome, None)
+            if valor is None:
+                continue
+            if callable(valor):
+                try:
+                    valor = valor()
+                except Exception:  # pylint: disable=broad-exception-caught
+                    continue
+            if valor is not None:
+                return valor
+        return None
+
+    def padrao(self) -> str:
+        valor = self._primeiro("DEFAULT_SLUG")
+        return valor if isinstance(valor, str) and valor else SLUG_PADRAO
+
+    def tema(self, slug: str) -> Any:
+        for nome in ("obter_tema", "get_palette", "from_catalog_slug"):
+            funcao = getattr(self._catalog, nome, None)
+            if not callable(funcao):
+                continue
+            try:
+                return funcao(slug)
+            except Exception:  # pylint: disable=broad-exception-caught
+                continue
+        return None
+
+    def nome(self, slug: str) -> str:
+        funcao = getattr(self._catalog, "nome_do_tema", None)
+        if callable(funcao):
+            try:
+                nome = funcao(slug)
+            except Exception:  # pylint: disable=broad-exception-caught
+                nome = None
+            if isinstance(nome, str) and nome:
+                return nome
+        tabela = getattr(self._catalog, "NAMES_BY_SLUG", None)
+        if isinstance(tabela, dict) and isinstance(tabela.get(slug), str):
+            return tabela[slug]
+        nome = getattr(self.tema(slug), "name", None)
+        return nome if isinstance(nome, str) and nome else slug
+
+    def dark_only(self, slug: str) -> bool:
+        funcao = getattr(self._catalog, "slug_é_dark_only", None)
+        if callable(funcao):
+            try:
+                return bool(funcao(slug))
+            except Exception:  # pylint: disable=broad-exception-caught
+                pass
+        tabela = getattr(self._catalog, "IS_DARK_ONLY_BY_SLUG", None)
+        if isinstance(tabela, dict) and slug in tabela:
+            return bool(tabela[slug])
+        return bool(getattr(self.tema(slug), "is_dark_only", False))
+
+    def cores(self, slug: str) -> tuple[Optional[str], Optional[str]]:
+        """(fundo, destaque) para o desenho de reserva da miniatura."""
+        tema = self.tema(slug)
+        fundo = getattr(tema, "bg", None)
+        destaque = getattr(tema, "accent_bg", None) or getattr(tema, "accent_fg", None)
+        return (
+            fundo if isinstance(fundo, str) else None,
+            destaque if isinstance(destaque, str) else None,
+        )
+
+
+# ── Aparência: integração com a Steam ────────────────────────────────────
+
+#: Opções avançadas que a skin do Jolven realmente aplica. A árvore vendorada
+#: exclui de propósito ``fonts/**``, ``extras/**`` e ``windowcontrols/**``
+#: (ver ``data/vendor/adwaita-for-steam/UPSTREAM.md``), então o instalador não
+#: tem de onde copiar esses arquivos e nenhuma opção fina tem efeito na versão
+#: de linha de base. As linhas correspondentes aparecem insensíveis, com uma
+#: nota, em vez de sumirem. Se o gerenciador passar a anunciar capacidades, elas
+#: substituem este conjunto em tempo de execução.
+OPCOES_STEAM_PADRAO: frozenset[str] = frozenset()
+
+#: Todas as opções que a página sabe exibir, na ordem do ExpanderRow.
+OPCOES_STEAM: tuple[str, ...] = (
+    "fonte",
+    "window-controls-theme",
+    "window-controls-layout",
+    "rounded-corners",
+    "cursor-pointer",
+    "hide-whats-new",
+    "sidebar-hover",
+    "uncrop-covers",
+    "hide-qr",
+)
+
+#: Id do widget na página → chave entendida pelo instalador da skin
+#: (``cartridges/integrations/steam_skin/installer.py``). As opções sem
+#: equivalente conhecido viajam com o próprio id, para uma versão futura da
+#: skin poder adotá-las.
+CHAVES_PERFIL_STEAM: dict[str, str] = {
+    "fonte": "font",
+    "window-controls-theme": "windowcontrols_theme",
+    "window-controls-layout": "windowcontrols_layout",
+    "rounded-corners": "rounded_corners",
+    "cursor-pointer": "cursor_pointer",
+    "hide-whats-new": "hide_whats_new",
+    "sidebar-hover": "sidebar_hover",
+    "uncrop-covers": "uncrop_covers",
+    "hide-qr": "hide_qr",
+}
+
+#: Inverso de :data:`CHAVES_PERFIL_STEAM`, para aceitar capacidades anunciadas
+#: pela lane em qualquer uma das duas grafias.
+CHAVES_UI_POR_PERFIL: dict[str, str] = {
+    perfil: ui for ui, perfil in CHAVES_PERFIL_STEAM.items()
+}
 
 
 @Gtk.Template(resource_path=shared.PREFIX + "/gtk/preferences.ui")
@@ -245,8 +466,56 @@ class CartridgesPreferences(Adw.PreferencesDialog):
     fita_testar_row: Adw.ActionRow = Gtk.Template.Child()
     fita_testar_button: Gtk.Button = Gtk.Template.Child()
 
+    appearance_page: Adw.PreferencesPage = Gtk.Template.Child()
+    appearance_group: Adw.PreferencesGroup = Gtk.Template.Child()
+    temas_flowbox: Gtk.FlowBox = Gtk.Template.Child()
+    tema_galeria_stack: Gtk.Stack = Gtk.Template.Child()
+    tema_galeria_spinner: Adw.Spinner = Gtk.Template.Child()
+    tema_galeria_erro: Adw.StatusPage = Gtk.Template.Child()
+    tema_galeria_scroll: Gtk.ScrolledWindow = Gtk.Template.Child()
+    tema_selecionado_row: Adw.ActionRow = Gtk.Template.Child()
+    tema_modo_row: Adw.ComboRow = Gtk.Template.Child()
+    tema_destaque_row: Adw.ComboRow = Gtk.Template.Child()
+    tema_cor_personalizada_row: Adw.ActionRow = Gtk.Template.Child()
+    tema_cor_button: Gtk.ColorDialogButton = Gtk.Template.Child()
+    tema_cor_padrao_switch: Adw.SwitchRow = Gtk.Template.Child()
+    tema_glows_switch: Adw.SwitchRow = Gtk.Template.Child()
+    tema_restaurar_row: Adw.ButtonRow = Gtk.Template.Child()
+
+    steam_group: Adw.PreferencesGroup = Gtk.Template.Child()
+    steam_skin_switch: Adw.SwitchRow = Gtk.Template.Child()
+    steam_instalacao_row: Adw.ComboRow = Gtk.Template.Child()
+    steam_estado_row: Adw.ActionRow = Gtk.Template.Child()
+    steam_estado_spinner: Adw.Spinner = Gtk.Template.Child()
+    steam_aplicar_row: Adw.ActionRow = Gtk.Template.Child()
+    steam_aplicar_button: Gtk.Button = Gtk.Template.Child()
+    steam_reparar_row: Adw.ActionRow = Gtk.Template.Child()
+    steam_reparar_button: Gtk.Button = Gtk.Template.Child()
+    steam_restaurar_row: Adw.ActionRow = Gtk.Template.Child()
+    steam_restaurar_button: Gtk.Button = Gtk.Template.Child()
+    steam_avancado_row: Adw.ExpanderRow = Gtk.Template.Child()
+    steam_fonte_row: Adw.ComboRow = Gtk.Template.Child()
+    steam_window_controls_theme_row: Adw.ComboRow = Gtk.Template.Child()
+    steam_window_controls_layout_row: Adw.ComboRow = Gtk.Template.Child()
+    steam_rounded_corners_switch: Adw.SwitchRow = Gtk.Template.Child()
+    steam_cursor_pointer_switch: Adw.SwitchRow = Gtk.Template.Child()
+    steam_hide_whats_new_switch: Adw.SwitchRow = Gtk.Template.Child()
+    steam_sidebar_hover_switch: Adw.SwitchRow = Gtk.Template.Child()
+    steam_uncrop_covers_switch: Adw.SwitchRow = Gtk.Template.Child()
+    steam_hide_qr_switch: Adw.SwitchRow = Gtk.Template.Child()
+
     removed_games: set[Game] = set()
     warning_menu_buttons: dict = {}
+
+    # Aparência: catálogo de temas e integração com a Steam.
+    _catalogo_temas: Optional["_CatalogoTemas"] = None
+    _manager_tema: Any = None
+    _manager_steam: Any = None
+    _manager_steam_carregado: bool = False
+    _instalacoes_steam: list = []
+    _steam_ocupada: bool = False
+    _sync_steam_id: Optional[int] = None
+    _bloqueio_ui: int = 0
 
     is_open = False
     _teste_em_curso: Optional[threading.Event] = None
@@ -616,6 +885,8 @@ class CartridgesPreferences(Adw.PreferencesDialog):
         self.setup_recorder_page()
         self.setup_fita_rows()
         self.reler_fitas()
+        self.setup_appearance_page()
+        self.setup_steam_group()
 
     def alternar_xcloud_login(self, *_args: Any) -> None:
         from cartridges import xcloud_login
@@ -1543,6 +1814,914 @@ class CartridgesPreferences(Adw.PreferencesDialog):
             )
 
         self.app_icon_row.connect("notify::selected", selected_changed)
+
+    # ── Aparência: tema do aplicativo ─────────────────────────────────────
+
+    def setup_appearance_page(self) -> None:
+        """Prepara a galeria de temas, o modo, o destaque e os brilhos."""
+        self._catalogo_temas = _CatalogoTemas()
+        self._montar_galeria()
+        self._ligar_modo()
+        self._ligar_destaque()
+        self.tema_glows_switch.connect("notify::active", self._alternar_glows)
+        self.tema_restaurar_row.connect("activated", self.restaurar_aparencia)
+
+        self._ligar_tema_manager()
+
+        shared.schema.connect("changed::theme-slug", lambda *_: self._refletir_tema())
+        shared.schema.connect("changed::theme-mode", lambda *_: self._refletir_modo())
+        shared.schema.connect(
+            "changed::theme-accent-custom", lambda *_: self._refletir_destaque()
+        )
+        try:
+            Adw.StyleManager.get_default().connect(
+                "notify::dark", lambda *_: self._atualizar_disponibilidade_temas()
+            )
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.debug("StyleManager indisponível para acompanhar o modo")
+
+        self.appearance_page.connect("map", self._focar_galeria)
+        self._refletir_tema()
+        self._refletir_modo()
+        self._refletir_destaque()
+
+    # -- ThemeManager -----------------------------------------------------
+
+    def _ligar_tema_manager(self) -> None:
+        """Liga o ThemeManager ao schema uma única vez, se ele existir."""
+        try:
+            from cartridges.themes.manager import ThemeManager  # noqa: PLC0415
+
+            self._manager_tema = ThemeManager.instance()
+            self._manager_tema.bind_to_schema(shared.schema)
+        except Exception:  # pylint: disable=broad-exception-caught
+            self._manager_tema = None
+            logging.warning("ThemeManager indisponível; a prévia fica no schema")
+
+    def _aplicar_tema(self, slug: str) -> None:
+        """Aplica o tema na hora, sem esperar o debounce do schema."""
+        manager = self._manager_tema
+        funcao = getattr(manager, "set_palette", None) if manager else None
+        if not callable(funcao):
+            return
+        try:
+            funcao(slug)
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.exception("Falha ao aplicar o tema %s", slug)
+
+    def _aplicar_modo(self, modo: str) -> None:
+        manager = self._manager_tema
+        funcao = getattr(manager, "set_mode", None) if manager else None
+        if not callable(funcao):
+            return
+        try:
+            funcao(modo)
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.debug("set_mode indisponível", exc_info=True)
+
+    def _aplicar_glows(self) -> None:
+        manager = self._manager_tema
+        funcao = getattr(manager, "set_glows", None) if manager else None
+        if not callable(funcao):
+            return
+        try:
+            funcao(self._glows_ativos())
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.debug("set_glows indisponível", exc_info=True)
+
+    def _aplicar_destaque(self) -> None:
+        """Repassa a cor personalizada ao gerenciador, quando ele aceitar."""
+        manager = self._manager_tema
+        funcao = None
+        for nome in ("set_acento_custom", "set_accent"):
+            candidato = getattr(manager, nome, None) if manager else None
+            if callable(candidato):
+                funcao = candidato
+                break
+        if funcao is None:
+            return
+        try:
+            funcao(shared.schema.get_string("theme-accent-custom"))
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.debug("alteração do destaque indisponível", exc_info=True)
+
+    # -- galeria ----------------------------------------------------------
+
+    def _montar_galeria(self) -> None:
+        """Preenche a galeria a partir do catálogo, com estados de erro."""
+        catalogo = self._catalogo_temas
+        self.temas_flowbox.remove_all()
+        if catalogo is None or not catalogo.disponivel:
+            self.tema_galeria_stack.set_visible_child(self.tema_galeria_erro)
+            self.tema_selecionado_row.set_subtitle(self._slug_atual())
+            return
+
+        for slug in catalogo.slugs:
+            self.temas_flowbox.append(self._criar_miniatura(slug))
+
+        self.temas_flowbox.connect("child-activated", self._escolher_tema)
+        self.tema_galeria_stack.set_visible_child(self.tema_galeria_scroll)
+
+    def _criar_miniatura(self, slug: str) -> Gtk.FlowBoxChild:
+        caixa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        for margem in ("set_margin_top", "set_margin_bottom"):
+            getattr(caixa, margem)(4)
+        for margem in ("set_margin_start", "set_margin_end"):
+            getattr(caixa, margem)(6)
+        caixa.append(self._figura_do_tema(slug))
+
+        rotulo = Gtk.Label(label=self._nome_do_tema(slug), wrap=True, max_width_chars=14)
+        rotulo.set_justify(Gtk.Justification.CENTER)
+        caixa.append(rotulo)
+
+        filho = Gtk.FlowBoxChild(child=caixa)
+        filho.add_css_class("card")
+        filho.set_size_request(140, -1)
+        filho.slug = slug  # type: ignore[attr-defined]
+        return filho
+
+    def _figura_do_tema(self, slug: str) -> Gtk.Widget:
+        """Miniatura do tema; usa o recurso e recua para um desenho local."""
+        try:
+            textura = Gdk.Texture.new_from_resource(
+                f"{shared.PREFIX}/themes/previews/{slug}.svg"
+            )
+        except Exception:  # pylint: disable=broad-exception-caught
+            textura = None
+        if textura is not None:
+            figura = Gtk.Picture.new_for_paintable(textura)
+            figura.set_content_fit(Gtk.ContentFit.CONTAIN)
+            figura.set_can_shrink(True)
+            figura.set_size_request(126, 78)
+            figura.set_halign(Gtk.Align.CENTER)
+            return figura
+
+        fundo, destaque = (
+            self._catalogo_temas.cores(slug)
+            if self._catalogo_temas is not None
+            else (None, None)
+        )
+        area = Gtk.DrawingArea()
+        area.set_content_width(126)
+        area.set_content_height(78)
+        area.set_halign(Gtk.Align.CENTER)
+        area.set_draw_func(
+            self._desenhar_miniatura,
+            fundo or "#1e1e2e",
+            destaque or DESTAQUE_PADRAO,
+        )
+        return area
+
+    @staticmethod
+    def _desenhar_miniatura(
+        _area: Gtk.DrawingArea,
+        contexto: Any,
+        largura: int,
+        altura: int,
+        fundo: str,
+        destaque: str,
+    ) -> None:
+        """Desenho de reserva: janela, barra superior e botão de destaque."""
+        cor_fundo = _rgba_do_hex(fundo)
+        cor_destaque = _rgba_do_hex(destaque)
+        contexto.set_source_rgb(cor_fundo.red, cor_fundo.green, cor_fundo.blue)
+        contexto.rectangle(0, 0, largura, altura)
+        contexto.fill()
+        contexto.set_source_rgba(
+            cor_destaque.red, cor_destaque.green, cor_destaque.blue, 0.9
+        )
+        contexto.rectangle(0, 0, largura, max(6, altura * 0.14))
+        contexto.fill()
+        contexto.rectangle(6, altura - 16, max(18, largura * 0.3), 10)
+        contexto.fill()
+
+    def _filhos_da_galeria(self) -> list[Gtk.FlowBoxChild]:
+        filhos: list[Gtk.FlowBoxChild] = []
+        filho = self.temas_flowbox.get_first_child()
+        while filho is not None:
+            if isinstance(filho, Gtk.FlowBoxChild):
+                filhos.append(filho)
+            filho = filho.get_next_sibling()
+        return filhos
+
+    def _escolher_tema(
+        self, _caixa: Gtk.FlowBox, filho: Gtk.FlowBoxChild
+    ) -> None:
+        slug = getattr(filho, "slug", None)
+        if not isinstance(slug, str):
+            return
+        if self._bloqueio_no_modo(slug):
+            self.add_toast(
+                Adw.Toast.new(
+                    _("Este tema só funciona no modo escuro. Mude o Modo para Escuro.")
+                )
+            )
+            return
+        shared.schema.set_string("theme-slug", slug)
+        self._refletir_tema()
+        self._aplicar_tema(slug)
+        self._agendar_sync_steam()
+        filho.grab_focus()
+
+    def _focar_galeria(self, *_args: Any) -> None:
+        """Foco inicial da página: o tema em uso."""
+        for filho in self._filhos_da_galeria():
+            if getattr(filho, "slug", None) == self._slug_atual():
+                filho.grab_focus()
+                return
+        self.tema_modo_row.grab_focus()
+
+    # -- modo -------------------------------------------------------------
+
+    def _ligar_modo(self) -> None:
+        self.tema_modo_row.set_model(
+            Gtk.StringList.new([_("Claro"), _("Escuro"), _("Automático")])
+        )
+        self.tema_modo_row.connect("notify::selected", self._modo_escolhido)
+
+    def _modo_escolhido(self, row: Adw.ComboRow, *_args: Any) -> None:
+        if self._bloqueio_ui:
+            return
+        indice = row.get_selected()
+        if not 0 <= indice < len(MODOS):
+            return
+        modo = MODOS[indice]
+        shared.schema.set_string("theme-mode", modo)
+        self._aplicar_modo(modo)
+        self._atualizar_disponibilidade_temas()
+        self._agendar_sync_steam()
+
+    def _refletir_modo(self) -> None:
+        with self._sem_reentrada():
+            self.tema_modo_row.set_selected(MODOS.index(self._modo_atual()))
+        self._atualizar_disponibilidade_temas()
+
+    # -- destaque ---------------------------------------------------------
+
+    def _ligar_destaque(self) -> None:
+        self.tema_destaque_row.set_model(
+            Gtk.StringList.new(
+                [_("Padrão do tema")]
+                + [_(nome) for nome, _hex in DESTAQUES]
+                + [_("Personalizado")]
+            )
+        )
+        self.tema_destaque_row.connect("notify::selected", self._destaque_escolhido)
+        self.tema_cor_button.connect("notify::rgba", self._cor_personalizada_escolhida)
+        self.tema_cor_padrao_switch.connect(
+            "notify::active", self._alternar_cor_padrao
+        )
+
+    def _destaque_escolhido(self, row: Adw.ComboRow, *_args: Any) -> None:
+        if self._bloqueio_ui:
+            return
+        indice = row.get_selected()
+        if indice == 0:
+            self._gravar_destaque("")
+            return
+        if 1 <= indice <= len(DESTAQUES):
+            self._gravar_destaque(DESTAQUES[indice - 1][1])
+            return
+        # "Personalizado": revela o seletor e parte da cor atual.
+        atual = shared.schema.get_string("theme-accent-custom").strip()
+        self._gravar_destaque(atual or _hex_do_rgba(self.tema_cor_button.get_rgba()))
+        self.tema_cor_personalizada_row.set_visible(True)
+        self.tema_cor_button.grab_focus()
+
+    def _gravar_destaque(self, hexcor: str) -> None:
+        """Grava a cor escolhida e sincroniza os controles dependentes."""
+        shared.schema.set_string("theme-accent-custom", hexcor)
+        self._aplicar_destaque()
+        if hexcor:
+            self._agendar_sync_steam()
+
+    def _cor_personalizada_escolhida(
+        self, botao: Gtk.ColorDialogButton, *_args: Any
+    ) -> None:
+        if self._bloqueio_ui:
+            return
+        hexcor = _hex_do_rgba(botao.get_rgba())
+        if hexcor == shared.schema.get_string("theme-accent-custom"):
+            return
+        self._gravar_destaque(hexcor)
+        with self._sem_reentrada():
+            self.tema_destaque_row.set_selected(len(DESTAQUES) + 1)
+            self.tema_cor_padrao_switch.set_active(False)
+        self.tema_cor_personalizada_row.set_visible(True)
+
+    def _alternar_cor_padrao(self, row: Adw.SwitchRow, *_args: Any) -> None:
+        if self._bloqueio_ui:
+            return
+        if row.get_active():
+            self._gravar_destaque("")
+            with self._sem_reentrada():
+                self.tema_destaque_row.set_selected(0)
+            self.tema_cor_personalizada_row.set_visible(False)
+            return
+        atual = shared.schema.get_string("theme-accent-custom").strip()
+        with self._sem_reentrada():
+            self.tema_destaque_row.set_selected(len(DESTAQUES) + 1)
+        self._gravar_destaque(atual or _hex_do_rgba(self.tema_cor_button.get_rgba()))
+        self.tema_cor_personalizada_row.set_visible(True)
+        self.tema_cor_button.grab_focus()
+
+    def _refletir_destaque(self) -> None:
+        hexcor = shared.schema.get_string("theme-accent-custom").strip()
+        personalizado = bool(hexcor)
+        indice = 0
+        if personalizado:
+            indice = len(DESTAQUES) + 1
+            for posicao, (_nome, valor) in enumerate(DESTAQUES, start=1):
+                if valor.casefold() == hexcor.casefold():
+                    indice = posicao
+                    break
+        with self._sem_reentrada():
+            self.tema_destaque_row.set_selected(indice)
+            self.tema_cor_padrao_switch.set_active(not personalizado)
+            if personalizado:
+                self.tema_cor_button.set_rgba(_rgba_do_hex(hexcor))
+        self.tema_cor_personalizada_row.set_visible(indice == len(DESTAQUES) + 1)
+
+    # -- brilhos e restauração --------------------------------------------
+
+    def _alternar_glows(self, row: Adw.SwitchRow, *_args: Any) -> None:
+        if self._bloqueio_ui:
+            return
+        self._aplicar_glows()
+        if row.get_active() and self._slug_atual() == SLUG_PADRAO:
+            self._agendar_sync_steam()
+
+    def restaurar_aparencia(self, *_args: Any) -> None:
+        """Volta ao tema Jolven, modo automático e destaque padrão."""
+        shared.schema.set_string("theme-slug", SLUG_PADRAO)
+        shared.schema.set_string("theme-mode", MODO_PADRAO)
+        shared.schema.set_string("theme-accent-custom", "")
+        with self._sem_reentrada():
+            self.tema_glows_switch.set_active(False)
+        self._refletir_tema()
+        self._refletir_modo()
+        self._refletir_destaque()
+        self._aplicar_tema(SLUG_PADRAO)
+        self._aplicar_modo(MODO_PADRAO)
+        self._aplicar_glows()
+        self.tema_restaurar_row.grab_focus()
+        self.add_toast(Adw.Toast.new(_("Aparência restaurada ao padrão")))
+        self._agendar_sync_steam()
+
+    # -- estado derivado do tema ------------------------------------------
+
+    def _sem_reentrada(self) -> Any:
+        """Evita que a atualização programática dos widgets volte ao schema."""
+
+        class _Guarda:
+            def __init__(self, dono: "CartridgesPreferences") -> None:
+                self._dono = dono
+
+            def __enter__(self) -> None:
+                self._dono._bloqueio_ui += 1
+
+            def __exit__(self, *_exc: Any) -> None:
+                self._dono._bloqueio_ui -= 1
+
+        return _Guarda(self)
+
+    def _nome_do_tema(self, slug: str) -> str:
+        if self._catalogo_temas is None:
+            return slug
+        return self._catalogo_temas.nome(slug)
+
+    def _slug_atual(self) -> str:
+        slug = shared.schema.get_string("theme-slug")
+        catalogo = self._catalogo_temas
+        if catalogo is not None and catalogo.disponivel and slug not in catalogo.slugs:
+            return catalogo.padrao()
+        if not slug:
+            return catalogo.padrao() if catalogo is not None else SLUG_PADRAO
+        return slug
+
+    def _modo_atual(self) -> str:
+        modo = shared.schema.get_string("theme-mode")
+        return modo if modo in MODOS else MODO_PADRAO
+
+    def _modo_escuro_efetivo(self) -> bool:
+        modo = self._modo_atual()
+        if modo == "dark":
+            return True
+        if modo == "light":
+            return False
+        try:
+            return bool(Adw.StyleManager.get_default().get_dark())
+        except Exception:  # pylint: disable=broad-exception-caught
+            return True
+
+    def _bloqueado_no_modo(self, slug: str) -> bool:
+        catalogo = self._catalogo_temas
+        return bool(
+            catalogo is not None
+            and catalogo.disponivel
+            and catalogo.dark_only(slug)
+            and not self._modo_escuro_efetivo()
+        )
+
+    def _glows_ativos(self) -> bool:
+        return (
+            self.tema_glows_switch.get_active()
+            and self._slug_atual() == SLUG_PADRAO
+        )
+
+    def _refletir_tema(self) -> None:
+        slug = self._slug_atual()
+        self.tema_selecionado_row.set_subtitle(self._nome_do_tema(slug))
+        self.tema_selecionado_row.set_tooltip_text(slug)
+        with self._sem_reentrada():
+            self.tema_glows_switch.set_visible(slug == SLUG_PADRAO)
+            if slug != SLUG_PADRAO:
+                self.tema_glows_switch.set_active(False)
+            self.temas_flowbox.unselect_all()
+        for filho in self._filhos_da_galeria():
+            if getattr(filho, "slug", None) == slug:
+                self.temas_flowbox.select_child(filho)
+                break
+        self._atualizar_disponibilidade_temas()
+
+    def _atualizar_disponibilidade_temas(self) -> None:
+        """Marca os temas que só funcionam no modo escuro."""
+        escuro = self._modo_escuro_efetivo()
+        catalogo = self._catalogo_temas
+        for filho in self._filhos_da_galeria():
+            slug = getattr(filho, "slug", None)
+            if not isinstance(slug, str):
+                continue
+            nome = self._nome_do_tema(slug)
+            bloqueado = bool(
+                catalogo is not None
+                and catalogo.disponivel
+                and catalogo.dark_only(slug)
+                and not escuro
+            )
+            filho.set_sensitive(not bloqueado)
+            filho.set_tooltip_text(
+                _("{} — só funciona no modo escuro").format(nome)
+                if bloqueado
+                else nome
+            )
+
+    # ── Aparência: integração com a Steam ─────────────────────────────────
+
+    def setup_steam_group(self) -> None:
+        """Liga o grupo da Steam; ausência da Steam nunca quebra a página."""
+        # Ligação só de leitura (schema -> switch): a gravação fica a cargo do
+        # manipulador. Assim, ligar/desligar o switch por código (ao habilitar
+        # ou bloquear controles enquanto a Steam é procurada) nunca reescreve a
+        # preferência guardada pelo usuário.
+        with self._sem_reentrada():
+            shared.schema.bind(
+                "steam-skin-enabled",
+                self.steam_skin_switch,
+                "active",
+                Gio.SettingsBindFlags.GET,
+            )
+        self.steam_skin_switch.connect("notify::active", self._alternar_skin_steam)
+        self.steam_instalacao_row.connect("notify::selected", self._escolher_instalacao)
+        self.steam_aplicar_button.connect("clicked", self._aplicar_skin_steam)
+        self.steam_reparar_button.connect("clicked", self._reparar_skin_steam)
+        self.steam_restaurar_button.connect("clicked", self._restaurar_skin_steam)
+        self._configurar_opcoes_avancadas()
+        self._ajustar_alvos_de_toque()
+        self._definir_controles_steam(ativos=False)
+        self._detectar_steam()
+
+    # -- manager tolerante -------------------------------------------------
+
+    def _steam_manager(self) -> Any:
+        if self._manager_steam_carregado:
+            return self._manager_steam
+        self._manager_steam_carregado = True
+        try:
+            from cartridges.integrations.steam_skin.manager import (  # noqa: PLC0415
+                SteamSkinManager,
+            )
+
+            criador = getattr(SteamSkinManager, "instance", None)
+            self._manager_steam = criador() if callable(criador) else SteamSkinManager()
+        except Exception:  # pylint: disable=broad-exception-caught
+            self._manager_steam = None
+            logging.warning("SteamSkinManager indisponível", exc_info=True)
+        return self._manager_steam
+
+    # -- opções avançadas -------------------------------------------------
+
+    FONTES = ("adwaita", "cantarell", "system")
+    CONTROLES_TEMA = ("theme", "light", "dark")
+    CONTROLES_LAYOUT = ("default", "left", "right")
+
+    def _linhas_avancadas(self) -> dict[str, Gtk.Widget]:
+        return {
+            "fonte": self.steam_fonte_row,
+            "window-controls-theme": self.steam_window_controls_theme_row,
+            "window-controls-layout": self.steam_window_controls_layout_row,
+            "rounded-corners": self.steam_rounded_corners_switch,
+            "cursor-pointer": self.steam_cursor_pointer_switch,
+            "hide-whats-new": self.steam_hide_whats_new_switch,
+            "sidebar-hover": self.steam_sidebar_hover_switch,
+            "uncrop-covers": self.steam_uncrop_covers_switch,
+            "hide-qr": self.steam_hide_qr_switch,
+        }
+
+    def _configurar_opcoes_avancadas(self) -> None:
+        self.steam_fonte_row.set_model(
+            Gtk.StringList.new(
+                [_("Padrão do Adwaita"), _("Cantarell"), _("Fonte do sistema")]
+            )
+        )
+        self.steam_fonte_row.set_selected(0)
+        self.steam_window_controls_theme_row.set_model(
+            Gtk.StringList.new([_("Seguir o tema"), _("Claro"), _("Escuro")])
+        )
+        self.steam_window_controls_theme_row.set_selected(0)
+        self.steam_window_controls_layout_row.set_model(
+            Gtk.StringList.new([_("Automático"), _("Todos à esquerda"), _("Todos à direita")])
+        )
+        self.steam_window_controls_layout_row.set_selected(0)
+        self._atualizar_opcoes_disponiveis()
+
+    def _opcoes_suportadas(self) -> set[str]:
+        """Opções que a skin aceita, preferindo o que o gerenciador reporta.
+
+        Aceita tanto os ids usados na página (``fonte``) quanto as chaves do
+        instalador (``font``); sem informação do gerenciador, vale o conjunto
+        padrão — vazio, porque a árvore vendorada não traz ``fonts``/``extras``/
+        ``windowcontrols``.
+        """
+        manager = self._steam_manager()
+        if manager is not None:
+            for nome in ("opcoes_suportadas", "capacidades", "supported_options"):
+                valor = getattr(manager, nome, None)
+                if callable(valor):
+                    try:
+                        valor = valor()
+                    except Exception:  # pylint: disable=broad-exception-caught
+                        valor = None
+                if isinstance(valor, (set, frozenset, list, tuple)):
+                    return self._normalizar_chaves(valor)
+        return set(OPCOES_STEAM_PADRAO)
+
+    @staticmethod
+    def _normalizar_chaves(valor: Any) -> set[str]:
+        """Converte chaves anunciadas em ids usados pela página."""
+        resultado: set[str] = set()
+        for item in valor:
+            chave = str(item)
+            if chave in CHAVES_PERFIL_STEAM:
+                resultado.add(chave)
+            elif chave in CHAVES_UI_POR_PERFIL:
+                resultado.add(CHAVES_UI_POR_PERFIL[chave])
+        return resultado
+
+    def _atualizar_opcoes_disponiveis(self) -> None:
+        suportadas = self._opcoes_suportadas()
+        for chave, linha in self._linhas_avancadas().items():
+            disponivel = chave in suportadas
+            linha.set_sensitive(disponivel)
+            if disponivel:
+                linha.remove_css_class("dim-label")
+                continue
+            linha.add_css_class("dim-label")
+            if isinstance(linha, (Adw.SwitchRow, Adw.ComboRow)):
+                linha.set_subtitle(_("Indisponível nesta versão da skin"))
+        if not suportadas:
+            self.steam_avancado_row.set_subtitle(
+                _("Esta versão da skin não oferece ajustes finos")
+            )
+
+    def _valor_combo(
+        self, row: Adw.ComboRow, valores: tuple[str, ...], padrao: str
+    ) -> str:
+        indice = row.get_selected()
+        return valores[indice] if 0 <= indice < len(valores) else padrao
+
+    def _opcoes_avancadas(self) -> dict[str, Any]:
+        """Opções avançadas no formato do instalador, só as suportadas."""
+        valores: dict[str, Any] = {
+            "fonte": self._valor_combo(self.steam_fonte_row, self.FONTES, "adwaita"),
+            "window-controls-theme": self._valor_combo(
+                self.steam_window_controls_theme_row, self.CONTROLES_TEMA, "theme"
+            ),
+            "window-controls-layout": self._valor_combo(
+                self.steam_window_controls_layout_row, self.CONTROLES_LAYOUT, "default"
+            ),
+            "rounded-corners": self.steam_rounded_corners_switch.get_active(),
+            "cursor-pointer": self.steam_cursor_pointer_switch.get_active(),
+            "hide-whats-new": self.steam_hide_whats_new_switch.get_active(),
+            "sidebar-hover": self.steam_sidebar_hover_switch.get_active(),
+            "uncrop-covers": self.steam_uncrop_covers_switch.get_active(),
+            "hide-qr": self.steam_hide_qr_switch.get_active(),
+        }
+        suportadas = self._opcoes_suportadas()
+        opcoes = {
+            CHAVES_PERFIL_STEAM[chave]: valores[chave]
+            for chave in OPCOES_STEAM
+            if chave in suportadas
+        }
+        # A instalação escolhida entra junto (chave que o instalador ignora)
+        # para que a assinatura de diferença do SteamSkinManager note a troca
+        # de instalação e reaplique a skin no destino novo.
+        instalacao = self._instalacao_escolhida()
+        if instalacao is not None:
+            opcoes["install_path"] = str(instalacao.path)
+        return opcoes
+
+    # -- detecção e estado ------------------------------------------------
+
+    def _detectar_steam(self) -> None:
+        """Procura instalações da Steam fora da thread principal."""
+        self.steam_estado_spinner.set_visible(True)
+        self.steam_estado_row.set_subtitle(_("Verificando a Steam…"))
+
+        def trabalho() -> None:
+            try:
+                from cartridges.integrations.steam_skin.detector import (  # noqa: PLC0415
+                    detect_all,
+                )
+
+                instalacoes: Any = list(detect_all())
+            except Exception:  # pylint: disable=broad-exception-caught
+                logging.warning("Detector de Steam indisponível", exc_info=True)
+                instalacoes = None
+            entregar_na_tela(self._steam_detectada, instalacoes)
+
+        threading.Thread(target=trabalho, daemon=True).start()
+
+    def _steam_detectada(self, instalacoes: Any) -> bool:
+        self.steam_estado_spinner.set_visible(False)
+        if instalacoes is None:
+            self.steam_estado_row.set_subtitle(_("Integração com a Steam indisponível"))
+            self._instalacoes_steam = []
+            self._definir_controles_steam(ativos=False)
+            return GLib.SOURCE_REMOVE
+
+        acessiveis = [item for item in instalacoes if getattr(item, "accessible", False)]
+        self._instalacoes_steam = acessiveis
+        if not acessiveis:
+            self.steam_estado_row.set_subtitle(_("Steam não encontrada"))
+            self.steam_instalacao_row.set_visible(False)
+            self.steam_avancado_row.set_enable_expansion(False)
+            self._definir_controles_steam(ativos=False)
+            return GLib.SOURCE_REMOVE
+
+        salvo = shared.schema.get_string("steam-install-path")
+        indice = 0
+        for posicao, item in enumerate(acessiveis):
+            if str(item.path) == salvo:
+                indice = posicao
+                break
+        self.steam_instalacao_row.set_model(
+            Gtk.StringList.new([self._rotulo_instalacao(item) for item in acessiveis])
+        )
+        self.steam_instalacao_row.set_visible(len(acessiveis) > 1)
+        with self._sem_reentrada():
+            self.steam_instalacao_row.set_selected(indice)
+        if not salvo:
+            shared.schema.set_string(
+                "steam-install-path", str(acessiveis[indice].path)
+            )
+        self.steam_avancado_row.set_enable_expansion(True)
+        self._definir_controles_steam(ativos=True)
+        self._atualizar_estado_steam()
+        return GLib.SOURCE_REMOVE
+
+    def _rotulo_instalacao(self, instalacao: Any) -> str:
+        tipos = {
+            "native": _("Nativo"),
+            "flatpak": _("Flatpak"),
+            "snap": _("Snap"),
+            "custom": _("Personalizado"),
+        }
+        tipo = tipos.get(str(getattr(instalacao, "kind", "")), _("Steam"))
+        return f"{tipo} · {instalacao.path}"
+
+    def _instalacao_escolhida(self) -> Any:
+        if not self._instalacoes_steam:
+            return None
+        indice = self.steam_instalacao_row.get_selected()
+        if 0 <= indice < len(self._instalacoes_steam):
+            return self._instalacoes_steam[indice]
+        return self._instalacoes_steam[0]
+
+    def _escolher_instalacao(self, row: Adw.ComboRow, *_args: Any) -> None:
+        if self._bloqueio_ui:
+            return
+        indice = row.get_selected()
+        if not 0 <= indice < len(self._instalacoes_steam):
+            return
+        shared.schema.set_string(
+            "steam-install-path", str(self._instalacoes_steam[indice].path)
+        )
+        self._atualizar_estado_steam()
+        self._agendar_sync_steam()
+
+    def _definir_controles_steam(self, ativos: bool) -> None:
+        """Habilita a skin e as ações conforme a Steam e o gerenciador.
+
+        Só mexe em sensibilidade: o switch continua refletindo a preferência
+        guardada, para não gravar nada no schema sem ação do usuário.
+        """
+        tem_manager = self._steam_manager() is not None
+        self.steam_skin_switch.set_sensitive(ativos and tem_manager)
+        for row in (self.steam_aplicar_row, self.steam_reparar_row, self.steam_restaurar_row):
+            row.set_sensitive(ativos and tem_manager and not self._steam_ocupada)
+        self.steam_avancado_row.set_sensitive(ativos and tem_manager)
+
+    def _atualizar_estado_steam(self, *_args: Any) -> None:
+        """Lê o estado da skin fora da thread principal."""
+        manager = self._steam_manager()
+        if manager is None:
+            self.steam_estado_row.set_subtitle(_("Integração com a Steam indisponível"))
+            return
+        self.steam_estado_spinner.set_visible(True)
+
+        def trabalho() -> None:
+            try:
+                estado = manager.estado()
+            except Exception as erro:  # pylint: disable=broad-exception-caught
+                logging.warning("Falha ao ler o estado da skin: %s", erro)
+                entregar_na_tela(self._estado_steam_pronto, None, True)
+            else:
+                entregar_na_tela(self._estado_steam_pronto, estado, False)
+
+        threading.Thread(target=trabalho, daemon=True).start()
+
+    def _estado_steam_pronto(self, estado: Any, falhou: bool) -> bool:
+        self.steam_estado_spinner.set_visible(False)
+        if falhou:
+            self.steam_estado_row.set_subtitle(_("Não foi possível verificar a Steam"))
+            return GLib.SOURCE_REMOVE
+        self.steam_estado_row.set_subtitle(self._texto_do_estado(estado))
+        return GLib.SOURCE_REMOVE
+
+    def _texto_do_estado(self, estado: Any) -> str:
+        if isinstance(estado, dict):
+            for chave in ("mensagem", "message", "descricao", "description"):
+                valor = estado.get(chave)
+                if isinstance(valor, str) and valor:
+                    return valor
+            estado = estado.get("estado") or estado.get("state") or estado.get("status")
+        chave = getattr(estado, "value", estado)
+        chave = getattr(chave, "name", chave)
+        if isinstance(chave, str):
+            chave = chave.strip().lower().replace("-", "_").replace(" ", "_")
+        return _estados_steam().get(chave, _("Estado desconhecido"))
+
+    # -- perfil compartilhado e sincronização ------------------------------
+
+    def _perfil_steam(self) -> dict:
+        """Perfil tema+destaque+opções no formato entendido pela lane.
+
+        O ``SteamSkinManager`` lê ``theme_slug``, ``accent_custom``/``accent``,
+        ``mode`` e as opções finas aninhadas em ``opcoes_avancadas``.
+        """
+        base: dict = {}
+        manager = self._manager_tema
+        funcao = getattr(manager, "perfil_compartilhado", None) if manager else None
+        if callable(funcao):
+            try:
+                valor = funcao()
+            except Exception:  # pylint: disable=broad-exception-caught
+                valor = None
+            if isinstance(valor, dict):
+                base = dict(valor)
+        base.setdefault("theme_slug", self._slug_atual())
+        base.setdefault("mode", self._modo_atual())
+        base.setdefault("accent_custom", shared.schema.get_string("theme-accent-custom"))
+        base.setdefault("accent", self._accent_do_tema())
+        base.setdefault("glows", self._glows_ativos())
+        base["opcoes_avancadas"] = self._opcoes_avancadas()
+        return base
+
+    def _accent_do_tema(self) -> str:
+        """Destaque da paleta do tema atual, usado quando não há cor própria."""
+        catalogo = self._catalogo_temas
+        if catalogo is None:
+            return ""
+        _fundo, destaque = catalogo.cores(self._slug_atual())
+        return destaque or ""
+
+    def _agendar_sync_steam(self) -> None:
+        """Debounce: só sincroniza a skin depois que o usuário para de mexer."""
+        if self._sync_steam_id is not None:
+            GLib.source_remove(self._sync_steam_id)
+        self._sync_steam_id = GLib.timeout_add(700, self._sincronizar_steam)
+
+    def _sincronizar_steam(self) -> bool:
+        self._sync_steam_id = None
+        if not shared.schema.get_boolean("steam-skin-enabled"):
+            return GLib.SOURCE_REMOVE
+        manager = self._steam_manager()
+        if manager is None:
+            return GLib.SOURCE_REMOVE
+        perfil = self._perfil_steam()
+
+        def trabalho() -> None:
+            try:
+                manager.sincronizar_se_habilitado(perfil)
+            except Exception:  # pylint: disable=broad-exception-caught
+                logging.warning("Falha ao sincronizar a skin da Steam", exc_info=True)
+            else:
+                entregar_na_tela(self._atualizar_estado_steam)
+
+        threading.Thread(target=trabalho, daemon=True).start()
+        return GLib.SOURCE_REMOVE
+
+    # -- ações da skin ----------------------------------------------------
+
+    def _alternar_skin_steam(self, row: Adw.SwitchRow, *_args: Any) -> None:
+        if self._bloqueio_ui:
+            return
+        ativo = row.get_active()
+        shared.schema.set_boolean("steam-skin-enabled", ativo)
+        self._executar_acao_steam("aplicar" if ativo else "restaurar")
+
+    def _aplicar_skin_steam(self, *_args: Any) -> None:
+        self._executar_acao_steam("aplicar")
+
+    def _reparar_skin_steam(self, *_args: Any) -> None:
+        self._executar_acao_steam("reparar")
+
+    def _restaurar_skin_steam(self, *_args: Any) -> None:
+        self._executar_acao_steam("restaurar")
+
+    def _executar_acao_steam(self, acao: str) -> None:
+        manager = self._steam_manager()
+        if manager is None or self._steam_ocupada:
+            if manager is None:
+                self.add_toast(
+                    Adw.Toast.new(_("Integração com a Steam indisponível"))
+                )
+            return
+        self._steam_ocupada = True
+        self.steam_estado_spinner.set_visible(True)
+        self._definir_controles_steam(ativos=bool(self._instalacoes_steam))
+        mensagens = {
+            "aplicar": _("Aplicando o tema à Steam…"),
+            "reparar": _("Reparando a skin da Steam…"),
+            "restaurar": _("Restaurando a aparência original da Steam…"),
+        }
+        self.steam_estado_row.set_subtitle(mensagens.get(acao, _("Trabalhando…")))
+        perfil = self._perfil_steam()
+
+        def trabalho() -> None:
+            try:
+                if acao == "restaurar":
+                    manager.restaurar_original()
+                elif acao == "reparar":
+                    manager.sincronizar_se_habilitado(perfil)
+                else:
+                    manager.aplicar_perfil(perfil)
+            except Exception as erro:  # pylint: disable=broad-exception-caught
+                logging.warning("Ação da skin da Steam falhou (%s): %s", acao, erro)
+                entregar_na_tela(self._acao_steam_pronta, acao, True)
+            else:
+                entregar_na_tela(self._acao_steam_pronta, acao, False)
+
+        threading.Thread(target=trabalho, daemon=True).start()
+
+    def _acao_steam_pronta(self, acao: str, falhou: bool) -> bool:
+        self._steam_ocupada = False
+        self.steam_estado_spinner.set_visible(False)
+        self._definir_controles_steam(ativos=bool(self._instalacoes_steam))
+        if falhou:
+            self.add_toast(
+                Adw.Toast.new(_("Não foi possível concluir a ação. Tente de novo."))
+            )
+        else:
+            concluidas = {
+                "aplicar": _("Tema aplicado à Steam"),
+                "reparar": _("Skin da Steam reparada"),
+                "restaurar": _("Aparência original da Steam devolvida"),
+            }
+            self.add_toast(Adw.Toast.new(concluidas.get(acao, _("Pronto"))))
+        botoes = {
+            "aplicar": self.steam_aplicar_button,
+            "reparar": self.steam_reparar_button,
+            "restaurar": self.steam_restaurar_button,
+        }
+        botao = botoes.get(acao)
+        if botao is not None:
+            botao.grab_focus()
+        self._atualizar_estado_steam()
+        return GLib.SOURCE_REMOVE
+
+    def _ajustar_alvos_de_toque(self) -> None:
+        """Na sessão o controle é o ponteiro: alvos de ~44 px."""
+        if not shared.runtime.is_session:
+            return
+        for botao in (
+            self.steam_aplicar_button,
+            self.steam_reparar_button,
+            self.steam_restaurar_button,
+        ):
+            botao.set_size_request(-1, 44)
+        self.tema_cor_button.set_size_request(44, 44)
 
     # (código gettext, nome no próprio idioma). Os nomes não passam por
     # gettext de propósito: o autônimo é igual em todo locale.

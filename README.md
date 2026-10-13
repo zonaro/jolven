@@ -137,6 +137,20 @@ installs any missing runtime dependencies and extracts Jolven under
 Each build is versioned `YY.DDD.HHMM` (2-digit year, day of year, 24h
 hour+minute of the compilation) — see `scripts/publish-release.sh`.
 
+## Appearance and themes
+
+Jolven ships its own theme engine. Open **Preferences → Appearance** to pick a
+theme from a gallery of 24 palettes, switch between light, dark and automatic
+modes, and choose an accent colour (preset or custom) — all applied live, with
+no restart. The default is the **Jolven** theme, which keeps the app's
+purple/lilac identity and adds optional RGB glows.
+
+The same appearance profile can be applied to Steam: enable **Apply skin to
+Steam** (off by default) and Jolven installs, syncs, repairs and restores a
+bundled [Adwaita-for-Steam](https://github.com/tkashkin/Adwaita-for-Steam) skin,
+without any external skin manager. Native, Flatpak and Snap Steam installs are
+detected. See [.agents/themes.md](.agents/themes.md) for details.
+
 ## Building manually
 
 See [CONTRIBUTING.md](CONTRIBUTING.md#building).

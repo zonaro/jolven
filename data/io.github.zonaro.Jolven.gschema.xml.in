@@ -295,6 +295,57 @@
       </choices>
       <default>"jolven-dpad"</default>
     </key>
+    <key name="theme-slug" type="s">
+      <choices>
+        <choice value="adwaita" />
+        <choice value="adwaita-gray" />
+        <choice value="breeze" />
+        <choice value="canta" />
+        <choice value="catppuccin-frappe" />
+        <choice value="catppuccin-latte" />
+        <choice value="catppuccin-macchiato" />
+        <choice value="catppuccin-mocha" />
+        <choice value="dracula" />
+        <choice value="everforest" />
+        <choice value="gruvbox" />
+        <choice value="kate" />
+        <choice value="metro" />
+        <choice value="nord" />
+        <choice value="oled" />
+        <choice value="one-dark" />
+        <choice value="pop" />
+        <choice value="rose-pine" />
+        <choice value="tokyo-night" />
+        <choice value="tomorrow-night" />
+        <choice value="vapor" />
+        <choice value="vgui2" />
+        <choice value="yaru" />
+        <choice value="jolven" />
+      </choices>
+      <default>"jolven"</default>
+      <summary>Application theme selection</summary>
+    </key>
+    <key name="theme-mode" type="s">
+      <choices>
+        <choice value="light" />
+        <choice value="dark" />
+        <choice value="auto" />
+      </choices>
+      <default>"auto"</default>
+      <summary>Colour scheme mode</summary>
+    </key>
+    <key name="theme-accent-custom" type="s">
+      <default>""</default>
+      <summary>Custom accent colour in #RRGGBB format (empty = theme default)</summary>
+    </key>
+    <key name="steam-skin-enabled" type="b">
+      <default>false</default>
+      <summary>Apply the selected theme as a skin to Steam</summary>
+    </key>
+    <key name="steam-install-path" type="s">
+      <default>""</default>
+      <summary>Custom Steam installation path (empty = auto-detect)</summary>
+    </key>
     <key name="recorder-enabled" type="b">
       <default>false</default>
       <summary>Enable the Jolven screen recorder</summary>

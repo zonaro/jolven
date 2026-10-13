@@ -11,3 +11,40 @@
     color: rgba(0, 0, 0, .8);
     background-color: white;
 }
+
+/* ── Jolven: brilhos RGB no modo escuro (somente tema jolven) ──────────────
+   Ajuste mais luminoso para o fundo escuro. Só box-shadow/border: sem
+   impacto no layout em 360px ou na sessão Gamescope. */
+
+.jolven-glow-accent {
+  box-shadow: 0 0 8px 1px alpha(var(--accent-color, #c9a7f5), 0.6);
+}
+
+.jolven-glow-card {
+  box-shadow: 0 0 14px 2px alpha(var(--accent-color, #c9a7f5), 0.3);
+}
+
+.jolven-rgb-border {
+  border: 1px solid alpha(var(--accent-color, #c9a7f5), 0.65);
+  box-shadow: 0 0 10px alpha(var(--accent-color, #c9a7f5), 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jolven-glow-accent,
+  .jolven-glow-card,
+  .jolven-rgb-border {
+    transition: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .jolven-glow-accent,
+  .jolven-glow-card {
+    box-shadow: 0 0 0 3px currentColor;
+  }
+
+  .jolven-rgb-border {
+    border: 2px solid currentColor;
+    box-shadow: none;
+  }
+}

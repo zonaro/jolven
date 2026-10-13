@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="112" viewBox="0 0 180 112" role="img" aria-label="Jolven">
+<defs><radialGradient id="g" cx="38%" cy="34%" r="70%"><stop offset="0%" stop-color="#c9b6f2" stop-opacity="0.38"/><stop offset="45%" stop-color="#9b7ee0" stop-opacity="0.15"/><stop offset="100%" stop-color="#8e6fd8" stop-opacity="0"/></radialGradient></defs>
+<rect x="0" y="0" width="180" height="112" rx="10" fill="#1e1e2e"/>
+<rect x="0" y="0" width="180" height="112" rx="10" fill="url(#g)"/>
+<path d="M0 10a10 10 0 0 1 10-10h160a10 10 0 0 1 10 10v12H0z" fill="#11111b"/>
+<circle cx="12" cy="11" r="3" fill="#141420"/>
+<circle cx="22" cy="11" r="3" fill="#141420"/>
+<rect x="86" y="7" width="52" height="8" rx="4" fill="#343443"/>
+<rect x="0" y="22" width="34" height="90" fill="#181824"/>
+<rect x="9" y="34" width="16" height="5" rx="2.5" fill="#3584e4"/>
+<rect x="9" y="48" width="16" height="5" rx="2.5" fill="#343443"/>
+<rect x="9" y="62" width="16" height="5" rx="2.5" fill="#343443"/>
+<rect x="46" y="34" width="38" height="52" rx="5" fill="#212c47"/>
+<rect x="92" y="34" width="38" height="52" rx="5" fill="#20273e"/>
+<rect x="138" y="34" width="34" height="52" rx="5" fill="#212c47"/>
+<rect x="46" y="44" width="38" height="16" rx="0" fill="#3584e4" opacity="0.85"/>
+<rect x="46" y="93" width="46" height="12" rx="6" fill="#3584e4" stroke="#62626d" stroke-width="1"/>
+<circle cx="53" cy="99" r="2.5" fill="#3f8ae5"/>
+<rect x="104" y="93" width="34" height="12" rx="6" fill="#343443"/>
+</svg>

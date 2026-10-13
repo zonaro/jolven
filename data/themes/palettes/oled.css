@@ -1,0 +1,5 @@
+/* OLED — paleta do tema Jolven. Gerada a partir de cartridges/themes/catalog.py. */
+:root {
+  --accent-color: #ffb4a0;
+  --accent-bg-color: #ff6e4a;
+}

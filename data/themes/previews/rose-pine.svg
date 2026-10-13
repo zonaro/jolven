@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="112" viewBox="0 0 180 112" role="img" aria-label="Rosé Pine">
+<rect x="0" y="0" width="180" height="112" rx="10" fill="#191724"/>
+<path d="M0 10a10 10 0 0 1 10-10h160a10 10 0 0 1 10 10v12H0z" fill="#14121a"/>
+<circle cx="12" cy="11" r="3" fill="#15131c"/>
+<circle cx="22" cy="11" r="3" fill="#15131c"/>
+<rect x="86" y="7" width="52" height="8" rx="4" fill="#302e3a"/>
+<rect x="0" y="22" width="34" height="90" fill="#16141f"/>
+<rect x="9" y="34" width="16" height="5" rx="2.5" fill="#ebbcba"/>
+<rect x="9" y="48" width="16" height="5" rx="2.5" fill="#302e3a"/>
+<rect x="9" y="62" width="16" height="5" rx="2.5" fill="#302e3a"/>
+<rect x="46" y="34" width="38" height="52" rx="5" fill="#362e39"/>
+<rect x="92" y="34" width="38" height="52" rx="5" fill="#2c2632"/>
+<rect x="138" y="34" width="34" height="52" rx="5" fill="#362e39"/>
+<rect x="46" y="44" width="38" height="16" rx="0" fill="#ebbcba" opacity="0.85"/>
+<rect x="46" y="93" width="46" height="12" rx="6" fill="#ebbcba" stroke="#5e5d66" stroke-width="1"/>
+<circle cx="53" cy="99" r="2.5" fill="#ecbfbd"/>
+<rect x="104" y="93" width="34" height="12" rx="6" fill="#302e3a"/>
+</svg>
