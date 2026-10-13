@@ -5,13 +5,18 @@ Responsabilidades
 1. Gerar um ``Gtk.CssProvider`` dedicado a partir de uma :class:`Palette`.
 2. Instalar/remover o provider no display padrão, em
    ``Gtk.STYLE_PROVIDER_PRIORITY_USER``, para a cor mudar ao vivo, sem restart.
-3. Emitir apenas as variáveis de destaque (``--accent-color`` e
-   ``--accent-bg-color``), deixando os fundos claros/escuros para o libadwaita.
+3. Emitir a paleta COMPLETA do libadwaita (``Palette.gtk_variables``: fundos
+   de janela/view/headerbar/sidebars/cards/diálogos/popovers, bordas, sombras
+   e destaques), deixando as cores semânticas para o libadwaita.
 4. Resolver o modo ``auto`` pelo :class:`Adw.StyleManager`, com fallback.
 
 Notas de projeto
 ----------------
 * Nenhum CSS do Steam é carregado no GTK.
+* O provider roda em prioridade USER, acima do ``style.css`` do app (que o
+  GTK carrega sozinho do GResource em prioridade APPLICATION): o tema sempre
+  vence, e o ``:root`` do ``style.css`` vira só um fallback para antes da
+  primeira aplicação.
 * A aplicação é idempotente: reaplicar o mesmo estado não reescreve o provider
   (debounce mínimo). O agendamento com ``GLib.timeout`` fica no ``ThemeManager``.
 * Nada aqui bloqueia a thread principal do GTK — só há carga de CSS em memória.
@@ -29,7 +34,7 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, Gdk, Gtk
 
 from cartridges.themes.catalog import obter_tema, tema_padrao
-from cartridges.themes.palette import Palette, validar_hex
+from cartridges.themes.palette import Palette, cor_contraste, validar_hex
 
 _LOG = logging.getLogger(__name__)
 
@@ -81,12 +86,17 @@ def _gerar_css(
     glows: bool,
     acento_custom: str | None,
 ) -> str:
-    """Monta o CSS ``:root`` determinístico para a paleta e o modo."""
-    variaveis = dict(paleta.css_variables())
+    """Monta o CSS ``:root`` determinístico para a paleta e o modo.
+
+    ``--accent-color`` NÃO é emitido: o libadwaita deriva o acento
+    "standalone" do NOSSO ``--accent-bg-color``. O acento personalizado,
+    quando válido, sobrescreve ``--accent-bg-color``/``--accent-fg-color``.
+    """
+    variaveis = paleta.gtk_variables(modo)
     acento = validar_hex(acento_custom)
     if acento:
         variaveis["--accent-bg-color"] = acento
-        variaveis["--accent-color"] = acento
+        variaveis["--accent-fg-color"] = cor_contraste(acento)
 
     linhas = "\n".join(f"  {chave}: {valor};" for chave, valor in variaveis.items())
     partes = [f":root {{\n{linhas}\n}}\n"]

@@ -399,3 +399,8 @@ flowboxchild:focus-visible {
     box-shadow: none;
   }
 }
+
+/* A largura útil das páginas de Preferências é definida em código: o
+   AdwPreferencesPage embute um AdwClamp com maximum_size = 600 e o GTK não
+   expõe esse teto ao CSS (e não suporta media query por largura). Ver
+   CartridgesPreferences._alargar_paginas. */

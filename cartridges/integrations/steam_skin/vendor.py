@@ -80,6 +80,33 @@ def colortheme_path(slug: str) -> Path:
     return colorthemes_dir() / slug / f"{slug}.css"
 
 
+def extras_dir() -> Path:
+    """Directory holding the vendored ``extras/**/*.css`` option files."""
+    return vendor_root() / "extras"
+
+
+def windowcontrols_dir() -> Path:
+    """Directory holding the vendored ``windowcontrols/*.css`` files."""
+    return vendor_root() / "windowcontrols"
+
+
+def fonts_dir() -> Path:
+    """Directory holding the vendored ``fonts/<name>/<name>.css`` files."""
+    return vendor_root() / "fonts"
+
+
+def list_fonts() -> list[str]:
+    """Sorted list of vendored font names (directories with ``<name>.css``)."""
+    directory = fonts_dir()
+    if not directory.is_dir():
+        return []
+    return sorted(
+        entry.name
+        for entry in directory.iterdir()
+        if entry.is_dir() and (entry / f"{entry.name}.css").is_file()
+    )
+
+
 def list_colorthemes() -> list[str]:
     """Sorted list of vendored colortheme slugs."""
     directory = colorthemes_dir()

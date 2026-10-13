@@ -15,6 +15,7 @@
 
 from __future__ import annotations
 
+import builtins
 import logging
 import os
 from enum import Enum
@@ -39,6 +40,23 @@ from cartridges.integrations.steam_skin.detector import (
 # ── State ────────────────────────────────────────────────────────────────
 
 
+def _(mensagem: str) -> str:
+    """Translate *mensagem* via the launcher-installed gettext, else identity.
+
+    Defined locally (instead of assuming the ``_`` builtin like UI modules
+    do) because :data:`TEXTOS_ESTADO` is evaluated at import time — this way
+    tests and tools importing this backend module without the launcher keep
+    working, and ``xgettext`` still extracts the marked strings.
+    """
+    traduzir = getattr(builtins, "_", None)
+    if callable(traduzir):
+        try:
+            return str(traduzir(mensagem))
+        except Exception:  # pylint: disable=broad-exception-caught
+            pass
+    return mensagem
+
+
 class Estado(Enum):
     """Health of the Steam skin for a given installation."""
 
@@ -58,6 +76,71 @@ class Estado(Enum):
     PERMISSAO = "permissao"
     #: Another tool patched one of the CSS files (unknown header).
     CONFLITO_TERCEIROS = "conflito_terceiros"
+
+
+#: User-visible label for every :class:`Estado`, keyed by the enum member
+#: itself so adding a state without a label is a visible gap instead of a
+#: silent ``"Estado desconhecido"``. UI code must derive from this table
+#: (never from a parallel hand-written map) to stay divergence-proof.
+TEXTOS_ESTADO: "dict[Estado, str]" = {
+    Estado.NAO_ENCONTRADA: _("Steam não encontrada"),
+    Estado.NAO_INSTALADA: _("Skin não instalada"),
+    Estado.SINCRONIZADA: _("Sincronizada"),
+    Estado.ATUALIZACAO_NECESSARIA: _("Atualização necessária"),
+    Estado.AGUARDANDO_REINICIO: _("Aguarde reiniciar a Steam"),
+    Estado.INCOMPATIVEL: _("Instalação incompatível"),
+    Estado.PERMISSAO: _("Erro de permissão"),
+    Estado.CONFLITO_TERCEIROS: _("Há outra personalização na Steam"),
+}
+
+#: Legacy English keys once used by the preferences page. Kept one-way
+#: (old → current) so persisted or in-flight values still resolve.
+_CHAVES_LEGADAS: dict[str, Estado] = {
+    "not_found": Estado.NAO_ENCONTRADA,
+    "not_installed": Estado.NAO_INSTALADA,
+    "synced": Estado.SINCRONIZADA,
+    "update_needed": Estado.ATUALIZACAO_NECESSARIA,
+    "awaiting_restart": Estado.AGUARDANDO_REINICIO,
+    "incompatible": Estado.INCOMPATIVEL,
+    "permission_error": Estado.PERMISSAO,
+    "conflict": Estado.CONFLITO_TERCEIROS,
+}
+
+
+def _normalizar_chave(valor: object) -> Optional[Estado]:
+    """Resolve *valor* (``Estado``, value string or legacy key) to ``Estado``."""
+    if isinstance(valor, Estado):
+        return valor
+    if isinstance(valor, str):
+        chave = valor.strip().lower().replace("-", "_").replace(" ", "_")
+        for estado in Estado:
+            if chave == estado.value:
+                return estado
+        return _CHAVES_LEGADAS.get(chave)
+    return None
+
+
+def texto_do_estado(estado: object) -> str:
+    """User-visible label for a skin state.
+
+    Accepts an :class:`Estado`, its value string, a legacy English key, or a
+    legacy payload dict (``{"estado"/"state"/"status": ...}`` or
+    ``{"mensagem"/"message"/"descricao"/"description": ...}``). Anything
+    unrecognised falls back to ``"Estado desconhecido"``.
+    """
+    if isinstance(estado, dict):
+        for chave in ("mensagem", "message", "descricao", "description"):
+            valor = estado.get(chave)
+            if isinstance(valor, str) and valor:
+                return valor
+        estado = estado.get("estado") or estado.get("state") or estado.get("status")
+    resolvido = _normalizar_chave(estado)
+    if resolvido is None:
+        nome = getattr(estado, "name", None)
+        resolvido = _normalizar_chave(nome) if isinstance(nome, str) else None
+    if resolvido is None:
+        return _("Estado desconhecido")
+    return TEXTOS_ESTADO[resolvido]
 
 
 #: First-line tokens that mark a foreign (non-Adwaita-for-Steam) patch.
@@ -252,15 +335,26 @@ def verificar_estado(steam_path: "str | Path") -> Estado:
 
 def precisa_reparo(steam_path: "str | Path") -> bool:
     """``True`` when the skin is installed but needs to be reapplied."""
-    return verificar_estado(steam_path) is Estado.ATUALIZACAO_NECESSARIA
+    return verificar_estado(steam_path) in (
+        Estado.ATUALIZACAO_NECESSARIA,
+        Estado.INCOMPATIVEL,
+    )
 
 
 def reparar_se_seguro(steam_path: "str | Path", perfil: Optional[dict] = None) -> bool:
     """Reapply the skin only when it can be done without data loss.
 
-    Refuses when the target is missing, unwritable, in conflict with a
-    third party, unrepairable (missing backup) or already in sync, and
-    defers whenever Steam is running. Returns ``True`` when a repair ran.
+    Repairs both ``ATUALIZACAO_NECESSARIA`` (wiped/outdated patch) and
+    ``INCOMPATIVEL`` (skin directory or backup missing) by reinstalling via
+    :func:`installer.instalar`, which rebuilds the whole skin tree and
+    reapplies the patches. Refuses when the target is missing, unwritable,
+    in conflict with a third party or already in sync, and defers whenever
+    Steam is running. Returns ``True`` when the repair applied changes.
+
+    A missing backup cannot be recreated (the pristine Steam content is
+    already lost), so that sub-case stays ``INCOMPATIVEL`` afterwards — but
+    the repair itself is still safe: already-patched files are simply
+    rewritten with a fresh valid patch and nothing else is touched.
     """
     steam = expand_steam_path(steam_path)
     estado = verificar_estado(steam)
@@ -270,7 +364,6 @@ def reparar_se_seguro(steam_path: "str | Path", perfil: Optional[dict] = None) -
         Estado.NAO_INSTALADA,
         Estado.PERMISSAO,
         Estado.CONFLITO_TERCEIROS,
-        Estado.INCOMPATIVEL,
         Estado.SINCRONIZADA,
     ):
         logging.debug("No safe repair for state %s", estado)

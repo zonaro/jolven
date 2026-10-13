@@ -55,6 +55,82 @@ def validar_hex(valor: str | None) -> str | None:
     return valor if _HEX_RE.match(valor) else None
 
 
+#: Fundos de recuo quando a paleta não informa ``bg`` (ex.: CSS mínimo só com
+#: destaque). Espelham os tons neutros padrão do libadwaita.
+_FUNDO_CLARO = "#fafafa"
+_FUNDO_ESCURO = "#242424"
+
+#: Destaque de recuo quando a paleta não informa ``accent_bg`` (azul Adwaita).
+_ACENTO_FALLBACK = "#3584e4"
+
+#: Texto sobre fundo escuro / sobre fundo claro (contraste máximo, legível em
+#: qualquer paleta do catálogo).
+_FG_SOBRE_ESCURO = "white"
+_FG_SOBRE_CLARO = "black"
+
+
+def _rgb_de_hex(cor: str) -> tuple[int, int, int] | None:
+    """Decompõe um hex (``#RGB``/``#RRGGBB`` e variantes com alfa) em RGB."""
+    texto = cor.strip().lstrip("#")
+    if len(texto) in (3, 4):
+        texto = "".join(caractere * 2 for caractere in texto[:3])
+    if len(texto) < 6:
+        return None
+    try:
+        return (int(texto[0:2], 16), int(texto[2:4], 16), int(texto[4:6], 16))
+    except ValueError:
+        return None
+
+
+def _luminancia(cor: str) -> float | None:
+    """Luminância sRGB aproximada (0 = preto, 1 = branco) ou ``None``."""
+    rgb = _rgb_de_hex(cor)
+    if rgb is None:
+        return None
+    vermelho, verde, azul = rgb
+    return (0.2126 * vermelho + 0.7152 * verde + 0.0722 * azul) / 255
+
+
+def cor_contraste(fundo: str) -> str:
+    """Cor de texto legível sobre *fundo*: ``"white"`` ou ``"black"``.
+
+    Decide pela luminância do fundo; um valor irreconhecível é tratado como
+    escuro (texto claro), que é o caso dominante do catálogo.
+    """
+    luminancia = _luminancia(fundo)
+    if luminancia is not None and luminancia >= 0.5:
+        return _FG_SOBRE_CLARO
+    return _FG_SOBRE_ESCURO
+
+
+def _escurecer(cor: str, fator: float) -> str:
+    """Escurece *cor* multiplicando os canais por *fator* (0–1).
+
+    Usado para derivar ``backdrop``/``shade``/``darker-shade`` do fundo
+    correspondente. Devolve ``"#808080"`` quando a cor não pode ser lida,
+    para o CSS gerado nunca carregar um valor inválido.
+    """
+    rgb = _rgb_de_hex(cor)
+    if rgb is None:
+        return "#808080"
+    r, g, b = (max(0, min(255, round(canal * fator))) for canal in rgb)
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+
+def _suplementar(supplementary: dict[str, str | None], *nomes: str) -> str | None:
+    """Lê uma cor complementar aceitando chave com ``_`` ou ``-``.
+
+    O catálogo usa ``card_bg`` enquanto CSS externos podem trazer
+    ``card-bg``; ambas as grafias valem. Só devolve hex válido.
+    """
+    for nome in nomes:
+        for variante in {nome, nome.replace("_", "-"), nome.replace("-", "_")}:
+            cor = validar_hex(supplementary.get(variante))
+            if cor is not None:
+                return cor
+    return None
+
+
 @dataclass(frozen=True)
 class Palette:
     """Paleta imutável de um tema.
@@ -95,6 +171,84 @@ class Palette:
         if accent_texto:
             variaveis["--accent-color"] = accent_texto
         return variaveis
+
+    def gtk_variables(self, modo: str) -> dict[str, str]:
+        """Paleta COMPLETA do libadwaita a partir dos campos desta ``Palette``.
+
+        Devolve as variáveis ``:root`` que pintam janela, headerbar, sidebars,
+        cards, diálogos, popovers e destaques — o conjunto que o
+        ``gtk_engine`` instala ao vivo no display. ``modo`` é o modo efetivo
+        (``"light"`` ou ``"dark"``); qualquer outro valor é tratado como
+        escuro, igual ao fallback do motor de GTK.
+
+        Regras de derivação (determinísticas, sem GTK nesta camada):
+
+        * Fundos: ``window``/``view``/``dialog`` usam ``bg``;
+          ``headerbar``/``sidebar`` usam ``headerbar_bg``;
+          ``card``/``popover``/``secondary-sidebar``/``thumbnail`` usam
+          ``supplementary["card_bg"]`` com recuo para ``bg``.
+        * Textos (``*-fg-color``): ``"white"`` sobre fundo escuro e
+          ``"black"`` sobre fundo claro, por luminância — nunca se confia no
+          fg do modo, pois o catálogo tem temas claros e escuros.
+        * ``--accent-bg-color`` = ``accent_bg``; ``--accent-fg-color`` = o
+          contraste sobre ele. ``--accent-color`` NÃO é emitido: o libadwaita
+          deriva o acento "standalone" do NOSSO ``--accent-bg-color``
+          (``oklab(from var(--accent-bg-color) ...)``), com contraste
+          adequado em claro e escuro.
+        * ``--border-color`` = ``supplementary["border"]``;
+          ``--shade-color`` = ``rgba(0,0,0,0.36)`` no escuro e
+          ``rgba(0,0,0,0.12)`` no claro.
+        * ``backdrop``/``shade``/``darker-shade`` escurecem o fundo
+          correspondente por fatores fixos.
+        * Cores semânticas (``--destructive-*``, ``--success-*``,
+          ``--warning-*``, ``--error-*``) NUNCA são emitidas: a UI exige
+          respeitar as do libadwaita.
+        """
+        escuro = modo != "light"
+
+        bg = validar_hex(self.bg) or (_FUNDO_ESCURO if escuro else _FUNDO_CLARO)
+        headerbar_bg = validar_hex(self.headerbar_bg) or bg
+        card_bg = _suplementar(self.supplementary, "card_bg", "card-bg") or bg
+        border = _suplementar(self.supplementary, "border") or _escurecer(bg, 0.75)
+        accent_bg = validar_hex(self.accent_bg) or _ACENTO_FALLBACK
+        shade = "rgba(0, 0, 0, 0.36)" if escuro else "rgba(0, 0, 0, 0.12)"
+
+        return {
+            "--window-bg-color": bg,
+            "--window-fg-color": cor_contraste(bg),
+            "--view-bg-color": bg,
+            "--view-fg-color": cor_contraste(bg),
+            "--headerbar-bg-color": headerbar_bg,
+            "--headerbar-fg-color": cor_contraste(headerbar_bg),
+            "--headerbar-backdrop-color": _escurecer(headerbar_bg, 0.92),
+            "--headerbar-border-color": border,
+            "--headerbar-shade-color": _escurecer(headerbar_bg, 0.85),
+            "--headerbar-darker-shade-color": _escurecer(headerbar_bg, 0.75),
+            "--sidebar-bg-color": headerbar_bg,
+            "--sidebar-fg-color": cor_contraste(headerbar_bg),
+            "--sidebar-backdrop-color": _escurecer(headerbar_bg, 0.92),
+            "--sidebar-border-color": border,
+            "--sidebar-shade-color": _escurecer(headerbar_bg, 0.85),
+            "--secondary-sidebar-bg-color": card_bg,
+            "--secondary-sidebar-fg-color": cor_contraste(card_bg),
+            "--secondary-sidebar-backdrop-color": _escurecer(card_bg, 0.92),
+            "--secondary-sidebar-border-color": border,
+            "--secondary-sidebar-shade-color": _escurecer(card_bg, 0.85),
+            "--card-bg-color": card_bg,
+            "--card-fg-color": cor_contraste(card_bg),
+            "--card-shade-color": _escurecer(card_bg, 0.88),
+            "--dialog-bg-color": bg,
+            "--dialog-fg-color": cor_contraste(bg),
+            "--popover-bg-color": card_bg,
+            "--popover-fg-color": cor_contraste(card_bg),
+            "--popover-shade-color": _escurecer(card_bg, 0.8),
+            "--thumbnail-bg-color": card_bg,
+            "--thumbnail-fg-color": cor_contraste(card_bg),
+            "--accent-bg-color": accent_bg,
+            "--accent-fg-color": cor_contraste(accent_bg),
+            "--border-color": border,
+            "--shade-color": shade,
+        }
 
 
 def _parece_escuro(cor: str | None) -> bool:

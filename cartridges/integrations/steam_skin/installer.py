@@ -267,6 +267,166 @@ def info_do_patch(css_path: "str | Path") -> dict[str, str]:
 # ── config.css ───────────────────────────────────────────────────────────
 
 
+#: Installer/profile key enabled in ``opcoes`` → ``extras/`` file, mirroring
+#: upstream ``install.py --extras`` names (extensionless, as upstream lists
+#: them: ``general/cursor-pointer``, ``library/hide-whats-new``, …).
+OPCAO_EXTRA_MAP: dict[str, str] = {
+    "cursor_pointer": "general/cursor-pointer",
+    "hide_whats_new": "library/hide-whats-new",
+    "sidebar_hover": "library/sidebar-hover",
+    "uncrop_covers": "library/uncrop-covers-in-details",
+    "hide_qr": "login/hide-qr",
+}
+
+#: UI ``windowcontrols_theme`` value → vendored ``windowcontrols/`` file.
+#: Upstream 4.4 only ships style files (no light/dark variants): ``theme``
+#: (and ``auto``/``dark``) resolve to the scheme-adaptive Adwaita controls,
+#: ``light`` to the inherently light Breeze ones. Raw upstream names
+#: (``adwaita``, ``breeze``, ``macos``, ``windows``) pass through as-is.
+_MAPA_TEMA_CONTROLES: dict[str, str] = {
+    "theme": "adwaita",
+    "auto": "adwaita",
+    "light": "breeze",
+    "dark": "adwaita",
+}
+
+#: UI ``windowcontrols_layout`` value → GNOME-format layout string.
+#: ``default`` emits nothing, keeping Steam's native button placement.
+_PREDEFINIDOS_LAYOUT_JANELA: dict[str, str] = {
+    "left": "close,minimize,maximize:",
+    "right": ":minimize,maximize,close",
+}
+
+_BOTOES_CONTROLE: tuple[str, ...] = ("close", "minimize", "maximize")
+
+_SELETORES_BOTOES_JANELA: dict[str, tuple[str, ...]] = {
+    "minimize": ("&.minimizeButton",),
+    "maximize": ("&.maximizeButton", "&.restoreButton"),
+    "close": ("&.closeButton",),
+}
+
+_SELETORES_CHAT_JANELA: dict[str, str] = {
+    "left": (
+        "html.client_chat_frame "
+        "div.chat_main.singlewindow:not(:has(div.friendsListContainer.collapsed)) "
+        "div.multiChatDialog &"
+    ),
+    "right": (
+        "html.client_chat_frame div.chat_main.singlewindow "
+        "div.friendsListContainer:not(.collapsed) &"
+    ),
+}
+
+_RE_NOME_OPCAO = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_\-/]*$")
+
+
+def _nome_opcao_seguro(valor: object) -> Optional[str]:
+    """``valor`` when it is a safe relative CSS option name, else ``None``."""
+    if valor is None:
+        return None
+    texto = str(valor).strip()
+    if _RE_NOME_OPCAO.match(texto):
+        return texto
+    logging.warning("Ignoring unsafe skin option name: %r", valor)
+    return None
+
+
+def _extras_da_opcao(opcoes: dict) -> list[str]:
+    """Upstream-style extras list from UI booleans plus ``extras`` passthrough."""
+    extras: list[str] = []
+    for bruto in opcoes.get("extras") or []:
+        nome = _nome_opcao_seguro(bruto)
+        if nome and nome not in extras:
+            extras.append(nome)
+    # Rounded corners are the upstream default: only opt out explicitly.
+    if not opcoes.get("rounded_corners", True):
+        extras.append("general/no-rounded-corners")
+    for chave, relativo in OPCAO_EXTRA_MAP.items():
+        if opcoes.get(chave) and relativo not in extras:
+            extras.append(relativo)
+    return extras
+
+
+def _resolver_layout_controles(valor: object) -> Optional[str]:
+    """Normalise a layout option to a ``"left:right"`` string, or ``None``."""
+    if valor is None:
+        return None
+    texto = str(valor).strip().lower()
+    if not texto or texto in ("default", "auto"):
+        return None
+    if texto in _PREDEFINIDOS_LAYOUT_JANELA:
+        return _PREDEFINIDOS_LAYOUT_JANELA[texto]
+    if ":" in texto:
+        return texto
+    logging.warning("Ignoring unsupported window-controls layout: %r", valor)
+    return None
+
+
+def _css_layout_controles(layout: str, rotulo: str) -> Optional[str]:
+    """Render upstream-style window-controls layout CSS.
+
+    Faithful port of upstream ``AdwWindowControlsLayout.to_css()`` (tag 4.4):
+    ``:root`` variables plus the rules that hide Steam's native buttons and
+    reposition each enabled one. Returns ``None`` for an empty layout so a
+    bogus value can never hide every window button.
+    """
+    partes = layout.split(":")
+    if len(partes) != 2:
+        return None
+    lados = [
+        [botao for botao in (item.strip() for item in parte.split(",")) if botao in _BOTOES_CONTROLE]
+        for parte in partes
+    ]
+    esquerda, direita = lados
+    if not esquerda and not direita:
+        return None
+
+    def tem(botao: str, lado: list[str]) -> int:
+        return 1 if botao in lado else 0
+
+    linhas = [
+        f"/* Window controls layout: {rotulo} - {layout} */",
+        ":root",
+        "{",
+        f"    --adw-windowcontrols-left-has-buttons: {tem('close', esquerda) or tem('minimize', esquerda) or tem('maximize', esquerda)};",
+        f"    --adw-windowcontrols-left-buttons: {len(esquerda)};",
+        f"    --adw-windowcontrols-right-has-buttons: {tem('close', direita) or tem('minimize', direita) or tem('maximize', direita)};",
+        f"    --adw-windowcontrols-right-buttons: {len(direita)};",
+        "    --adw-windowcontrols-close-margin: calc(var(--adw-windowcontrols-buttons-margin-outer) + var(--adw-windowcontrols-button-width) + var(--adw-windowcontrols-buttons-margin-inner));",
+        f"    --adw-windowcontrols-close-margin-left: calc({tem('close', esquerda)} * var(--adw-windowcontrols-close-margin));",
+        f"    --adw-windowcontrols-close-margin-right: calc({tem('close', direita)} * var(--adw-windowcontrols-close-margin));",
+        "}",
+        "",
+        f"/* Window controls layout styles: {rotulo} - {layout} */",
+        "body.DesktopUI,",
+        "html.client_chat_frame",
+        "{",
+        "    .title-bar-actions.window-controls .title-area-icon",
+        "    {",
+        "        visibility: hidden !important;",
+    ]
+    for lado_nome, lado in (("left", esquerda), ("right", direita)):
+        for indice, botao in (
+            list(enumerate(lado)) if lado_nome == "left" else list(enumerate(reversed(lado)))
+        ):
+            for seletor in _SELETORES_BOTOES_JANELA[botao]:
+                linhas.extend(
+                    [
+                        f"        {seletor}",
+                        "        {",
+                        "            visibility: visible !important;",
+                        f"            {lado_nome}: calc(var(--adw-windowcontrols-buttons-margin-outer) + ({indice} * var(--adw-windowcontrols-button-width)) + ({indice} * var(--adw-windowcontrols-button-gap))) !important;",
+                        f"            {_SELETORES_CHAT_JANELA[lado_nome]}",
+                        "            {",
+                        "                visibility: hidden !important;",
+                        "            }",
+                        "        }",
+                    ]
+                )
+    linhas.extend(["    }", "}"])
+    return "\n".join(linhas) + "\n"
+
+
 def _system_accent_css() -> str:
     """Resolve the system accent to a CSS value, falling back to Adwaita blue."""
     try:
@@ -324,22 +484,32 @@ def _build_config_css(
     if tema_slug and tema_slug != DEFAULT_COLORTHEME:
         _add(f"colorthemes/{tema_slug}/{tema_slug}.css", f"Color theme: {tema_slug}")
 
-    for extra in opcoes.get("extras") or []:
+    for extra in _extras_da_opcao(opcoes):
         _add(f"extras/{extra}.css", f"Extra: {extra}")
 
-    font = opcoes.get("font")
+    font = _nome_opcao_seguro(opcoes.get("font"))
     if font:
         _add(f"fonts/{font}/{font}.css", f"Font: {font}")
 
     if opcoes.get("custom_css"):
         _add("custom.css", "Custom CSS")
 
-    windowcontrols = opcoes.get("windowcontrols_theme")
-    if windowcontrols:
-        _add(f"windowcontrols/{windowcontrols}.css", f"Window controls theme: {windowcontrols}")
+    controles = _nome_opcao_seguro(opcoes.get("windowcontrols_theme"))
+    if controles:
+        controles = _MAPA_TEMA_CONTROLES.get(controles.lower(), controles)
+        _add(f"windowcontrols/{controles}.css", f"Window controls theme: {controles}")
 
-    if opcoes.get("windowcontrols_layout"):
-        logging.info("Window-controls layout is not vendored; skipping it")
+    blocos: list[str] = []
+    layout = _resolver_layout_controles(opcoes.get("windowcontrols_layout"))
+    if layout is not None:
+        css_layout = _css_layout_controles(layout, str(opcoes.get("windowcontrols_layout")))
+        if css_layout:
+            blocos.append(css_layout)
+        else:
+            logging.warning(
+                "Skipping unrenderable window-controls layout: %r",
+                opcoes.get("windowcontrols_layout"),
+            )
 
     variables: list[str] = []
     accent_css = _accent_to_css(accent)
@@ -356,6 +526,7 @@ def _build_config_css(
         lines.append("{")
         lines.extend(f"    {variable}" for variable in variables)
         lines.append(f"}} /* Accent color: {accent}, color scheme: {mode} */")
+    lines.extend(f"\n{bloco}".rstrip("\n") for bloco in blocos)
     return "\n".join(lines) + "\n"
 
 
@@ -439,6 +610,11 @@ def _build_skin_tree(
         source = root / name
         if source.is_file():
             shutil.copy2(source, build_dir / name)
+
+    for sub in ("extras", "windowcontrols", "fonts"):
+        origem = root / sub
+        if origem.is_dir():
+            shutil.copytree(origem, build_dir / sub, dirs_exist_ok=True)
 
     custom = opcoes.get("custom_css") if opcoes else None
     if custom:

@@ -88,17 +88,17 @@ DESTAQUE_PADRAO = "#3584e4"
 
 
 def _estados_steam() -> dict[str, str]:
-    """Os oito estados possíveis da integração com a Steam (chave → texto)."""
-    return {
-        "not_found": _("Steam não encontrada"),
-        "not_installed": _("Skin não instalada"),
-        "synced": _("Sincronizada"),
-        "update_needed": _("Atualização necessária"),
-        "awaiting_restart": _("Aguarde reiniciar a Steam"),
-        "incompatible": _("Instalação incompatível"),
-        "permission_error": _("Erro de permissão"),
-        "conflict": _("Há outra personalização na Steam"),
-    }
+    """Os oito estados possíveis da integração com a Steam (chave → texto).
+
+    Derivado de ``recovery.TEXTOS_ESTADO`` (chaveado por ``Estado``) para que
+    a página nunca divirja do backend: um estado novo sem rótulo aparece aqui
+    automaticamente assim que for registrado lá.
+    """
+    from cartridges.integrations.steam_skin.recovery import (  # noqa: PLC0415
+        TEXTOS_ESTADO,
+    )
+
+    return {estado.value: texto for estado, texto in TEXTOS_ESTADO.items()}
 
 
 def _rgba_do_hex(hexcor: str) -> Gdk.RGBA:
@@ -237,13 +237,24 @@ class _CatalogoTemas:
 # ── Aparência: integração com a Steam ────────────────────────────────────
 
 #: Opções avançadas que a skin do Jolven realmente aplica. A árvore vendorada
-#: exclui de propósito ``fonts/**``, ``extras/**`` e ``windowcontrols/**``
-#: (ver ``data/vendor/adwaita-for-steam/UPSTREAM.md``), então o instalador não
-#: tem de onde copiar esses arquivos e nenhuma opção fina tem efeito na versão
-#: de linha de base. As linhas correspondentes aparecem insensíveis, com uma
-#: nota, em vez de sumirem. Se o gerenciador passar a anunciar capacidades, elas
-#: substituem este conjunto em tempo de execução.
-OPCOES_STEAM_PADRAO: frozenset[str] = frozenset()
+#: traz ``fonts/**``, ``extras/**`` e ``windowcontrols/**`` (ver
+#: ``data/vendor/adwaita-for-steam/UPSTREAM.md``) e o instalador copia esses
+#: arquivos para a skin, então todas as opções finas têm efeito. Serve de
+#: recuo quando o gerenciador não está disponível; com gerenciador, o que ele
+#: anuncia via ``opcoes_suportadas()`` prevalece.
+OPCOES_STEAM_PADRAO: frozenset[str] = frozenset(
+    {
+        "fonte",
+        "window-controls-theme",
+        "window-controls-layout",
+        "rounded-corners",
+        "cursor-pointer",
+        "hide-whats-new",
+        "sidebar-hover",
+        "uncrop-covers",
+        "hide-qr",
+    }
+)
 
 #: Todas as opções que a página sabe exibir, na ordem do ExpanderRow.
 OPCOES_STEAM: tuple[str, ...] = (
@@ -887,6 +898,48 @@ class CartridgesPreferences(Adw.PreferencesDialog):
         self.reler_fitas()
         self.setup_appearance_page()
         self.setup_steam_group()
+        # As páginas internas do AdwPreferencesDialog só entram na árvore quando
+        # o diálogo é mapeado; alargamos o clamp de cada uma nesse momento.
+        self.connect("map", lambda *_: self._alargar_paginas())
+
+    #: Largura útil das páginas de Preferências. O ``AdwPreferencesDialog`` tem
+    #: ``content-width: 920``, mas cada ``AdwPreferencesPage`` embute um
+    #: ``AdwClamp`` com ``maximum_size = 600`` que limita o conteúdo e não é
+    #: exposto ao CSS. Elevamos esse teto aqui; ``AdwClamp`` continua encolhendo
+    #: em janelas estreitas (o valor é um teto, não um piso), então o layout
+    #: permanece íntegro a partir de 360px.
+    LARGURA_PAGINA = 856
+
+    def _alargar_paginas(self) -> None:
+        """Aumenta o ``AdwClamp`` estrutural de cada página de Preferências.
+
+        Só toca no clamp da própria página (cadeia
+        ``PreferencesPage > ScrolledWindow > Viewport > Clamp``); os clamps de
+        conteúdo (``StatusPage``) e da barra superior têm outro pai e ficam
+        como estão.
+        """
+        pilha: list[Gtk.Widget] = [self]
+        while pilha:
+            widget = pilha.pop()
+            filho = widget.get_first_child()
+            while filho is not None:
+                pilha.append(filho)
+                filho = filho.get_next_sibling()
+            if not isinstance(widget, Adw.Clamp):
+                continue
+            viewport = widget.get_parent()
+            scrolled = viewport.get_parent() if viewport is not None else None
+            pagina = scrolled.get_parent() if scrolled is not None else None
+            if not (
+                isinstance(viewport, Gtk.Viewport)
+                and isinstance(scrolled, Gtk.ScrolledWindow)
+                and isinstance(pagina, Adw.PreferencesPage)
+            ):
+                continue
+            try:
+                widget.set_maximum_size(self.LARGURA_PAGINA)
+            except Exception:  # pylint: disable=broad-exception-caught
+                logging.debug("Não foi possível alargar a página", exc_info=True)
 
     def alternar_xcloud_login(self, *_args: Any) -> None:
         from cartridges import xcloud_login
@@ -1925,18 +1978,18 @@ class CartridgesPreferences(Adw.PreferencesDialog):
     def _criar_miniatura(self, slug: str) -> Gtk.FlowBoxChild:
         caixa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         for margem in ("set_margin_top", "set_margin_bottom"):
-            getattr(caixa, margem)(4)
-        for margem in ("set_margin_start", "set_margin_end"):
             getattr(caixa, margem)(6)
+        for margem in ("set_margin_start", "set_margin_end"):
+            getattr(caixa, margem)(8)
         caixa.append(self._figura_do_tema(slug))
 
-        rotulo = Gtk.Label(label=self._nome_do_tema(slug), wrap=True, max_width_chars=14)
+        rotulo = Gtk.Label(label=self._nome_do_tema(slug), wrap=True, max_width_chars=20)
         rotulo.set_justify(Gtk.Justification.CENTER)
         caixa.append(rotulo)
 
         filho = Gtk.FlowBoxChild(child=caixa)
         filho.add_css_class("card")
-        filho.set_size_request(140, -1)
+        filho.set_size_request(200, -1)
         filho.slug = slug  # type: ignore[attr-defined]
         return filho
 
@@ -1952,7 +2005,7 @@ class CartridgesPreferences(Adw.PreferencesDialog):
             figura = Gtk.Picture.new_for_paintable(textura)
             figura.set_content_fit(Gtk.ContentFit.CONTAIN)
             figura.set_can_shrink(True)
-            figura.set_size_request(126, 78)
+            figura.set_size_request(188, 118)
             figura.set_halign(Gtk.Align.CENTER)
             return figura
 
@@ -1962,8 +2015,8 @@ class CartridgesPreferences(Adw.PreferencesDialog):
             else (None, None)
         )
         area = Gtk.DrawingArea()
-        area.set_content_width(126)
-        area.set_content_height(78)
+        area.set_content_width(188)
+        area.set_content_height(118)
         area.set_halign(Gtk.Align.CENTER)
         area.set_draw_func(
             self._desenhar_miniatura,
@@ -2092,8 +2145,11 @@ class CartridgesPreferences(Adw.PreferencesDialog):
         """Grava a cor escolhida e sincroniza os controles dependentes."""
         shared.schema.set_string("theme-accent-custom", hexcor)
         self._aplicar_destaque()
-        if hexcor:
-            self._agendar_sync_steam()
+        # Qualquer mudança de destaque (inclusive voltar ao "Padrão", que
+        # grava "") altera o acento efetivo da Steam, então sempre re-sincro-
+        # niza a skin com debounce; o agendamento em si decide se há o que
+        # regravar a partir da assinatura do perfil.
+        self._agendar_sync_steam()
 
     def _cor_personalizada_escolhida(
         self, botao: Gtk.ColorDialogButton, *_args: Any
@@ -2343,6 +2399,10 @@ class CartridgesPreferences(Adw.PreferencesDialog):
             Gtk.StringList.new([_("Automático"), _("Todos à esquerda"), _("Todos à direita")])
         )
         self.steam_window_controls_layout_row.set_selected(0)
+        # Cantos arredondados são o padrão do Adwaita (e do upstream sem
+        # extras): o interruptor começa ligado para não mudar a aparência de
+        # quem nunca mexeu nas opções.
+        self.steam_rounded_corners_switch.set_active(True)
         self._atualizar_opcoes_disponiveis()
 
     def _opcoes_suportadas(self) -> set[str]:
@@ -2350,8 +2410,7 @@ class CartridgesPreferences(Adw.PreferencesDialog):
 
         Aceita tanto os ids usados na página (``fonte``) quanto as chaves do
         instalador (``font``); sem informação do gerenciador, vale o conjunto
-        padrão — vazio, porque a árvore vendorada não traz ``fonts``/``extras``/
-        ``windowcontrols``.
+        padrão — que espelha a árvore vendorada atual.
         """
         manager = self._steam_manager()
         if manager is not None:
@@ -2560,17 +2619,11 @@ class CartridgesPreferences(Adw.PreferencesDialog):
         return GLib.SOURCE_REMOVE
 
     def _texto_do_estado(self, estado: Any) -> str:
-        if isinstance(estado, dict):
-            for chave in ("mensagem", "message", "descricao", "description"):
-                valor = estado.get(chave)
-                if isinstance(valor, str) and valor:
-                    return valor
-            estado = estado.get("estado") or estado.get("state") or estado.get("status")
-        chave = getattr(estado, "value", estado)
-        chave = getattr(chave, "name", chave)
-        if isinstance(chave, str):
-            chave = chave.strip().lower().replace("-", "_").replace(" ", "_")
-        return _estados_steam().get(chave, _("Estado desconhecido"))
+        from cartridges.integrations.steam_skin.recovery import (  # noqa: PLC0415
+            texto_do_estado,
+        )
+
+        return texto_do_estado(estado)
 
     # -- perfil compartilhado e sincronização ------------------------------
 
@@ -2674,7 +2727,13 @@ class CartridgesPreferences(Adw.PreferencesDialog):
                 if acao == "restaurar":
                     manager.restaurar_original()
                 elif acao == "reparar":
-                    manager.sincronizar_se_habilitado(perfil)
+                    # Reparar é uma ação explícita do usuário: reconstrói a
+                    # skin mesmo com o toggle desligado.
+                    reparar = getattr(manager, "reparar", None)
+                    if callable(reparar):
+                        reparar(perfil)
+                    else:
+                        manager.sincronizar_se_habilitado(perfil)
                 else:
                     manager.aplicar_perfil(perfil)
             except Exception as erro:  # pylint: disable=broad-exception-caught

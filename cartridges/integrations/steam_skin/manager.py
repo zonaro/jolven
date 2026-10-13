@@ -149,6 +149,48 @@ class SteamSkinManager:
             logging.error("Steam skin sync failed: %s", error)
             return False
 
+    def reparar(self, perfil: dict) -> bool:
+        """Explicit user-triggered repair, ignoring the enabled toggle.
+
+        Unlike :meth:`sincronizar_se_habilitado` this is a demand action
+        (the "Reparar" button): it runs synchronously and rebuilds the skin
+        even when ``steam-skin-enabled`` is off. Only refuses when there is
+        nowhere safe to write (missing/unwritable target) or a third-party
+        conflict must be preserved. Returns ``True`` when something changed.
+        """
+        try:
+            path = self._resolver_caminho()
+            if path is None:
+                logging.info("No Steam installation found; nothing to repair")
+                return False
+            estado = recovery.verificar_estado(path)
+            if estado in (
+                Estado.NAO_ENCONTRADA,
+                Estado.PERMISSAO,
+                Estado.CONFLITO_TERCEIROS,
+            ):
+                logging.warning("Refusing Steam skin repair in state %s", estado)
+                return False
+            perfil = dict(perfil or {})
+            changed = installer.instalar(
+                path,
+                perfil.get("theme_slug") or DEFAULT_COLORTHEME,
+                self._accent_efetivo(perfil),
+                perfil.get("mode", "auto"),
+                perfil.get("opcoes_avancadas"),
+            )
+            self._last_signature = self._assinatura(perfil)
+            if recovery.steam_em_execucao():
+                self._precisa_reiniciar = True
+            logging.info("Steam skin repaired at %s (changed=%s)", path, changed)
+            return changed
+        except installer.SkinError as error:
+            logging.error("Steam skin repair failed: %s", error)
+            return False
+        except Exception as error:  # pylint: disable=broad-exception-caught
+            logging.error("Unexpected Steam skin repair error: %s", error)
+            return False
+
     def desabilitar(self) -> None:
         """Stop syncing. The installed skin is intentionally left in place."""
         self._sync_enabled = False
@@ -184,6 +226,49 @@ class SteamSkinManager:
         except Exception as error:  # pylint: disable=broad-exception-caught
             logging.error("Could not determine Steam skin state: %s", error)
             return Estado.NAO_ENCONTRADA
+
+    @staticmethod
+    def opcoes_suportadas() -> set[str]:
+        """Advanced option keys (installer spelling) actually implemented.
+
+        Derived from the vendored ``adwaita-for-steam`` tree, so the UI
+        enables exactly the options the installer can honour. Missing vendor
+        subtrees degrade to a smaller set instead of failing.
+        """
+        from cartridges.integrations.steam_skin import vendor  # local import: cheap + lazy
+
+        try:
+            root = vendor.vendor_root()
+        except Exception as error:  # pylint: disable=broad-exception-caught
+            logging.debug("Could not locate skin vendor tree: %s", error)
+            return set()
+        suportadas: set[str] = set()
+        try:
+            if vendor.list_fonts():
+                suportadas.add("font")
+            controles = vendor.windowcontrols_dir()
+            if controles.is_dir() and any(controles.glob("*.css")):
+                suportadas.update({"windowcontrols_theme", "windowcontrols_layout"})
+            extras = vendor.extras_dir()
+            if extras.is_dir():
+                for chave, relativo in (
+                    ("rounded_corners", "general/no-rounded-corners"),
+                    ("cursor_pointer", "general/cursor-pointer"),
+                    ("hide_whats_new", "library/hide-whats-new"),
+                    ("sidebar_hover", "library/sidebar-hover"),
+                    ("uncrop_covers", "library/uncrop-covers-in-details"),
+                    ("hide_qr", "login/hide-qr"),
+                ):
+                    if (extras / f"{relativo}.css").is_file():
+                        suportadas.add(chave)
+        except OSError as error:
+            logging.debug("Could not inspect skin vendor tree: %s", error)
+        return suportadas
+
+    # Retrocompatibilidade: a página de preferências aceita qualquer um
+    # destes nomes ao perguntar o que o gerenciador suporta.
+    capacidades = opcoes_suportadas
+    supported_options = opcoes_suportadas
 
     @property
     def precisa_reiniciar(self) -> bool:

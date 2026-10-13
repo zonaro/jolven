@@ -41,11 +41,25 @@ fonte de verdade para os dois:
   (23 do upstream + `jolven`). API: `carregar_catalogo()`, `obter_tema(slug)`,
   `tema_padrao()`, `slug_é_dark_only(slug)`, `nome_do_tema(slug)`,
   `DEFAULT_SLUG == "jolven"`.
+- `cartridges/themes/palette.py` (continuação) — `Palette.gtk_variables(modo)`
+  monta, sem tocar em GTK, as **35 variáveis de cor do libadwaita 1.9.4**
+  (`--window-bg-color`, `--view-bg-color`, `--dialog-bg-color`,
+  `--headerbar-bg-color`, `--sidebar-bg-color`, `--card-bg-color`,
+  `--popover-bg-color`, `--accent-bg-color`, `--accent-fg-color`,
+  `--border-color`, `--shade-color`, fundos *backdrop* e variantes
+  escurecidas). Os `*-fg-color` são calculados por luminância (nunca se confia
+  no `fg` do modo) e as **cores semânticas** (`--destructive-*`, `--success-*`,
+  `--warning-*`, `--error-*`) **nunca** são emitidas — o libadwaita segue
+  dono delas.
 - `cartridges/themes/gtk_engine.py` — `aplicar(slug, modo, glows=False,
   acento_custom=None)` e `remover()`. Instala um `Gtk.CssProvider` dedicado com
-  prioridade `STYLE_PROVIDER_PRIORITY_USER` gerando
-  `:root { --accent-color; --accent-bg-color; }`; o modo `auto` resolve pelo
-  `Adw.StyleManager`. A troca é ao vivo, sem reiniciar o app.
+  prioridade `STYLE_PROVIDER_PRIORITY_USER` (vence o `style.css` do app) e
+  reescreve `:root { … }` com `gtk_variables()`; o modo `auto` resolve pelo
+  `Adw.StyleManager`. **`--accent-color` não é emitido**: a libadwaita o deriva
+  de `--accent-bg-color`, então o contorno de foco, `-gtk-icon-palette: accent`
+  e `needs-attention` acompanham o tema com contraste correto em claro e escuro.
+  A aplicação é idempotente (cache da última assinatura) e a troca é ao vivo,
+  sem reiniciar o app.
 - `cartridges/themes/manager.py` — `ThemeManager` (GObject) com os sinais
   `theme-changed (str, str, bool)`, `mode-changed (str)` e `glows-changed (bool)`;
   singleton via `ThemeManager.instance()`; `bind_to_schema(schema)` escuta
@@ -62,8 +76,10 @@ envolta em `try/except`: uma falha de tema nunca impede o uso do Jolven.
 O tema `jolven` é o padrão (`theme-slug` default) e preserva a identidade
 roxa/lilás atual:
 
-- Paleta em `data/themes/palettes/jolven.css`: `--accent-color: #813d9c`,
-  `--accent-bg-color: #c9a7f5`.
+- Paleta em `data/themes/palettes/jolven.css`: `--accent-bg-color: #c9a7f5`
+  (e `--accent-color: #813d9c`, que o catálogo lê como `accent_fg`). No GTK, o
+  provider emite `--accent-bg-color`/`--accent-fg-color` e deixa a libadwaita
+  derivar `--accent-color`.
 - Glows RGB opcionais em `data/gtk/style.css` (classes `.jolven-glow-accent`,
   `.jolven-glow-card`, `.jolven-rgb-border`), usando `--accent-color` em
   `box-shadow`/`border`. Só valem no tema `jolven`.
@@ -112,9 +128,14 @@ Módulos em `cartridges/integrations/steam_skin/`:
 - `recovery.py` — `Estado` (ver abaixo), `verificar_estado()`,
   `precisa_reparo()`, `reparar_se_seguro()`, `steam_em_execucao()`.
 - `manager.py` — `SteamSkinManager` com `aplicar_perfil()`,
-  `sincronizar_se_habilitado()`, `desabilitar()`, `restaurar_original()`,
-  `estado()`, `precisa_reiniciar()`. Toda falha é contida com `try/except` +
-  log; a integração nunca derruba o Jolven.
+  `sincronizar_se_habilitado()`, `reparar(perfil)` (repara estados
+  `INCOMPATIVEL`/`ATUALIZACAO_NECESSARIA` fora do fluxo de *toggle*),
+  `desabilitar()`, `restaurar_original()`, `estado()`, `precisa_reiniciar()` e
+  `opcoes_suportadas()` (conjunto das opções finas realmente aplicáveis, hoje as
+  9: `fontes`, `extras` e `windowcontrols`, `window-controls-theme`,
+  `window-controls-layout`, `rounded-corners`, `cursor-pointer`,
+  `hide-whats-new`, `sidebar-hover`, `uncrop-covers`, `hide-qr`). Toda falha é
+  contida com `try/except` + log; a integração nunca derruba o Jolven.
 
 ### Estados da interface
 
@@ -127,9 +148,12 @@ Quando **Aplicar skin à Steam** está habilitado (`steam-skin-enabled`,
 **default false**), mudanças de tema, destaque ou modo geram a atualização
 correspondente na Steam. O manager usa *debounce*, compara a assinatura do
 perfil antes de gravar (evita gravações desnecessárias) e registra a última
-configuração aplicada. O Jolven **não** inicia, fecha ou reinicia a Steam; apenas
-informa quando uma reinicialização é necessária. Se a Steam não existir, estiver
-inacessível ou falhar, o Jolven continua funcionando normalmente.
+configuração aplicada. A assinatura inclui `theme_slug`, `accent` e
+`accent_custom`, então **qualquer** mudança de destaque re-sincroniza — inclusive
+voltar para **Padrão**, quando passa a valer o destaque do próprio tema. O Jolven
+**não** inicia, fecha ou reinicia a Steam; apenas informa quando uma
+reinicialização é necessária. Se a Steam não existir, estiver inacessível ou
+falhar, o Jolven continua funcionando normalmente.
 
 ### Recuperação após atualização da Steam
 
@@ -155,6 +179,15 @@ O mesmo perfil alimenta os dois softwares. Trocar de tema, de destaque ou de
 modo no Jolven reflete na Steam (quando habilitado), respeitando as limitações
 de cada paleta.
 
+O **destaque acompanha o tema** nos dois lados. No Jolven, `--accent-bg-color`
+(botões *suggested*, switches, seleção) vem de `Palette.accent_bg`; na Steam, o
+acento efetivo do perfil — `accent_custom` válido ou, quando vazio,
+`Palette.accent_bg` resolvido por `ThemeManager.perfil_compatilhado()` — vira
+`--adw-system-accent` no `config.css`. Todos os 24 temas definem um `accent_bg`
+próprio (jolven `#c9a7f5`, dracula `#bd93f9`, oled `#ff6e4a`, nord `#88c0d0`),
+então **trocar de tema troca o destaque nos dois softwares**; uma cor custom
+sobrepõe a do tema em ambos.
+
 **Importante:** os CSS da Steam **não** são carregados no GTK — os motores de
 renderização são diferentes. O Jolven reutiliza apenas as *definições de cor*
 (`palette.css` e `colorthemes/<slug>/<slug>.css`, que são blocos puros de
@@ -165,18 +198,20 @@ Jolven vira um destaque *purple* equivalente na skin da Steam.
 
 Snapshot curado em `data/vendor/adwaita-for-steam/`, instalado em
 `<pkgdatadir>/vendor/adwaita-for-steam/` e lido por
-`cartridges/integrations/steam_skin/vendor.py`.
+`cartridges/integrations/steam_skin/vendor.py`
+(`extras_dir()`, `windowcontrols_dir()`, `fonts_dir()`, `list_fonts()`).
 
 - Versão incorporada: **4.4** (commit `1e92107a51f6ed53c59c38646444c9eb3a52b030`).
-- Licença: **MIT** (`LICENSE`, Copyright © 2022 Anatoliy Kashkin). Se fontes
-  vierem a ser incluídas, elas são **SIL OFL 1.1** e exigem os respectivos
-  `LICENSE.md`/`COPYING`.
-- Inclui apenas: `LICENSE`, `VERSION`, `palette.css` e
-  `colorthemes/<slug>/<slug>.css` (23 temas), total bem abaixo de 120 KB.
+- Licença: **MIT** (`LICENSE`, Copyright © 2022 Anatoliy Kashkin). As fontes
+  vendoradas são **SIL OFL 1.1** e mantêm os respectivos `LICENSE.md`/`COPYING`.
+- Inclui: `LICENSE`, `VERSION`, `palette.css`, `colorthemes/<slug>/<slug>.css`
+  (23 temas), além de `extras/**`, `windowcontrols/**` e `fonts/**` — que dão
+  efeito real às opções finas da skin (fontes, controles de janela, `extras`).
+  O conteúdo é copiado byte a byte da tag upstream.
 - Excluído de propósito: `adwaita/css/**` estrutural (~608 KB), previews PNG
-  (~19 MB), fontes (~7.5 MB), `extras/**`, `windowcontrols/**`, `injectors/**`,
-  `screenshots/**`, `scripts/**`, `install.py`, `skin.json`, `theme.json`.
-  Motivos detalhados em `data/vendor/adwaita-for-steam/UPSTREAM.md`.
+  (~19 MB), `injectors/**`, `screenshots/**`, `scripts/**`, `install.py`,
+  `skin.json`, `theme.json`. Motivos detalhados em
+  `data/vendor/adwaita-for-steam/UPSTREAM.md`.
 
 ### Como atualizar o vendor
 
@@ -199,14 +234,34 @@ execução de código remoto em tempo de execução.
   `accessible=False` e o recovery reporta `PERMISSAO`; os arquivos esperados não
   são alterados. O manifest não requisita filesystem indiscriminado.
 - **Snap:** suporte best-effort, dependente da disposição dos diretórios.
-- **Opções avançadas:** fontes, `extras` e `windowcontrols` ficam desabilitadas
-  enquanto a árvore vendorada não as incluir; a UI informa
-  "Indisponível nesta versão da skin" em vez de prometer o que não funciona.
+- **Opções avançadas:** a árvore vendorada inclui `fonts/`, `extras/` e
+  `windowcontrols/`, então fontes, controles de janela e `extras` têm efeito. As
+  opções efetivas vêm de `SteamSkinManager.opcoes_suportadas()`; quando não há
+  gerenciador, a UI cai na lista estática e nunca promete o que não funciona.
 - **Windows:** a interface de detecção é reutilizável, mas o suporte a
   instalações Windows ainda não está concluído; o funcionamento no Linux não
   depende disso.
 - **Páginas Store/Community/Profile** da Steam não são personalizadas por este
   método; o Jolven não promete isso.
+
+## Interface (página Aparência)
+
+- A **galeria de temas** fica no topo da página (`tema_group`), antes do grupo
+  de aparência (`appearance_group`) e do grupo da Steam (`steam_group`). É um
+  `FlowBox` `homogeneous` (3 a 6 miniaturas por linha) dentro de um
+  `ScrolledWindow` com `height-request: 520`; o scroll interno rola quando há
+  mais temas que o espaço visível e a altura fixa evita o colapso do clamp
+  interno do `AdwPreferencesPage` (sem ela, a grade recebia só ~58 px).
+- As miniaturas são geradas em código (`_criar_miniatura` / `_figura_do_tema`),
+  com área de desenho `188×118` e legenda; a miniatura desenha o fundo e o
+  destaque da paleta do tema.
+- A janela de Preferências tem `content-width: 920`. Como cada
+  `AdwPreferencesPage` embute um `AdwClamp` com `maximum_size = 600` que **não**
+  é exposto ao CSS (e o GTK não suporta media query por largura),
+  `CartridgesPreferences._alargar_paginas()` eleva esse teto para `856` no
+  sinal `map` do diálogo, para o conteúdo acompanhar a largura da janela. O
+  `AdwClamp` continua encolhendo em janelas estreitas — o valor é um teto, não
+  um piso — então o layout permanece íntegro a partir de 360 px.
 
 ## Uso
 
@@ -224,8 +279,11 @@ execução de código remoto em tempo de execução.
 ## Testes
 
 - `tests/test_theme_catalog.py`, `tests/test_theme_persist.py`,
-  `tests/test_steam_detect.py`, `tests/test_steam_install.py` cobrem catálogo,
-  persistência, detecção, instalação, idempotência, backup, restauração,
-  conflito de terceiros e falhas de escrita — sempre em diretórios temporários,
-  nunca sobre a Steam real.
+  `tests/test_theme_gtk_variables.py`, `tests/test_steam_detect.py`,
+  `tests/test_steam_install.py`, `tests/test_steam_estados.py` e
+  `tests/test_steam_opcoes.py` cobrem catálogo, persistência, as variáveis GTK do
+  libadwaita (35 por tema × modo, sem cores semânticas, contraste legível), os
+  rótulos de estado, as opções suportadas, detecção, instalação, idempotência,
+  backup, restauração, reparo, conflito de terceiros e falhas de escrita —
+  sempre em diretórios temporários, nunca sobre a Steam real.
 - Rodam junto da suíte padrão (`unittest discover` via `meson test`).

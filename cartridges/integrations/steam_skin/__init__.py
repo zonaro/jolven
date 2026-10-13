@@ -40,6 +40,7 @@ from cartridges.integrations.steam_skin.recovery import (
     Estado,
     precisa_reparo,
     reparar_se_seguro,
+    texto_do_estado,
     verificar_estado,
 )
 
@@ -63,6 +64,7 @@ __all__ = [
     "precisa_reparo",
     "reparar_se_seguro",
     "restaurar",
+    "texto_do_estado",
     "totalmente_instalada",
     "verificar_estado",
 ]

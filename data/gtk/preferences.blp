@@ -3,6 +3,7 @@ using Adw 1;
 
 template $CartridgesPreferences: Adw.PreferencesDialog {
   search-enabled: true;
+  content-width: 920;
 
   Adw.PreferencesPage general_page {
     name: "general";
@@ -101,14 +102,9 @@ template $CartridgesPreferences: Adw.PreferencesDialog {
     title: _("Aparência");
     icon-name: "applications-graphics-symbolic";
 
-    Adw.PreferencesGroup appearance_group {
+    Adw.PreferencesGroup tema_group {
       title: _("Tema do aplicativo");
       description: _("A prévia aparece na hora, sem precisar reiniciar o Jolven.");
-
-      Adw.ComboRow app_icon_row {
-        title: _("Ícone do aplicativo");
-        subtitle: _("Troca o ícone no menu e na grade. Pode ser preciso sair e entrar de novo para ver a mudança.");
-      }
 
       Stack tema_galeria_stack {
         hexpand: true;
@@ -132,18 +128,27 @@ template $CartridgesPreferences: Adw.PreferencesDialog {
         ScrolledWindow tema_galeria_scroll {
           hscrollbar-policy: never;
           vscrollbar-policy: automatic;
-          max-content-height: 360;
-          propagate-natural-height: true;
+          height-request: 520;
           child: FlowBox temas_flowbox {
             selection-mode: single;
             homogeneous: true;
-            column-spacing: 12;
-            row-spacing: 12;
+            min-children-per-line: 3;
+            max-children-per-line: 6;
+            column-spacing: 18;
+            row-spacing: 18;
             valign: start;
-            margin-start: 6;
-            margin-end: 6;
+            halign: center;
+            margin-start: 12;
+            margin-end: 12;
           };
         }
+      }
+    }
+
+    Adw.PreferencesGroup appearance_group {
+      Adw.ComboRow app_icon_row {
+        title: _("Ícone do aplicativo");
+        subtitle: _("Troca o ícone no menu e na grade. Pode ser preciso sair e entrar de novo para ver a mudança.");
       }
 
       Adw.ActionRow tema_selecionado_row {
