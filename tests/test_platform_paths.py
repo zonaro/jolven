@@ -66,9 +66,14 @@ class WindowsPathsTest(_PlatformTestCase):
         self.assertEqual(paths.config_dir(), appdata / "jolven")
 
     def test_cache_stays_out_of_inet_cache(self):
-        expected = Path(WINDOWS_ENV["LOCALAPPDATA"]) / "jolven" / "cache"
+        expected = Path(WINDOWS_ENV["LOCALAPPDATA"]) / "jolven"
         self.assertEqual(paths.cache_dir(), expected)
         self.assertEqual(paths.logs_dir(), expected / "logs")
+
+    def test_base_directories(self):
+        self.assertEqual(paths.base_data_dir(), Path(WINDOWS_ENV["APPDATA"]))
+        self.assertEqual(paths.base_config_dir(), Path(WINDOWS_ENV["APPDATA"]))
+        self.assertEqual(paths.base_cache_dir(), Path(WINDOWS_ENV["LOCALAPPDATA"]))
 
     def test_third_party_locations(self):
         self.assertEqual(paths.appdata_dir(), Path(WINDOWS_ENV["APPDATA"]))
@@ -102,6 +107,29 @@ class LinuxPathsTest(_PlatformTestCase):
             )
             self.assertEqual(paths.config_dir(), Path("/home/player/.config/jolven"))
             self.assertEqual(paths.cache_dir(), Path("/home/player/.cache/jolven"))
+
+    def test_base_directories(self):
+        self.assertEqual(
+            paths.base_data_dir(), Path(LINUX_ENV["XDG_DATA_HOME"])
+        )
+        self.assertEqual(
+            paths.base_config_dir(), Path(LINUX_ENV["XDG_CONFIG_HOME"])
+        )
+        self.assertEqual(
+            paths.base_cache_dir(), Path(LINUX_ENV["XDG_CACHE_HOME"])
+        )
+
+    def test_base_directories_fall_back_to_home(self):
+        with mock.patch.dict(os.environ, {"HOME": "/home/player"}, clear=True):
+            self.assertEqual(
+                paths.base_data_dir(), Path("/home/player/.local/share")
+            )
+            self.assertEqual(
+                paths.base_config_dir(), Path("/home/player/.config")
+            )
+            self.assertEqual(
+                paths.base_cache_dir(), Path("/home/player/.cache")
+            )
 
     def test_third_party_locations_are_windows_only(self):
         self.assertIsNone(paths.appdata_dir())
