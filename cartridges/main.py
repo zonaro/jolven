@@ -43,6 +43,7 @@ except (ValueError, ImportError):
 # pylint: disable=wrong-import-position
 from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk
 
+from cartridges import platform
 from cartridges import shared
 from cartridges.details_dialog import DetailsDialog
 from cartridges.controller import (
@@ -84,11 +85,13 @@ from cartridges.store.managers.thegamesdb_manager import TheGamesDBManager
 from cartridges.store.store import Store
 from cartridges.utils import backup, session_fita, session_wallpaper
 from cartridges.utils.install_size import InstallSizeSweep
+from cartridges.utils.na_tela import entregar_na_tela
 from cartridges.utils.run_executable import run_executable
 from cartridges.utils.single_instance import (
     acquire as acquire_single_instance,
     present_running_instance,
     release as release_single_instance,
+    watch_second_launch,
 )
 from cartridges.utils.news_checker import NewsChecker
 from cartridges.utils.updates_checker import UpdatesChecker
@@ -123,6 +126,9 @@ class CartridgesApplication(Adw.Application):
     restauracao_falhou = False
     reiniciar = False
     _gamepad_devices: dict[int, str]
+    # O provider da cor de destaque, guardado para o watcher do registro poder
+    # reescrever o CSS no lugar em vez de empilhar um provider por mudança.
+    _accent_provider: Optional[Gtk.CssProvider] = None
 
     @GObject.Signal(name="emulate-key", arg_types=[int])
     def emulate_key(self, keyval) -> None:
@@ -307,6 +313,111 @@ class CartridgesApplication(Adw.Application):
 
         self.add_main_option_entries((search, launch, *mode_options))
 
+    def apply_windows_theme(self) -> bool:
+        """Follow the Windows light/dark setting and accent colour.
+
+        GTK/Libadwaita does not pick these up from Windows on its own, so they
+        are read from the registry to keep the app visually consistent with the
+        rest of the system. Read at startup and re-run by `watch_windows_theme`
+        whenever Windows says either key changed; failures fall back silently
+        to the bundled defaults.
+
+        Returns False so it can double as a one-shot GLib idle callback.
+        """
+        if not platform.IS_WINDOWS:
+            return False
+        import winreg  # pylint: disable=import-outside-toplevel
+
+        # Light / dark scheme
+        try:
+            with winreg.OpenKey(
+                winreg.HKEY_CURRENT_USER,
+                r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
+            ) as key:
+                apps_use_light = winreg.QueryValueEx(key, "AppsUseLightTheme")[0]
+            Adw.StyleManager.get_default().set_color_scheme(
+                Adw.ColorScheme.FORCE_LIGHT
+                if apps_use_light
+                else Adw.ColorScheme.FORCE_DARK
+            )
+        except OSError:
+            pass
+
+        # Accent colour: the DWORD is stored as 0xAABBGGRR (red is the low byte)
+        try:
+            with winreg.OpenKey(
+                winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\DWM"
+            ) as key:
+                value = winreg.QueryValueEx(key, "AccentColor")[0]
+            accent = "#{:02x}{:02x}{:02x}".format(
+                value & 0xFF, (value >> 8) & 0xFF, (value >> 16) & 0xFF
+            )
+            if self._accent_provider is None:
+                self._accent_provider = Gtk.CssProvider()
+                Gtk.StyleContext.add_provider_for_display(
+                    Gdk.Display.get_default(),
+                    self._accent_provider,
+                    Gtk.STYLE_PROVIDER_PRIORITY_USER,
+                )
+            # Reescrever o provider já instalado atualiza a cor ao vivo.
+            # --accent-color é cor de texto sobre o fundo: a mesma fórmula do
+            # Libadwaita a clareia no tema escuro (o realce do Windows costuma
+            # ser escuro demais para texto).
+            self._accent_provider.load_from_string(
+                f":root {{ --accent-bg-color: {accent}; "
+                f"--accent-color: oklab(from {accent} var(--standalone-color-oklab)); }}"
+            )
+        except OSError:
+            pass
+
+        return False
+
+    def watch_windows_theme(self) -> None:
+        """Reaplica tema e realce quando o Windows muda, sem reiniciar o app.
+
+        `RegNotifyChangeKeyValue` bloqueia até a chave mudar, então cada chave
+        vigiada custa um daemon thread parado num wait do kernel — sem polling.
+        A aplicação em si volta para o thread principal por idle: tudo que ela
+        toca (StyleManager, provider no display) é GTK.
+        """
+        if not platform.IS_WINDOWS:
+            return
+        import ctypes  # pylint: disable=import-outside-toplevel
+        import winreg  # pylint: disable=import-outside-toplevel
+
+        advapi32 = ctypes.WinDLL("advapi32")
+        reg_notify_change_last_set = 0x00000004
+
+        def watch(subkey: str) -> None:
+            while True:
+                try:
+                    with winreg.OpenKey(winreg.HKEY_CURRENT_USER, subkey) as key:
+                        # Bloqueia dentro do with: o handle precisa viver até a
+                        # notificação chegar.
+                        result = advapi32.RegNotifyChangeKeyValue(
+                            ctypes.c_void_p(key.handle),
+                            False,
+                            reg_notify_change_last_set,
+                            None,
+                            False,
+                        )
+                    if result != 0:
+                        return  # a chave sumiu ou o registro recusou: desiste
+                except OSError:
+                    return
+                GLib.idle_add(self.apply_windows_theme)
+
+        for subkey in (
+            r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
+            r"Software\Microsoft\Windows\DWM",
+        ):
+            threading.Thread(target=watch, args=(subkey,), daemon=True).start()
+
+    def on_second_launch(self) -> bool:
+        if shared.win is not None:
+            shared.win.present()
+        return GLib.SOURCE_REMOVE
+
     def do_activate(self) -> None:  # pylint: disable=arguments-differ
         """Called on app creation"""
 
@@ -323,6 +434,9 @@ class CartridgesApplication(Adw.Application):
         from cartridges.utils import app_icon
 
         app_icon.ensure()
+
+        # A janela principal já nasce no tema do Windows.
+        self.apply_windows_theme()
 
         # Setup gamepads
         if Manette is not None:
@@ -460,6 +574,9 @@ class CartridgesApplication(Adw.Application):
         shared.win.update_game_mode_home()
 
         shared.win.present()
+        self.watch_windows_theme()
+        # Uma segunda cópia do app pede a esta que se mostre.
+        watch_second_launch(lambda: entregar_na_tela(self.on_second_launch))
         if shared.runtime.is_session:
             shared.win.fullscreen()
         if shared.runtime.is_game_mode:

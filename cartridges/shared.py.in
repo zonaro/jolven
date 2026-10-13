@@ -24,6 +24,8 @@ from pathlib import Path
 from gi.repository import Gdk, Gio, GLib
 
 from cartridges.runtime import RuntimeContext
+from cartridges import platform
+from cartridges.platform import paths as _platform_paths
 
 
 class AppState(IntEnum):
@@ -169,14 +171,25 @@ runtime = RuntimeContext()
 
 home = Path.home()
 
-data_dir = Path(GLib.get_user_data_dir())
-host_data_dir = Path(getenv("HOST_XDG_DATA_HOME", Path.home() / ".local" / "share"))
-
-config_dir = Path(GLib.get_user_config_dir())
-host_config_dir = Path(getenv("HOST_XDG_CONFIG_HOME", Path.home() / ".config"))
-
-cache_dir = Path(GLib.get_user_cache_dir())
-host_cache_dir = Path(getenv("HOST_XDG_CACHE_HOME", Path.home() / ".cache"))
+# No Windows, os caminhos passam pela camada de plataforma porque
+# GLib.get_user_cache_dir() resolve para INetCache, que a Limpeza de
+# Disco/Storage Sense esvazia por padrao — exatamente onde estaria o log
+# de um crash. Os host_* sao caminhos do host Flatpak (HOST_XDG_*); no
+# Windows nao ha Flatpak, entao espelham os diretorios locais.
+if platform.IS_WINDOWS:
+    data_dir = _platform_paths.base_data_dir()
+    config_dir = _platform_paths.base_config_dir()
+    cache_dir = _platform_paths.base_cache_dir()
+    host_data_dir = data_dir
+    host_config_dir = config_dir
+    host_cache_dir = cache_dir
+else:
+    data_dir = Path(GLib.get_user_data_dir())
+    host_data_dir = Path(getenv("HOST_XDG_DATA_HOME", Path.home() / ".local" / "share"))
+    config_dir = Path(GLib.get_user_config_dir())
+    host_config_dir = Path(getenv("HOST_XDG_CONFIG_HOME", Path.home() / ".config"))
+    cache_dir = Path(GLib.get_user_cache_dir())
+    host_cache_dir = Path(getenv("HOST_XDG_CACHE_HOME", Path.home() / ".cache"))
 
 flatpak_dir = home / ".var" / "app"
 
@@ -201,8 +214,9 @@ legacy_covers_dir = data_dir / "cartridges" / "covers"
 
 appdata_dir = Path(getenv("appdata") or r"C:\Users\Default\AppData\Roaming")
 local_appdata_dir = Path(
-    getenv("csidl_local_appdata") or r"C:\Users\Default\AppData\Local"
+    getenv("localappdata") or r"C:\Users\Default\AppData\Local"
 )
+# Intencionalmente o Program Files de 32 bits: e onde o Steam instala no Windows de 64 bits.
 programfiles32_dir = Path(getenv("programfiles(x86)") or r"C:\Program Files (x86)")
 
 app_support_dir = home / "Library" / "Application Support"
