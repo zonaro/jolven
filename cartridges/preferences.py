@@ -2063,7 +2063,7 @@ class CartridgesPreferences(Adw.PreferencesDialog):
         slug = getattr(filho, "slug", None)
         if not isinstance(slug, str):
             return
-        if self._bloqueio_no_modo(slug):
+        if self._bloqueado_no_modo(slug):
             self.add_toast(
                 Adw.Toast.new(
                     _("Este tema só funciona no modo escuro. Mude o Modo para Escuro.")

@@ -252,6 +252,9 @@ execução de código remoto em tempo de execução.
   `ScrolledWindow` com `height-request: 520`; o scroll interno rola quando há
   mais temas que o espaço visível e a altura fixa evita o colapso do clamp
   interno do `AdwPreferencesPage` (sem ela, a grade recebia só ~58 px).
+- **Clicar numa miniatura aplica o tema na hora**: o handler grava
+  `theme-slug` no schema, chama `ThemeManager.set_palette()` e re-agenda a
+  sincronização da skin — sem reabrir o app.
 - As miniaturas são geradas em código (`_criar_miniatura` / `_figura_do_tema`),
   com área de desenho `188×118` e legenda; a miniatura desenha o fundo e o
   destaque da paleta do tema.
