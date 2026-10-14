@@ -84,6 +84,7 @@ One-time setup with a friendly wizard, credentials stored encrypted, and from th
 - **GameMode + MangoHud + Gamescope, without the terminal** — toggle performance boosts and overlays per game or globally, from a normal settings screen.
 - **Xbox Cloud Gaming (experimental)** — native player (no browser): sign in with your Microsoft account and stream from the cloud alongside your installed games.
 - **Sunshine streaming** — export games to Sunshine with one click or automatically, then play them over Moonlight on any screen.
+- **Settings behind authentication** — system installs ask for your password before opening Preferences (polkit on Linux, Windows Hello on Windows).
 - **Waydroid apps** — import installed Android games with their package ids and local icons, while filtering system utilities.
 - **GNOME search provider** — hit Super, type a game name, press Enter.
 - **Animated, gamepad-first interface** — every screen works from the couch, with hotplug controllers, an on-screen keyboard and a global menu (library, power, session).
@@ -105,6 +106,7 @@ Jolven exports your games to [Sunshine](https://github.com/LizardByte/Sunshine) 
 
 - Open a game's menu and choose **Add to Sunshine**, or turn on the automatic sync in Preferences to export new games as they arrive (Xbox Cloud Gaming titles are skipped).
 - The export writes to your local Sunshine `apps.json` — no account, no network — preserving anything already there.
+- The Sunshine Web UI password you type in Preferences is masked and kept in your system keyring (Secret Service), not in a plain settings file.
 - Then open [Moonlight](https://moonlight-stream.org/) on your TV, phone or another PC and play.
 
 ### Gravação de tela e streaming (GPU Screen Recorder)

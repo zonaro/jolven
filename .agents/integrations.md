@@ -160,8 +160,9 @@ inspirada no LutrisToSunshine, por escrita direta no `apps.json`
 - A página Sunshine nas Preferências (item Sunshine no menu do
   aplicativo) centraliza exportação e diagnóstico: além do grupo de
   exportação, há conexão com a Web UI local (`sunshine-host`,
-  `sunshine-port`, `sunshine-username` em GSettings; senha só em
-  memória, nunca persistida nem logada), teste que exibe versão e
+  `sunshine-port`, `sunshine-username` em GSettings; a senha mora no
+  Secret Service por `cartridges/utils/sunshine_credenciais.py`, nunca
+  em GSettings e nunca em log), teste que exibe versão e
   quantidade de apps via `GET /api/apps` + `GET /api/config` com Basic
   auth e sem header `Origin` (isento de CSRF),   lista somente-leitura
   dos apps e abertura da Web UI. `POST /api/config`, PIN e clientes
@@ -170,9 +171,10 @@ inspirada no LutrisToSunshine, por escrita direta no `apps.json`
 
 ### Sunshine v2 (config do host, apps, PIN, clientes)
 
-A v2 completa a tela com escrita remota, sempre com Basic auth, timeout
-e senha só em memória (`cartridges/utils/sunshine_api.py`, sem rede nos
-testes):
+A v2 completa a tela com escrita remota, sempre com Basic auth e
+timeout. `cartridges/utils/sunshine_api.py` continua sem persistir nada:
+as credenciais só passam por ele em memória, chegam do cofre pela tela e
+nunca aparecem nos testes (sem rede):
 
 - Host: leitura via `GET /api/config` preenche as linhas; Aplicar faz
   GET→merge→`POST /api/config` (o Sunshine substitui o arquivo inteiro)
@@ -206,6 +208,30 @@ sem nenhum, segue o tipo de instalação detectado.
 
 ## Integrações do sistema
 
+### Autenticação para abrir as Preferências
+
+`cartridges/platform/authentication.py` é o portão que roda antes de construir o
+diálogo, fora da thread GTK, com a entrega por
+`utils.na_tela.entregar_na_tela` (chamado em
+`CartridgesApplication.on_preferences_action`):
+
+- Linux: action polkit `io.github.zonaro.Jolven.preferences`
+  (`data/io.github.zonaro.Jolven.Preferences.policy.in`), verificada com
+  `pkcheck --action-id … --process <pid>,<início>,<uid>
+  --allow-user-interaction`. `auth_admin_keep` guarda a autorização por cerca de
+  5 minutos, então aberturas seguidas não repetem a senha. Não há helper rodando
+  como root nem comando arbitrário. O início do processo vem do campo 22 de
+  `/proc/<pid>/stat`.
+- Windows: Windows Hello por `UserConsentVerifier`, no pacote opcional
+  `winrt-Windows.Security.Credentials.UI`, importado de forma lazy.
+- `DENIED` — recusa, diálogo dispensado ou tempo esgotado — bloqueia a abertura
+  com toast. `UNAVAILABLE` abre assim mesmo e registra aviso: um build local
+  (`~/.local`) não instala a policy polkit, e uma instalação Windows pode não ter
+  o pacote ou o Hello configurado.
+- O portão é higiene contra alteração casual por quem já está na sessão, não
+  fronteira de segurança: o mesmo usuário consegue contorná-lo, e o app não
+  decide autorização de sistema a partir dele.
+
 ### GPU Screen Recorder
 
 O overlay de jogo da Jolven Session pode abrir uma instalação local do GPU
@@ -218,10 +244,11 @@ aviso recuperável e nunca encerrar o jogo ou a sessão.
 | Sistema | Uso | Restrição |
 | --- | --- | --- |
 | systemd-logind | suspender/desligar/reiniciar | via D-Bus e autorização normal |
-| Secret Service | credenciais Tuya | nunca fallback para log ou arquivo público |
+| Secret Service | credenciais Tuya e senha da Web UI do Sunshine | nunca fallback para log, backup ou arquivo público |
 | xdg-desktop-portal/libei | emulação autorizada de entrada | sem acesso bruto a dispositivos |
 | PipeWire/WirePlumber | volume e sink da sessão | restaurar estado ao sair |
 | `/sys/class/drm` | detecção de monitor/VRR | somente leitura |
-| polkit | instalar/remover sessão | operações fixas, sem comando arbitrário |
+| polkit | instalar/remover sessão e abrir as Preferências | operações fixas, sem comando arbitrário |
+| Windows Hello | abrir as Preferências (Windows) | pacote opcional; sem ele, abre com aviso |
 | Gamescope | compositor da Jolven Session | não aninhar em sessão dedicada |
 | GameMode/MangoHud | wrappers por jogo | opcionais e composicionalmente testados |

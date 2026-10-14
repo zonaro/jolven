@@ -83,6 +83,11 @@ Ainda sem equivalente no Windows, conforme o épico do port:
 
 - sem Jolven Session/Gamescope, sem integração de display manager e sem helper
   privilegiado por polkit;
+- o portão das Preferências troca polkit por Windows Hello
+  (`UserConsentVerifier`, no pacote opcional
+  `winrt-Windows.Security.Credentials.UI`); sem o pacote, sem Hello configurado
+  ou com Hello desabilitado por política, as Preferências abrem com aviso no
+  log, como no build local do Linux;
 - gamepads por libmanette dão lugar a XInput (`ctypes`);
 - xCloud embutido, GameMode, MangoHud, `wpctl`/WirePlumber e libei/snegg não têm
   equivalente direto;
@@ -101,6 +106,7 @@ Ainda sem equivalente no Windows, conforme o épico do port:
 | overlay | MangoHud | jogo inicia sem overlay | sem equivalente |
 | controle de áudio | `wpctl`/WirePlumber | não ajustar automaticamente | sem equivalente |
 | luzes inteligentes | `tinytuya` e Secret Service | integração desabilitada | sem Secret Service; segredos por DPAPI (planejado) |
+| autenticação das Preferências | polkit (`pkcheck`) / `winrt-Windows.Security.Credentials.UI` | Preferências abrem sem exigir autenticação, com aviso no log | pywinrt opcional, via CPython oficial (o do MSYS2 UCRT64 recusa os wheels `win_amd64`) |
 
 Imports dessas capacidades devem ser lazy ou protegidos. Nunca transforme uma
 dependência opcional em falha na importação global de `main.py`.
