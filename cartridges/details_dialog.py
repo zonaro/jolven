@@ -65,6 +65,8 @@ class DetailsDialog(Adw.Dialog):
 
     cover_overlay: Gtk.Overlay = Gtk.Template.Child()
     cover: Gtk.Picture = Gtk.Template.Child()
+    install_notice_group: Adw.PreferencesGroup = Gtk.Template.Child()
+    install_notice_row: Adw.ActionRow = Gtk.Template.Child()
     cover_button_edit: Gtk.Button = Gtk.Template.Child()
     cover_button_browse: Gtk.Button = Gtk.Template.Child()
     cover_button_delete_revealer: Gtk.Revealer = Gtk.Template.Child()
@@ -165,6 +167,7 @@ class DetailsDialog(Adw.Dialog):
 
         if self.game:
             self.set_title(_("Game Details"))
+            self.install_notice_group.set_visible(not self.game.installed)
             self.name.set_text(self.game.name)
             if self.game.developer:
                 self.developer.set_text(self.game.developer)

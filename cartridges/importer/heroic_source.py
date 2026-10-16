@@ -173,17 +173,28 @@ class StoreSubSourceIterable(SubSourceIterable):
     def is_installed(self, app_name: str) -> bool:
         return app_name in self.installed_app_names
 
-    def process_library_entry(self, entry):
-        # Skip games that are not installed
+    def process_library_entry(
+        self, entry: HeroicLibraryEntry
+    ) -> SourceIterationResult:
         app_name = entry["app_name"]
         if not self.is_installed(app_name):
-            logging.warning(
-                "Skipped %s game %s (%s): not installed",
+            # Include the uninstalled game: Heroic offers to install it
+            # when its launch URL is opened.
+            result = super().process_library_entry(entry)
+            if result is None:
+                return None
+            game, additional_data = result
+            game.installed = False
+            game.install_executable = self.source.make_executable(
+                runner=entry["runner"], app_name=app_name
+            )
+            logging.debug(
+                "Including %s game %s (%s): not installed",
                 self.service,
                 entry["title"],
                 app_name,
             )
-            return None
+            return (game, additional_data)
         # Process entry as normal
         return super().process_library_entry(entry)
 

@@ -9,6 +9,7 @@ from typing import Callable
 
 
 _STEAM_URI = re.compile(r"steam://rungameid/(\d+)", re.IGNORECASE)
+_STEAM_INSTALL_URI = re.compile(r"steam://install/(\d+)", re.IGNORECASE)
 
 _TWINTAIL_FLATPAK_ID = "app.twintaillauncher.ttl"
 TWINTAIL_FLATPAK_ID = _TWINTAIL_FLATPAK_ID
@@ -35,6 +36,24 @@ def resolve_steam_command(
 ) -> str:
     """Use a discovered Steam backend in quiet mode for a Steam launch URI."""
     match = _STEAM_URI.search(command or "")
+    if not match:
+        return command
+    uri = match.group(0)
+    if steam := find_program("steam"):
+        return f'"{steam}" -silent "{uri}"'
+    if find_program("flatpak") and has_flatpak("com.valvesoftware.Steam"):
+        return f'flatpak run com.valvesoftware.Steam -silent "{uri}"'
+    return command
+
+
+def resolve_steam_install_command(
+    command: str,
+    *,
+    find_program: Callable[[str], str | None] = which,
+    has_flatpak: Callable[[str], bool] = flatpak_installed,
+) -> str:
+    """Use a discovered Steam backend in quiet mode for a Steam install URI."""
+    match = _STEAM_INSTALL_URI.search(command or "")
     if not match:
         return command
     uri = match.group(0)

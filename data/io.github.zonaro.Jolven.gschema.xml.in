@@ -32,6 +32,9 @@
     <key name="steam-location" type="s">
       <default>"~/.steam/steam"</default>
     </key>
+    <key name="steam-show-uninstalled" type="b">
+      <default>false</default>
+    </key>
     <key name="lutris" type="b">
       <default>true</default>
     </key>
@@ -45,6 +48,9 @@
       <default>false</default>
     </key>
     <key name="lutris-import-flatpak" type="b">
+      <default>false</default>
+    </key>
+    <key name="lutris-show-uninstalled" type="b">
       <default>false</default>
     </key>
     <key name="heroic" type="b">
@@ -64,6 +70,9 @@
     </key>
     <key name="heroic-import-sideload" type="b">
       <default>true</default>
+    </key>
+    <key name="heroic-show-uninstalled" type="b">
+      <default>false</default>
     </key>
     <key name="bottles" type="b">
       <default>true</default>
@@ -88,6 +97,9 @@
     </key>
     <key name="legendary-location" type="s">
       <default>"~/.config/legendary/"</default>
+    </key>
+    <key name="legendary-show-uninstalled" type="b">
+      <default>false</default>
     </key>
     <key name="retroarch" type="b">
       <default>true</default>

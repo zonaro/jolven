@@ -42,6 +42,8 @@ class FileManager(AsyncManager):
             "added",
             "executable",
             "game_id",
+            "installed",
+            "install_executable",
             "source",
             "hidden",
             "last_played",

@@ -72,11 +72,15 @@ class SteamSourceIterable(SourceIterable):
                 logging.debug("Couldn't load appmanifest %s", manifest, exc_info=error)
                 continue
 
-            # Skip non installed games
+            # Manifests without the fully-installed bit are owned but not
+            # installed. They always enter as uninstalled games.
+            # Note: a game fully removed from disk leaves no local manifest,
+            # so it cannot be listed offline without an API key (out of
+            # scope, see #44).
             installed_mask = 4
-            if not int(local_data["stateflags"]) & installed_mask:
-                logging.debug("Skipped %s: not installed", manifest)
-                continue
+            is_installed = bool(int(local_data["stateflags"]) & installed_mask)
+            if not is_installed:
+                logging.debug("Including %s: not installed", manifest)
 
             # Skip duplicate appids
             appid = local_data["appid"]
@@ -92,6 +96,12 @@ class SteamSourceIterable(SourceIterable):
                 "source": self.source.source_id,
                 "game_id": self.source.game_id_format.format(game_id=appid),
                 "executable": self.source.make_executable(game_id=appid),
+                "installed": is_installed,
+                "install_executable": (
+                    f"xdg-open steam://install/{appid}"
+                    if not is_installed
+                    else ""
+                ),
             }
             game = Game(values)
 

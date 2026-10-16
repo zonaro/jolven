@@ -31,6 +31,7 @@ from cartridges.launchers import (
     TWINTAIL_FLATPAK_ID,
     is_twintail_command,
     resolve_steam_command,
+    resolve_steam_install_command,
 )
 
 
@@ -132,7 +133,7 @@ def run_executable(
         use_mangohud = shared.schema.get_boolean("game-mode-use-mangohud")
 
     resolved_executable = (
-        resolve_steam_command(executable)
+        resolve_steam_install_command(resolve_steam_command(executable))
         if shared.runtime.is_game_mode and os.name == "posix"
         else executable
     )

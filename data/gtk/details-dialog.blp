@@ -25,6 +25,15 @@ template $DetailsDialog: Adw.Dialog {
     }
 
     Adw.PreferencesPage {
+      Adw.PreferencesGroup install_notice_group {
+        visible: false;
+
+        Adw.ActionRow install_notice_row {
+          title: _("Not Installed");
+          subtitle: _("Launching this game from the library will install it.");
+        }
+      }
+
       Adw.PreferencesGroup cover_group {
         Adw.Clamp cover_clamp {
           maximum-size: 200;
