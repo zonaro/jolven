@@ -30,7 +30,16 @@ from urllib.parse import urlparse
 
 from cartridges import shared
 from cartridges.botao_tarefas import BotaoTarefas
-from cartridges.controller import detect_controller_layout, name_for_button
+from cartridges.controller import (
+    GAMEPAD_CONFIRM_HOLD_SECONDS,
+    GAMEPAD_TILE_FOCUS_CLASS,
+    GAMEPAD_TILE_FOCUS_RGB_CLASS,
+    confirm_hold_exceeded,
+    detect_controller_layout,
+    focus_class,
+    name_for_button,
+    should_confine_gamepad,
+)
 from cartridges.gamepad_visual import GamepadVisual
 from cartridges.game import Game, STATUS_LABELS, status_label
 from cartridges.game_cover import GameCover
@@ -123,6 +132,9 @@ def can_edit_notes(game: Game) -> bool:
     return game.status == "playing" or bool((game.notes or "").strip())
 
 
+# Gamepad home helpers (should_confine_gamepad, confirm_hold_exceeded,
+# focus_class e constantes) vivem em ``cartridges.controller`` — módulo sem
+# GTK, testável sem display — e são reexportados aqui para o `main.py`.
 _XCLOUD_VKEY = {
     Gdk.KEY_Return: 0x0D,
     Gdk.KEY_KP_Enter: 0x0D,
@@ -352,6 +364,11 @@ class CartridgesWindow(Adw.ApplicationWindow):
     active_source_filters: set[str]
     known_source_filters: set[str]
     source_rows: dict
+    # Gamepad home/library navigation state. Class-level defaults so the
+    # pure helpers and focus tracking stay safe even before __init__ runs.
+    _gamepad_nav_active: bool = False
+    _gamepad_focus_widget: Optional[Gtk.Widget] = None
+    _gamepad_focus_handler: int = 0
 
     def add_toast(self, toast: Adw.Toast) -> None:
         self.toast_queue.add(toast)
@@ -975,13 +992,35 @@ class CartridgesWindow(Adw.ApplicationWindow):
                 logging.exception("Could not update the gamepad visual")
 
     def gamepad_search(self) -> None:
+        """Go to the library if needed and open the on-screen keyboard.
+
+        Physical keyboard search keeps using ``on_toggle_search_action``
+        directly; this gamepad path always ends with the keyboard dialog
+        focused on the visible search entry.
+        """
         page = self.navigation_view.get_visible_page()
         if page not in (self.library_page, self.hidden_library_page):
             if page == self.game_mode_home_page:
                 self.navigation_view.push(self.library_page)
             else:
                 self.navigation_view.pop_to_page(self.library_page)
-        self.on_toggle_search_action()
+        page = self.navigation_view.get_visible_page()
+        if page == self.hidden_library_page:
+            search_bar = self.hidden_search_bar
+            search_entry = self.hidden_search_entry
+        else:
+            if page != self.library_page:
+                self.navigation_view.pop_to_page(self.library_page)
+            search_bar = self.search_bar
+            search_entry = self.search_entry
+        if not search_bar.get_search_mode():
+            search_bar.set_search_mode(True)
+        search_entry.set_text("")
+        try:
+            self.set_focus(search_entry)
+        except Exception:  # pylint: disable=broad-exception-caught
+            pass
+        self.show_gamepad_keyboard(None, search_entry)
 
     @staticmethod
     def _game_from_widget(widget: Gtk.Widget | None) -> Game | None:
@@ -1038,20 +1077,248 @@ class CartridgesWindow(Adw.ApplicationWindow):
             first_launcher.grab_focus()
         return GLib.SOURCE_REMOVE
 
-    def gamepad_navigate(self, direction: Gtk.DirectionType) -> None:
-        moved = self.child_focus(direction)
-        if (game := self._game_from_focus()) is not None:
-            self.atualizar_fundo_biblioteca(game)
+    def _gamepad_sidebar_open(self) -> bool:
+        """Whether the sidebar (overlay_split_view) is currently open."""
+        try:
+            return bool(self.overlay_split_view.get_show_sidebar())
+        except Exception:  # pylint: disable=broad-exception-caught
+            return False
+
+    def _gamepad_library_page_id(self) -> str:
+        """Id of the visible library page, or ``""`` when off-library."""
+        try:
+            page = self.navigation_view.get_visible_page()
+        except Exception:  # pylint: disable=broad-exception-caught
+            return ""
+        if page == self.library_page:
+            return "library"
+        if page == self.hidden_library_page:
+            return "hidden"
+        if page == self.zerados_library_page:
+            return "zerados"
+        return ""
+
+    def _is_library_page(self) -> bool:
+        return self._gamepad_library_page_id() != ""
+
+    def _gamepad_focus_classes(self) -> tuple:
+        return (GAMEPAD_TILE_FOCUS_RGB_CLASS, GAMEPAD_TILE_FOCUS_CLASS)
+
+    def _gamepad_glows_active(self) -> bool:
+        try:
+            app = self.get_application()
+            manager = getattr(app, "theme_manager", None)
+            return bool(getattr(manager, "glows", False))
+        except Exception:  # pylint: disable=broad-exception-caught
+            return False
+
+    def _launcher_button_from_widget(
+        self, widget: Gtk.Widget | None
+    ) -> Optional[Gtk.Button]:
+        while widget is not None:
+            if isinstance(widget, Gtk.Button) and getattr(
+                widget, "_jolven_launcher_game", None
+            ) is not None:
+                return widget
+            try:
+                if widget is self.launchers_box:
+                    return None
+            except AttributeError:
+                return None
+            widget = widget.get_parent()
+        return None
+
+    def _launcher_from_focus(self) -> tuple:
+        """Focused launcher ``(button, game)`` or ``(None, None)``."""
+        button = self._launcher_button_from_widget(self.get_focus())
+        if button is None:
+            return (None, None)
+        return (button, getattr(button, "_jolven_launcher_game", None))
+
+    def _gamepad_clear_focus_highlight(self) -> None:
+        widget = getattr(self, "_gamepad_focus_widget", None)
+        if widget is not None:
+            for css in self._gamepad_focus_classes():
+                try:
+                    widget.remove_css_class(css)
+                except Exception:  # pylint: disable=broad-exception-caught
+                    pass
+        handler = getattr(self, "_gamepad_focus_handler", 0)
+        self._gamepad_focus_widget = None
+        self._gamepad_focus_handler = 0
+        if handler and widget is not None:
+            try:
+                widget.disconnect(handler)
+            except Exception:  # pylint: disable=broad-exception-caught
+                pass
+
+    def _gamepad_on_focus_lost(self, widget: Gtk.Widget, _pspec: Any) -> None:
+        try:
+            has_focus = bool(widget.has_focus())
+        except Exception:  # pylint: disable=broad-exception-caught
+            has_focus = False
+        if not has_focus and widget is getattr(self, "_gamepad_focus_widget", None):
+            self._gamepad_clear_focus_highlight()
+
+    def _gamepad_track_focus(self) -> None:
+        """Re-apply the gamepad focus ring to the focused tile/launcher."""
+        self._gamepad_clear_focus_highlight()
+        if not getattr(self, "_gamepad_nav_active", False):
             return
-        if not moved and self.get_visible_library() is not None:
+        try:
+            if self.get_visible_dialog() is not None:
+                return
+            if self.gamepad_test_active or self.xcloud_input_active:
+                return
+        except Exception:  # pylint: disable=broad-exception-caught
+            return
+        if not self._is_library_page():
+            return
+        focus = self.get_focus()
+        target = None
+        if self._game_from_widget(focus) is not None:
+            target = focus
+        else:
+            button, game = self._launcher_from_focus()
+            if button is not None and game is not None:
+                target = button
+        if target is None:
+            return
+        try:
+            target.add_css_class(focus_class(self._gamepad_glows_active()))
+        except Exception:  # pylint: disable=broad-exception-caught
+            return
+        self._gamepad_focus_widget = target
+        try:
+            self._gamepad_focus_handler = target.connect(
+                "notify::has-focus", self._gamepad_on_focus_lost
+            )
+        except Exception:  # pylint: disable=broad-exception-caught
+            self._gamepad_focus_handler = 0
+
+    def gamepad_navigate(self, direction: Gtk.DirectionType) -> None:
+        self._gamepad_nav_active = True
+        if self.get_visible_dialog() is not None:
+            self.child_focus(direction)
+            self._gamepad_track_focus()
+            return
+        try:
+            busy = self.gamepad_test_active or self.xcloud_input_active
+        except Exception:  # pylint: disable=broad-exception-caught
+            busy = False
+        if busy:
+            self.child_focus(direction)
+            self._gamepad_track_focus()
+            return
+        if not should_confine_gamepad(
+            self._gamepad_sidebar_open(), self._gamepad_library_page_id()
+        ):
+            moved = self.child_focus(direction)
+            if (game := self._game_from_focus()) is not None:
+                self.atualizar_fundo_biblioteca(game)
+            elif not moved and self.get_visible_library() is not None:
+                self.focus_first_library_tile()
+            self._gamepad_track_focus()
+            return
+        previous = self.get_focus()
+        self.child_focus(direction)
+        game = self._game_from_focus()
+        _button, launcher_game = self._launcher_from_focus()
+        if game is not None or launcher_game is not None:
+            if game is not None:
+                self.atualizar_fundo_biblioteca(game)
+            self._gamepad_track_focus()
+            return
+        # Focus escaped to the sidebar/search/header or got lost:
+        # send it back to the previous tile/launcher when possible.
+        restored = False
+        if previous is not None and (
+            self._game_from_widget(previous) is not None
+            or self._launcher_button_from_widget(previous) is not None
+        ):
+            try:
+                previous.grab_focus()
+                restored = True
+            except Exception:  # pylint: disable=broad-exception-caught
+                restored = False
+        if not restored:
             self.focus_first_library_tile()
+        elif (game := self._game_from_focus()) is not None:
+            self.atualizar_fundo_biblioteca(game)
+        self._gamepad_track_focus()
 
     def gamepad_confirm(self) -> None:
+        """Tap on confirm (legacy entry point): open, never launch."""
+        self.gamepad_confirm_tap()
+
+    def gamepad_confirm_tap(self) -> None:
+        """Single tap: open the focused game, launch a focused launcher."""
         if (game := self._game_from_focus()) is not None:
-            game.main_button_clicked(None, False)
+            self.show_details_page(game)
+            return
+        button, launcher_game = self._launcher_from_focus()
+        if launcher_game is not None:
+            try:
+                self.on_launcher_clicked(button, launcher_game)
+            except Exception:  # pylint: disable=broad-exception-caught
+                logging.exception("Could not launch from the gamepad")
             return
         if (focus := self.get_focus()) is not None:
-            focus.activate()
+            try:
+                focus.activate()
+            except Exception:  # pylint: disable=broad-exception-caught
+                pass
+
+    def gamepad_confirm_pressed(self) -> bool:
+        """Whether main.py must arm the hold-to-launch timer.
+
+        Returns True only when a game tile or launcher is focused and no
+        dialog, tester, xCloud input or game overlay owns the input. Every
+        other focus keeps the immediate tap behaviour.
+        """
+        try:
+            if self.gamepad_test_active or self.xcloud_input_active:
+                return False
+            if self._game_overlay_open and self.session_game is not None:
+                return False
+            if self.get_visible_dialog() is not None:
+                return False
+        except Exception:  # pylint: disable=broad-exception-caught
+            return False
+        if self._game_from_focus() is not None:
+            return True
+        _button, launcher_game = self._launcher_from_focus()
+        return launcher_game is not None
+
+    def gamepad_confirm_hold(self) -> None:
+        """Hold threshold reached: launch the focused game directly."""
+        try:
+            if self.gamepad_test_active or self.xcloud_input_active:
+                return
+            if self._game_overlay_open and self.session_game is not None:
+                return
+            if self.get_visible_dialog() is not None:
+                return
+        except Exception:  # pylint: disable=broad-exception-caught
+            return
+        if (game := self._game_from_focus()) is not None:
+            try:
+                self.launch_library_game(game)
+            except Exception:  # pylint: disable=broad-exception-caught
+                logging.exception("Could not launch the game from the gamepad")
+            return
+        button, launcher_game = self._launcher_from_focus()
+        if launcher_game is not None:
+            try:
+                self.on_launcher_clicked(button, launcher_game)
+            except Exception:  # pylint: disable=broad-exception-caught
+                logging.exception("Could not launch from the gamepad")
+
+    def gamepad_confirm_released(self, held: bool) -> None:
+        """Release after a press: tap opens, hold already launched."""
+        if held:
+            return
+        self.gamepad_confirm_tap()
 
     def on_library_child_activated(
         self, _flowbox: Gtk.FlowBox, child: Gtk.FlowBoxChild
@@ -1072,27 +1339,67 @@ class CartridgesWindow(Adw.ApplicationWindow):
                 and not self._focus_in_library_chrome()
             ):
                 self.focus_first_library_tile()
+        else:
+            self._gamepad_nav_active = False
+            self._gamepad_clear_focus_highlight()
         return GLib.SOURCE_REMOVE
 
     def gamepad_game_menu(self) -> None:
         if (game := self._game_from_focus()) is not None:
-            game.menu_revealer.set_reveal_child(True)
-            game.menu_button.popup()
+            try:
+                game.menu_revealer.set_reveal_child(True)
+                game.menu_button.popup()
+            except Exception:  # pylint: disable=broad-exception-caught
+                logging.exception("Could not open the game menu")
+            return
+        button, launcher_game = self._launcher_from_focus()
+        if button is not None and launcher_game is not None:
+            try:
+                self.on_launcher_menu(None, 0, 0.0, 0.0, launcher_game, button)
+            except Exception:  # pylint: disable=broad-exception-caught
+                logging.exception("Could not open the launcher menu")
 
     def gamepad_main_menu(self) -> None:
-        if self.navigation_view.get_visible_page() not in (
-            self.library_page,
-            self.hidden_library_page,
-            self.zerados_library_page,
-        ):
-            if self.navigation_view.get_visible_page() == self.game_mode_home_page:
-                self.navigation_view.push(self.library_page)
-            else:
-                self.navigation_view.pop_to_page(self.library_page)
-        GLib.idle_add(self.on_open_menu_action)
+        page = self.navigation_view.get_visible_page()
+        if page == self.library_page:
+            button = self.primary_menu_button
+        elif page == self.hidden_library_page:
+            button = self.hidden_primary_menu_button
+        elif page == self.zerados_library_page:
+            button = self.zerados_primary_menu_button
+        else:
+            # Off-library: keep the minimal fallback (a no-op outside the
+            # library pages) without touching pages, sidebar, tester,
+            # xCloud or the game overlay.
+            GLib.idle_add(self.on_open_menu_action)
+            return
+        try:
+            button.popup()
+        except Exception:  # pylint: disable=broad-exception-caught
+            return
+        try:
+            button.grab_focus()
+        except Exception:  # pylint: disable=broad-exception-caught
+            pass
+        GLib.idle_add(self._focus_app_menu_popover, button)
+
+    def _focus_app_menu_popover(self, button: Gtk.MenuButton) -> bool:
+        try:
+            popover = button.get_popover()
+            if popover is not None:
+                popover.grab_focus()
+        except Exception:  # pylint: disable=broad-exception-caught
+            pass
+        return GLib.SOURCE_REMOVE
 
     def gamepad_toggle_sidebar(self) -> None:
         self.on_show_sidebar_action()
+        try:
+            if self._gamepad_sidebar_open():
+                self._gamepad_nav_active = False
+                self._gamepad_clear_focus_highlight()
+        except Exception:  # pylint: disable=broad-exception-caught
+            pass
 
     def show_gamepad_keyboard(
         self, _button: Gtk.Button, entry: Gtk.SearchEntry
@@ -2007,6 +2314,8 @@ class CartridgesWindow(Adw.ApplicationWindow):
             )
             button.set_child(Gtk.Image.new_from_icon_name(icon_name))
             button.connect("clicked", self.on_launcher_clicked, game)
+            # Lets the gamepad find (and launch/menu) the focused launcher.
+            button._jolven_launcher_game = game  # type: ignore[attr-defined]
             right = Gtk.GestureClick.new()
             right.set_button(3)
             right.connect("released", self.on_launcher_menu, game, button)

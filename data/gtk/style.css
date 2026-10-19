@@ -105,6 +105,58 @@ flowboxchild:focus-visible {
   border-radius: 12px;
 }
 
+/* ── Jolven: destaque de foco via controle na home ───────────────────────
+   Aplicadas pelo código (`window.py`: `_gamepad_track_focus`) ao tile do
+   jogo ou botão de launcher focado quando a navegação vem do controle e o
+   menu lateral está fechado. Não mudam o layout (só outline/sombra).
+   `.gamepad-tile-focus`: borda com a cor de destaque do tema.
+   `.gamepad-tile-focus-rgb`: borda arco-íris animada, usada somente quando
+   os glows RGB do tema Jolven estão ligados (o código escolhe entre elas). */
+
+flowboxchild.gamepad-tile-focus,
+button.gamepad-tile-focus {
+  outline: 3px solid @accent_color;
+  outline-offset: 2px;
+  border-radius: 12px;
+}
+
+@keyframes gamepad-rainbow {
+  0% { outline-color: #ff5f6d; box-shadow: 0 0 8px 0 #ff5f6d; }
+  20% { outline-color: #ffaf5f; box-shadow: 0 0 8px 0 #ffaf5f; }
+  40% { outline-color: #f5e663; box-shadow: 0 0 8px 0 #f5e663; }
+  60% { outline-color: #57e389; box-shadow: 0 0 8px 0 #57e389; }
+  80% { outline-color: #62a0ea; box-shadow: 0 0 8px 0 #62a0ea; }
+  100% { outline-color: #c061cb; box-shadow: 0 0 8px 0 #c061cb; }
+}
+
+flowboxchild.gamepad-tile-focus-rgb,
+button.gamepad-tile-focus-rgb {
+  outline: 3px solid #ff5f6d;
+  outline-offset: 2px;
+  border-radius: 12px;
+  animation: gamepad-rainbow 2.4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  flowboxchild.gamepad-tile-focus-rgb,
+  button.gamepad-tile-focus-rgb {
+    animation: none;
+    outline-color: @accent_color;
+    box-shadow: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  flowboxchild.gamepad-tile-focus,
+  button.gamepad-tile-focus,
+  flowboxchild.gamepad-tile-focus-rgb,
+  button.gamepad-tile-focus-rgb {
+    animation: none;
+    outline: 3px solid currentColor;
+    box-shadow: none;
+  }
+}
+
 .gamepad-input {
   padding: 8px 12px;
   border-radius: 9999px;

@@ -179,3 +179,39 @@ def stick_direction(value: float, threshold: float = STICK_THRESHOLD) -> int:
     if value > threshold:
         return 1
     return 0
+
+
+#: Seconds the confirm button (A) must be held to launch the focused game
+#: directly instead of opening its details page on release.
+GAMEPAD_CONFIRM_HOLD_SECONDS = 0.6
+
+#: Focus ring classes for gamepad navigation on library tiles/launchers.
+#: The actual CSS rules live in ``data/gtk/style.css``; only these two
+#: names exist.
+GAMEPAD_TILE_FOCUS_CLASS = "gamepad-tile-focus"
+GAMEPAD_TILE_FOCUS_RGB_CLASS = "gamepad-tile-focus-rgb"
+
+#: Library page ids where gamepad focus stays confined to tiles/launchers
+#: while the sidebar is closed.
+_GAMEPAD_LIBRARY_PAGES = frozenset({"library", "hidden", "zerados"})
+
+
+def should_confine_gamepad(sidebar_open: bool, page: str) -> bool:
+    """Whether gamepad navigation must stay on tiles/launchers.
+
+    Pure helper (no GTK) so it can be unit-tested without a display.
+    ``page`` is ``"library"``, ``"hidden"``, ``"zerados"`` or ``""``.
+    """
+    return (not sidebar_open) and page in _GAMEPAD_LIBRARY_PAGES
+
+
+def confirm_hold_exceeded(
+    elapsed: float, threshold: float = GAMEPAD_CONFIRM_HOLD_SECONDS
+) -> bool:
+    """Whether a confirm press lasted long enough to count as a hold."""
+    return elapsed >= threshold
+
+
+def focus_class(glows: bool) -> str:
+    """Focus ring class for the focused tile/launcher."""
+    return GAMEPAD_TILE_FOCUS_RGB_CLASS if glows else GAMEPAD_TILE_FOCUS_CLASS

@@ -25,7 +25,7 @@ import shlex
 import subprocess
 import sys
 import threading
-from time import time
+from time import monotonic, time
 from typing import Any, Optional
 from urllib.parse import quote
 
@@ -97,7 +97,11 @@ from cartridges.utils.single_instance import (
 )
 from cartridges.utils.news_checker import NewsChecker
 from cartridges.utils.updates_checker import UpdatesChecker
-from cartridges.window import CartridgesWindow
+from cartridges.window import (
+    GAMEPAD_CONFIRM_HOLD_SECONDS,
+    CartridgesWindow,
+    confirm_hold_exceeded,
+)
 
 
 def _exit_failed_game_session(
@@ -190,7 +194,7 @@ class CartridgesApplication(Adw.Application):
 
         match action_for_button(button):
             case ControllerAction.CONFIRM:
-                shared.win.gamepad_confirm()
+                self._gamepad_confirm_press()
             case ControllerAction.BACK:
                 shared.win.gamepad_back()
             case ControllerAction.GAME_MENU:
@@ -201,6 +205,80 @@ class CartridgesApplication(Adw.Application):
                 shared.win.gamepad_main_menu()
             case ControllerAction.GUIDE:
                 shared.win.gamepad_toggle_sidebar()
+            case ControllerAction.HOME:
+                shared.win.gamepad_toggle_sidebar()
+
+    def _gamepad_confirm_press(self) -> None:
+        """Press on A: arm hold-to-launch or tap immediately.
+
+        Tiles/launchers defer the decision to the release (hold launches,
+        tap opens); any other focus keeps the immediate tap behaviour.
+        Runs on the GTK main loop (manette events already arrive there).
+        """
+        try:
+            arm = bool(shared.win.gamepad_confirm_pressed())
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.exception("Could not handle the gamepad confirm press")
+            return
+        if not arm:
+            try:
+                shared.win.gamepad_confirm()
+            except Exception:  # pylint: disable=broad-exception-caught
+                logging.exception("Could not handle the gamepad confirm tap")
+            return
+        self._confirm_armed = True
+        self._confirm_hold_fired = False
+        try:
+            self._confirm_press_time = monotonic()
+        except Exception:  # pylint: disable=broad-exception-caught
+            self._confirm_press_time = 0.0
+        if self._confirm_hold_source:
+            try:
+                GLib.source_remove(self._confirm_hold_source)
+            except Exception:  # pylint: disable=broad-exception-caught
+                pass
+            self._confirm_hold_source = 0
+        delay_ms = max(1, int(GAMEPAD_CONFIRM_HOLD_SECONDS * 1000))
+        try:
+            self._confirm_hold_source = GLib.timeout_add(
+                delay_ms, self._on_gamepad_confirm_hold
+            )
+        except Exception:  # pylint: disable=broad-exception-caught
+            self._confirm_hold_source = 0
+
+    def _on_gamepad_confirm_hold(self) -> bool:
+        self._confirm_hold_source = 0
+        try:
+            elapsed = monotonic() - self._confirm_press_time
+        except Exception:  # pylint: disable=broad-exception-caught
+            elapsed = GAMEPAD_CONFIRM_HOLD_SECONDS
+        if not confirm_hold_exceeded(elapsed):
+            return GLib.SOURCE_REMOVE
+        self._confirm_hold_fired = True
+        try:
+            shared.win.gamepad_confirm_hold()
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.exception("Could not launch the game from the gamepad")
+        return GLib.SOURCE_REMOVE
+
+    def _gamepad_confirm_release(self) -> None:
+        """Release of A: cancel a pending hold or fire the tap."""
+        if not self._confirm_armed:
+            return
+        self._confirm_armed = False
+        if self._confirm_hold_source:
+            try:
+                GLib.source_remove(self._confirm_hold_source)
+            except Exception:  # pylint: disable=broad-exception-caught
+                pass
+            self._confirm_hold_source = 0
+        if self._confirm_hold_fired:
+            self._confirm_hold_fired = False
+            return
+        try:
+            shared.win.gamepad_confirm_released(False)
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.exception("Could not handle the gamepad confirm release")
 
     def gamepad_button_released(self, _device, event) -> None:
         button = event.get_button()[1]
@@ -210,6 +288,8 @@ class CartridgesApplication(Adw.Application):
             shared.win.update_gamepad_trigger(trigger, False)
             return
         shared.win.update_gamepad_button(button, False)
+        if action_for_button(button) == ControllerAction.CONFIRM:
+            self._gamepad_confirm_release()
 
     def gamepad_hat_axis(self, _device, event) -> None:
         hat = event.get_hat()
@@ -275,6 +355,10 @@ class CartridgesApplication(Adw.Application):
         shared.runtime = RuntimeContext.detect(sys.argv, os.environ)
         self._gamepad_devices = {}
         self._tester_chord: set[int] = set()
+        self._confirm_hold_source: int = 0
+        self._confirm_press_time: float = 0.0
+        self._confirm_hold_fired: bool = False
+        self._confirm_armed: bool = False
         flags = (
             Gio.ApplicationFlags.NON_UNIQUE
             if shared.runtime.is_nested
