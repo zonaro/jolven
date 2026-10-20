@@ -6,6 +6,7 @@ data/gtk/details-dialog.blp
 data/gtk/fita-wizard.blp
 data/gtk/game.blp
 data/gtk/image-picker.blp
+data/gtk/integrations.blp
 data/gtk/logo-picker.blp
 data/gtk/preferences.blp
 data/gtk/shortcuts-dialog.blp
@@ -17,6 +18,7 @@ cartridges/window.py
 cartridges/gamepad_visual.py
 cartridges/details_dialog.py
 cartridges/game.py
+cartridges/integrations_page.py
 cartridges/onscreen_keyboard.py
 cartridges/preferences.py
 cartridges/xcloud_login.py
@@ -36,6 +38,7 @@ cartridges/utils/relative_date.py
 cartridges/utils/format_playtime.py
 cartridges/utils/hltb.py
 cartridges/utils/install_size.py
+cartridges/utils/integrations.py
 cartridges/utils/ligacao_zerado.py
 cartridges/utils/updates_checker.py
 

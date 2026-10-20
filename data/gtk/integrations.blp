@@ -1,0 +1,94 @@
+using Gtk 4.0;
+using Adw 1;
+
+// Página Integrações: o que o Jolven usa, o que já está instalado e o que
+// dá para instalar via Flatpak. As linhas de cada programa são montadas em
+// Python (`cartridges/integrations_page.py`), porque cada uma depende do
+// status detectado na máquina.
+template $IntegrationsPage: Adw.NavigationPage {
+  title: _("Integrações");
+  tag: "integrations";
+
+  Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {
+      [end]
+      Button integrations_refresh_button {
+        tooltip-text: _("Atualizar");
+        icon-name: "view-refresh-symbolic";
+      }
+    }
+
+    Stack integrations_stack {
+      transition-type: crossfade;
+
+      StackPage {
+        name: "loading";
+
+        child: Box {
+          orientation: vertical;
+          spacing: 12;
+          halign: center;
+          valign: center;
+          hexpand: true;
+          vexpand: true;
+
+          Spinner carregando_spinner {
+            spinning: true;
+            halign: center;
+            valign: center;
+          }
+
+          Label {
+            label: _("Verificando as integrações…");
+            justify: center;
+            styles ["dim-label"]
+          }
+        };
+      }
+
+      StackPage {
+        name: "list";
+
+        child: ScrolledWindow {
+          hexpand: true;
+          vexpand: true;
+          hscrollbar-policy: never;
+
+          Adw.Clamp {
+            maximum-size: 760;
+            tightening-threshold: 560;
+            margin-top: 18;
+            margin-bottom: 18;
+            margin-start: 12;
+            margin-end: 12;
+
+            Box {
+              orientation: vertical;
+              spacing: 18;
+
+              Adw.PreferencesGroup grupo_streaming {}
+
+              Adw.PreferencesGroup grupo_launchadores {}
+
+              Adw.PreferencesGroup grupo_emuladores {}
+
+              Adw.PreferencesGroup grupo_ferramentas {}
+            }
+          }
+        };
+      }
+
+      StackPage {
+        name: "error";
+
+        child: Adw.StatusPage erro_status {
+          icon-name: "dialog-warning-symbolic";
+          title: _("Não foi possível carregar");
+          vexpand: true;
+          valign: center;
+        };
+      }
+    }
+  }
+}

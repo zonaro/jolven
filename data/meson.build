@@ -4,6 +4,7 @@ foreach name : [
   'details-dialog',
   'fita-wizard',
   'game',
+  'integrations',
   'logo-picker',
   'preferences',
   'image-picker',

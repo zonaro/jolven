@@ -5,6 +5,7 @@
     <file preprocess="xml-stripblanks" alias="gtk/details-dialog.ui">details-dialog.ui</file>
     <file preprocess="xml-stripblanks" alias="gtk/fita-wizard.ui">fita-wizard.ui</file>
     <file preprocess="xml-stripblanks" alias="gtk/game.ui">game.ui</file>
+    <file preprocess="xml-stripblanks" alias="gtk/integrations.ui">integrations.ui</file>
     <file preprocess="xml-stripblanks" alias="gtk/logo-picker.ui">logo-picker.ui</file>
     <file preprocess="xml-stripblanks" alias="gtk/preferences.ui">preferences.ui</file>
     <file preprocess="xml-stripblanks" alias="gtk/image-picker.ui">image-picker.ui</file>

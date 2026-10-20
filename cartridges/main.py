@@ -606,6 +606,7 @@ class CartridgesApplication(Adw.Application):
                 ("quit", ("<primary>q",)),
                 ("about",),
                 ("preferences", ("<primary>comma",)),
+                ("integrations",),
                 ("sunshine",),
                 ("launch_game",),
                 ("hide_game",),
@@ -803,6 +804,12 @@ class CartridgesApplication(Adw.Application):
             "Steam and the Steam logo are trademarks and/or registered trademarks of Valve Corporation in the U.S. and/or other countries.",  # pylint: disable=line-too-long
         )
         about.present(shared.win)
+
+    def on_integrations_action(self, *_args: Any) -> None:
+        """Menu principal › Integrações: abre a página de integrações."""
+        if shared.win is None:
+            return
+        shared.win.open_integrations()
 
     def on_preferences_action(
         self,

@@ -43,6 +43,7 @@ from cartridges.controller import (
 from cartridges.gamepad_visual import GamepadVisual
 from cartridges.game import Game, STATUS_LABELS, status_label
 from cartridges.game_cover import GameCover
+from cartridges.integrations_page import IntegrationsPage
 from cartridges.onscreen_keyboard import OnscreenKeyboardDialog
 from cartridges.session_history import SessionHistoryDialog
 from cartridges.utils import agrupamento, launcher, restauracao, session_fita, session_log, session_wallpaper, tarefas
@@ -627,6 +628,9 @@ class CartridgesWindow(Adw.ApplicationWindow):
         self.active_source_filters = set()
         self.known_source_filters = set()
         self.source_rows = {}
+
+        # Página Integrações (`app.integrations`): criada na primeira abertura.
+        self.integracoes_page: Optional[IntegrationsPage] = None
 
         self._news_thumb_cache: dict[str, Gdk.Texture] = {}
         self._news_thumb_pending: dict[str, list[Gtk.Picture]] = {}
@@ -1844,6 +1848,15 @@ class CartridgesWindow(Adw.ApplicationWindow):
             return
 
         self.navigation_view.push(self.zerados_library_page)
+
+    def open_integrations(self, *_args: Any) -> None:
+        """Abre a página Integrações, criando-a na primeira vez."""
+        if self.integracoes_page is None:
+            self.integracoes_page = IntegrationsPage()
+        if self.navigation_view.get_visible_page() == self.integracoes_page:
+            return
+        self.integracoes_page.atualizar()
+        self.navigation_view.push(self.integracoes_page)
 
     def attach_news_checker(self, checker: Any) -> None:
         self.news_checker = checker
