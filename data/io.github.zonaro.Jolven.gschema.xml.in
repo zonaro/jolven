@@ -295,7 +295,7 @@
     <key name="sunshine-username" type="s">
       <default>""</default>
       <summary>Sunshine Web UI username</summary>
-      <description>Username created in the Sunshine Web UI. The password is never stored.</description>
+      <description>Username created in the Sunshine Web UI. The password is kept in the user's keyring (Secret Service).</description>
     </key>
     <key name="disabled-source-filters" type="as">
       <default>[]</default>

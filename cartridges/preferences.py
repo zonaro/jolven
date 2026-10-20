@@ -321,7 +321,7 @@ class CartridgesPreferences(Adw.PreferencesDialog):
     sunshine_host_row: Adw.EntryRow = Gtk.Template.Child()
     sunshine_port_row: Adw.EntryRow = Gtk.Template.Child()
     sunshine_username_row: Adw.EntryRow = Gtk.Template.Child()
-    sunshine_password_row: Adw.EntryRow = Gtk.Template.Child()
+    sunshine_password_row: Adw.PasswordEntryRow = Gtk.Template.Child()
     sunshine_status_row: Adw.ActionRow = Gtk.Template.Child()
     sunshine_test_button: Gtk.Button = Gtk.Template.Child()
     sunshine_web_button: Gtk.Button = Gtk.Template.Child()
@@ -536,7 +536,7 @@ class CartridgesPreferences(Adw.PreferencesDialog):
 
         # Make it so only one dialog can be open at a time
         self.__class__.is_open = True
-        self.connect("closed", lambda *_: self.set_is_open(False))
+        self.connect("closed", self._ao_fechar)
 
         self.file_chooser = Gtk.FileDialog()
 
@@ -619,7 +619,7 @@ class CartridgesPreferences(Adw.PreferencesDialog):
         self.sunshine_apps_path_row.connect("changed", sunshine_apps_path_changed)
         self.sunshine_sync_all_button.connect("clicked", self.sincronizar_sunshine)
 
-        # Sunshine remoto (a senha vive só nesta sessão: nunca é salva)
+        # Sunshine remoto (a senha vive no cofre do usuário: Secret Service)
         def sunshine_host_changed(*_args: Any) -> None:
             shared.schema.set_string(
                 "sunshine-host", self.sunshine_host_row.get_text().strip()
@@ -646,6 +646,28 @@ class CartridgesPreferences(Adw.PreferencesDialog):
             shared.schema.get_string("sunshine-username")
         )
         self.sunshine_username_row.connect("changed", sunshine_username_changed)
+        # A senha mora no cofre, não no GSettings: carrega numa thread (o
+        # libsecret fala por D-Bus e pode pedir desbloqueio — nunca na GTK)
+        # e persiste com debounce, também fora da thread GTK. A entrega só
+        # preenche o campo se o usuário ainda não digitou nada, e o `set_text`
+        # programático é o único suprimido — tecla durante o lookup agenda o
+        # save normalmente.
+        self._senha_sunshine_id: int = 0
+        self._senha_sunshine_seq = 0
+        self._senha_sunshine_lock = threading.Lock()
+        self._senha_sunshine_aplicando = False
+        self.sunshine_password_row.connect("changed", self._ao_mudar_senha_sunshine)
+
+        def _carregar_senha() -> None:
+            try:
+                from cartridges.utils import sunshine_credenciais  # noqa: PLC0415
+
+                salva = sunshine_credenciais.carregar_senha()
+            except Exception:  # pylint: disable=broad-exception-caught
+                salva = ""
+            entregar_na_tela(self._mostrar_senha_sunshine, salva)
+
+        threading.Thread(target=_carregar_senha, daemon=True).start()
         self.sunshine_test_button.connect("clicked", self.testar_sunshine)
         self.sunshine_web_button.connect("clicked", self.abrir_sunshine_web)
         self.sunshine_start_button.connect("clicked", self.iniciar_sunshine)
@@ -999,6 +1021,86 @@ class CartridgesPreferences(Adw.PreferencesDialog):
                 entregar_na_tela(concluir, resultado)
 
         threading.Thread(target=executar, daemon=True).start()
+
+    #: Espera após a última tecla antes de persistir a senha do Sunshine.
+    SENHA_SUNSHINE_DEBOUNCE_MS = 750
+
+    def _ao_fechar(self, *_args: Any) -> None:
+        """Descarta o debounce pendente da senha e marca o diálogo fechado.
+
+        Sem isso, o timeout dispararia depois do diálogo destruído e gravaria
+        um texto velho no cofre.
+        """
+        if getattr(self, "_senha_sunshine_id", 0):
+            try:
+                GLib.source_remove(self._senha_sunshine_id)
+            except Exception:  # pylint: disable=broad-exception-caught
+                logging.debug("Não foi possível cancelar o debounce da senha")
+            self._senha_sunshine_id = 0
+        self.set_is_open(False)
+
+    def _mostrar_senha_sunshine(self, salva: str) -> bool:
+        """Preenche o campo com a senha vinda do cofre (thread principal).
+
+        Só preenche se o campo ainda estiver vazio: o que o usuário já
+        digitou enquanto o lookup voava nunca é sobrescrito. O `set_text`
+        programático roda sob `_senha_sunshine_aplicando`, o único trecho
+        que o handler de "changed" ignora.
+        """
+        self._senha_sunshine_aplicando = True
+        try:
+            if salva and not self.sunshine_password_row.get_text():
+                self.sunshine_password_row.set_text(salva)
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.debug("Diálogo fechado antes da senha chegar do cofre")
+        finally:
+            self._senha_sunshine_aplicando = False
+        return GLib.SOURCE_REMOVE
+
+    def _ao_mudar_senha_sunshine(self, *_args: Any) -> None:
+        """Reagenda o save da senha no cofre após a última tecla."""
+        if getattr(self, "_senha_sunshine_aplicando", False):
+            return
+        if self._senha_sunshine_id:
+            try:
+                GLib.source_remove(self._senha_sunshine_id)
+            except Exception:  # pylint: disable=broad-exception-caught
+                logging.debug("Não foi possível cancelar o debounce da senha")
+            self._senha_sunshine_id = 0
+        self._senha_sunshine_id = GLib.timeout_add(
+            self.SENHA_SUNSHINE_DEBOUNCE_MS, self._guardar_senha_sunshine
+        )
+
+    def _guardar_senha_sunshine(self) -> bool:
+        """Persiste a senha atual no cofre, fora da thread GTK.
+
+        O texto é lido aqui (thread principal); o D-Bus do libsecret roda
+        num worker que nunca toca em widget. Cada disparo carimba uma
+        sequência crescente e o worker só grava se ainda for o mais recente
+        (latest-wins); o lock serializa as escritas sem nunca travar a GTK,
+        que só incrementa o contador.
+        """
+        self._senha_sunshine_id = 0
+        senha = self.sunshine_password_row.get_text()
+        self._senha_sunshine_seq += 1
+        seq = self._senha_sunshine_seq
+
+        def executar() -> None:
+            try:
+                from cartridges.utils import sunshine_credenciais  # noqa: PLC0415
+            except Exception:  # pylint: disable=broad-exception-caught
+                logging.debug("Save da senha do Sunshine falhou", exc_info=True)
+                return
+            with self._senha_sunshine_lock:
+                if seq != self._senha_sunshine_seq:
+                    return
+                try:
+                    sunshine_credenciais.salvar_senha(senha)
+                except Exception:  # pylint: disable=broad-exception-caught
+                    logging.debug("Save da senha do Sunshine falhou", exc_info=True)
+
+        threading.Thread(target=executar, daemon=True).start()
+        return GLib.SOURCE_REMOVE
 
     def _conexao_sunshine(self) -> Any:
         from cartridges.utils import sunshine_api

@@ -20,7 +20,7 @@
 
 import logging
 from time import time
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 from gi.repository import Adw, Gio, GLib, Gtk
 
@@ -461,9 +461,10 @@ class Importer(ErrorProducer):
         self,
         page_name: Optional[str] = None,
         expander_row: Optional[Adw.ExpanderRow] = None,
-    ) -> Adw.PreferencesDialog:
-        return shared.win.get_application().on_preferences_action(
-            page_name=page_name, expander_row=expander_row
+        on_ready: Optional[Callable[[Any], None]] = None,
+    ) -> None:
+        shared.win.get_application().on_preferences_action(
+            page_name=page_name, expander_row=expander_row, on_ready=on_ready
         )
 
     def timeout_toast(self, *_args: Any) -> None:
@@ -477,6 +478,11 @@ class Importer(ErrorProducer):
         if response == "open_preferences":
             self.open_preferences(*args)
         elif response == "open_preferences_import":
-            self.open_preferences(*args).connect("close-request", self.timeout_toast)
+            self.open_preferences(
+                *args,
+                on_ready=lambda win: win.connect(
+                    "close-request", self.timeout_toast
+                ),
+            )
         else:
             self.timeout_toast()

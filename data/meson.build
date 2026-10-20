@@ -198,4 +198,11 @@ if host_machine.system() == 'linux' and get_option('prefix') in ['/usr', '/usr/l
     install: true,
     install_dir: '/usr/share/polkit-1/actions',
   )
+  configure_file(
+    input: 'io.github.zonaro.Jolven.Preferences.policy.in',
+    output: app_id + '.Preferences.policy',
+    configuration: conf,
+    install: true,
+    install_dir: '/usr/share/polkit-1/actions',
+  )
 endif

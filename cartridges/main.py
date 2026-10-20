@@ -26,7 +26,7 @@ import subprocess
 import sys
 import threading
 from time import monotonic, time
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 from urllib.parse import quote
 
 import gi
@@ -45,6 +45,7 @@ from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk
 
 from cartridges import platform
 from cartridges import shared
+from cartridges.platform import authentication
 from cartridges.details_dialog import DetailsDialog
 from cartridges.controller import (
     ControllerAction,
@@ -138,6 +139,9 @@ class CartridgesApplication(Adw.Application):
     # Coordenador de temas do Jolven (paleta, modo e brilho). Criado em
     # `do_activate`; fica None se o sistema de temas falhar, sem quebrar o app.
     theme_manager: Optional[ThemeManager] = None
+    # Guarda contra dois `pkcheck` simultâneos: dois toques rápidos no
+    # Preferences compartilham uma única tentativa de autenticação.
+    _preferences_authenticating = False
 
     @GObject.Signal(name="emulate-key", arg_types=[int])
     def emulate_key(self, keyval) -> None:
@@ -810,18 +814,60 @@ class CartridgesApplication(Adw.Application):
         _parameter: Any = None,
         page_name: Optional[str] = None,
         expander_row: Optional[str] = None,
-    ) -> Optional[CartridgesPreferences]:
-        if CartridgesPreferences.is_open:
-            return
+        on_ready: Optional[Callable[[CartridgesPreferences], None]] = None,
+    ) -> None:
+        if CartridgesPreferences.is_open or self._preferences_authenticating:
+            return None
+        self._preferences_authenticating = True
 
-        win = CartridgesPreferences()
-        if page_name:
-            win.set_visible_page_name(page_name)
-        if expander_row:
-            getattr(win, expander_row).set_expanded(True)
-        win.present(shared.win)
+        motivo = _("Open Preferences")
 
-        return win
+        def concluir(resultado: authentication.AuthOutcome) -> bool:
+            try:
+                if resultado is authentication.AuthOutcome.DENIED:
+                    shared.win.toast_queue.add(
+                        Adw.Toast.new(
+                            _("Authentication is required to open Preferences")
+                        )
+                    )
+                elif not CartridgesPreferences.is_open:
+                    if resultado is authentication.AuthOutcome.UNAVAILABLE:
+                        # Fail-open: user-local builds do not install the
+                        # polkit policy and Windows may lack Hello; blocking
+                        # Preferences there would lock the user out of
+                        # settings.
+                        logging.warning(
+                            "Preferences auth unavailable; opening without enforcement"
+                        )
+                    try:
+                        win = CartridgesPreferences()
+                    except Exception:  # pylint: disable=broad-exception-caught
+                        # `is_open` é marcado no início do `__init__`; sem
+                        # resetar aqui, uma falha de construção travaria o
+                        # Preferences para sempre.
+                        CartridgesPreferences.is_open = False
+                        logging.exception("Could not open Preferences")
+                        shared.win.toast_queue.add(
+                            Adw.Toast.new(_("Could not open Preferences"))
+                        )
+                    else:
+                        if page_name:
+                            win.set_visible_page_name(page_name)
+                        if expander_row:
+                            getattr(win, expander_row).set_expanded(True)
+                        if on_ready is not None:
+                            on_ready(win)
+                        win.present(shared.win)
+            finally:
+                self._preferences_authenticating = False
+            return GLib.SOURCE_REMOVE
+
+        def em_thread() -> None:
+            resultado = authentication.authenticate(motivo)
+            entregar_na_tela(concluir, resultado)
+
+        threading.Thread(target=em_thread, daemon=True).start()
+        return None
 
     def on_sunshine_action(self, *_args: Any) -> None:
         from cartridges.utils import sunshine
