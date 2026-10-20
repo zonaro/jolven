@@ -178,3 +178,12 @@ privilegiado limitado, autorizado por polkit. O helper aceita somente operaçõe
 e destinos fixos; não o transforme em um executor genérico. Arquivos de sessão
 que não sejam reconhecidamente gerenciados pelo Jolven não podem ser removidos.
 
+O arquivo de sessão precisa apontar para um caminho de sistema: o seletor do
+display manager é avaliado pelo usuário `gdm`, que não atravessa uma home `0700`
+e descarta silenciosamente a sessão quando `TryExec` falha. Instalações em
+prefixo de usuário usam o relay fixo `/usr/libexec/jolven-session` para os campos
+`Exec` e `TryExec`; o helper nunca copia conteúdo controlado pelo usuário para
+caminhos de sistema, apenas escreve esse relay. A chave
+`X-GDM-SessionRegisters` deve continuar ausente até que o launcher implemente
+`RegisterSession`.
+

@@ -55,6 +55,10 @@ conf.set('libexecdir', libexecdir)
 conf.set('bindir', join_paths(get_option('prefix'), get_option('bindir')))
 conf.set('datadir', join_paths(get_option('prefix'), get_option('datadir')))
 conf.set('game_session_datadir', '/usr/share')
+# Fixed system location for the display-manager session integration; it is not
+# derived from the install prefix because the greeter evaluates the launcher as
+# the gdm user, which may not traverse a user prefix.
+conf.set('game_session_libexecdir', '/usr/libexec')
 
 subdir('data')
 subdir('cartridges')

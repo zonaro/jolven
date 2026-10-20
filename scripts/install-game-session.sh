@@ -8,6 +8,12 @@ bindir="$prefix/bin"
 libexecdir="$prefix/libexec"
 app_id="io.github.zonaro.Jolven"
 
+if [[ "$prefix" != /usr && "$prefix" != /usr/local ]]; then
+    printf 'The display manager only reads system data directories; %s would install an invisible session.\n' "$prefix" >&2
+    printf 'Install Jolven with Meson under /usr or /usr/local, or use the application menu action "Install Jolven Session", which handles user prefixes.\n' >&2
+    exit 1
+fi
+
 if [[ ! -r /etc/os-release ]]; then
     printf 'Cannot identify this operating system.\n' >&2
     exit 1
@@ -64,6 +70,7 @@ trap 'rm -rf -- "$tmp_dir"' EXIT
 sed -e "s|@bindir@|$jolven_bindir|g" -e "s|@APP_ID@|$app_id|g" \
     "$repo_dir/session/jolven-session.in" > "$tmp_dir/jolven-session"
 sed -e "s|@bindir@|$bindir|g" -e "s|@game_session_datadir@|$prefix/share|g" \
+    -e "s|@game_session_libexecdir@|$prefix/libexec|g" \
     "$repo_dir/session/jolven-game-mode-setup.in" \
     > "$tmp_dir/jolven-game-mode-setup"
 sed -e "s|@libexecdir@|$libexecdir|g" \
