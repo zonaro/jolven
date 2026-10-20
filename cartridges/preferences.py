@@ -50,6 +50,7 @@ from cartridges.importer.shortcuts_source import ShortcutsSource
 from cartridges.importer.source import Source
 from cartridges.importer.steam_source import SteamSource
 from cartridges.importer.twintail_source import TwintailSource
+from cartridges.importer.uzdoom_source import UzdoomSource
 from cartridges.importer.waydroid_source import WaydroidSource
 from cartridges.importer.yuzu_source import YuzuSource
 from cartridges.store.managers.sgdb_manager import SgdbManager
@@ -409,6 +410,10 @@ class CartridgesPreferences(Adw.PreferencesDialog):
     eden_data_action_row: Adw.ActionRow = Gtk.Template.Child()
     eden_data_file_chooser_button: Gtk.Button = Gtk.Template.Child()
 
+    uzdoom_expander_row: Adw.ExpanderRow = Gtk.Template.Child()
+    uzdoom_data_action_row: Adw.ActionRow = Gtk.Template.Child()
+    uzdoom_data_file_chooser_button: Gtk.Button = Gtk.Template.Child()
+
     twintail_expander_row: Adw.ExpanderRow = Gtk.Template.Child()
     twintail_data_action_row: Adw.ActionRow = Gtk.Template.Child()
     twintail_data_file_chooser_button: Gtk.Button = Gtk.Template.Child()
@@ -591,6 +596,7 @@ class CartridgesPreferences(Adw.PreferencesDialog):
             ShortcutsSource,
             SteamSource,
             TwintailSource,
+            UzdoomSource,
             WaydroidSource,
             YuzuSource,
         ):

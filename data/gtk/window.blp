@@ -1341,6 +1341,18 @@ Adw.NavigationPage details_page {
                   ]
                 }
 
+                Button details_view_uzdoom_mods_button {
+                  icon-name: "view-list-symbolic";
+                  action-name: "win.uzdoom_mods";
+                  tooltip-text: _("Mods");
+                  visible: false;
+
+                  styles [
+                    "raised",
+                    "circular",
+                  ]
+                }
+
                 MenuButton {
                   icon-name: "system-search-symbolic";
                   menu-model: search;

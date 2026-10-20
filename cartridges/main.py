@@ -71,6 +71,7 @@ from cartridges.importer.retroarch_source import RetroarchSource
 from cartridges.importer.shortcuts_source import ShortcutsSource
 from cartridges.importer.steam_source import SteamSource
 from cartridges.importer.twintail_source import TwintailSource
+from cartridges.importer.uzdoom_source import UzdoomSource
 from cartridges.importer.waydroid_source import WaydroidSource
 from cartridges.importer.yuzu_source import YuzuSource
 from cartridges.logging.setup import log_system_info, setup_logging
@@ -1016,6 +1017,9 @@ class CartridgesApplication(Adw.Application):
 
         if shared.schema.get_boolean("twintail"):
             shared.importer.add_source(TwintailSource())
+
+        if shared.schema.get_boolean("uzdoom"):
+            shared.importer.add_source(UzdoomSource())
 
         if shared.schema.get_boolean("shortcuts"):
             shared.importer.add_source(ShortcutsSource())

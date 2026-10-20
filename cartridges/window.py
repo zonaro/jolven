@@ -58,6 +58,7 @@ from cartridges.utils.open_uri import open_uri
 from cartridges.utils.relative_date import relative_date
 from cartridges.utils.spring_scroll import attach as attach_spring_scroll
 from cartridges.utils.toast_queue import ToastQueue
+from cartridges.uzdoom_mods_dialog import UzdoomModsDialog
 from cartridges.zerados_picker import ZeradosPicker
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango
 
@@ -282,6 +283,7 @@ class CartridgesWindow(Adw.ApplicationWindow):
     details_view_notes_view: Gtk.TextView = Gtk.Template.Child()
     details_view_delete_button: Gtk.Button = Gtk.Template.Child()
     details_view_hide_button: Gtk.Button = Gtk.Template.Child()
+    details_view_uzdoom_mods_button: Gtk.Button = Gtk.Template.Child()
 
     hidden_library_page: Adw.NavigationPage = Gtk.Template.Child()
     hidden_primary_menu_button: Gtk.MenuButton = Gtk.Template.Child()
@@ -705,6 +707,10 @@ class CartridgesWindow(Adw.ApplicationWindow):
         delete_game = Gio.SimpleAction.new("delete_game", None)
         delete_game.connect("activate", self.on_delete_game_action)
         self.add_action(delete_game)
+
+        uzdoom_mods = Gio.SimpleAction.new("uzdoom_mods", None)
+        uzdoom_mods.connect("activate", self.on_uzdoom_mods_action)
+        self.add_action(uzdoom_mods)
 
         shared.schema.bind(
             "show-news-button",
@@ -1617,6 +1623,11 @@ class CartridgesWindow(Adw.ApplicationWindow):
 
         self.details_view_hide_button.set_icon_name(icon)
         self.details_view_hide_button.set_tooltip_text(text)
+
+        # Only the Doom-family games have mods to choose from.
+        self.details_view_uzdoom_mods_button.set_visible(
+            game.base_source == "uzdoom"
+        )
 
         if self.details_view_game_cover:
             self.details_view_game_cover.pictures.remove(self.details_view_cover)
@@ -3050,6 +3061,12 @@ class CartridgesWindow(Adw.ApplicationWindow):
         dialog.set_close_response("cancel")
         dialog.connect("response", self.on_delete_game_response, game)
         dialog.present(self)
+
+    def on_uzdoom_mods_action(self, *_args: Any) -> None:
+        game = getattr(self, "active_game", None)
+        if game is None or game.base_source != "uzdoom":
+            return
+        UzdoomModsDialog(game).present(self)
 
     def on_delete_game_response(
         self, _dialog: Adw.AlertDialog, response: str, game: Game

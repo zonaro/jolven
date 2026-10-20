@@ -100,6 +100,7 @@ class FileManager(AsyncManager):
             "auto_record",
             "is_launcher",
             "fundo_biblioteca",
+            "uzdoom_mods",
         )
 
         json.dump(

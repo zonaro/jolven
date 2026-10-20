@@ -10,6 +10,7 @@ data/gtk/integrations.blp
 data/gtk/logo-picker.blp
 data/gtk/preferences.blp
 data/gtk/shortcuts-dialog.blp
+data/gtk/uzdoom-mods-dialog.blp
 data/gtk/wallpaper-picker.blp
 data/gtk/window.blp
 
@@ -32,6 +33,7 @@ cartridges/tarefas_janela.py
 cartridges/wallhaven_filter_bar.py
 cartridges/wallpaper_picker.py
 cartridges/zerados_picker.py
+cartridges/uzdoom_mods_dialog.py
 
 cartridges/utils/create_dialog.py
 cartridges/utils/relative_date.py
@@ -57,6 +59,7 @@ cartridges/importer/lutris_source.py
 cartridges/importer/retroarch_source.py
 cartridges/importer/steam_source.py
 cartridges/importer/twintail_source.py
+cartridges/importer/uzdoom_source.py
 cartridges/importer/waydroid_source.py
 cartridges/importer/yuzu_source.py
 

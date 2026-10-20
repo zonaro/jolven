@@ -48,6 +48,7 @@ Manually add and edit games, or let Jolven pull them in automatically from:
 - Yuzu
 - Eden
 - TwinTail
+- UZDoom
 - Flatpak
 - Desktop Entries
 - Xbox Cloud Gaming (experimental)

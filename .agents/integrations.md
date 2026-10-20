@@ -129,8 +129,8 @@ executado durante a inicialização do aplicativo.
 ## Launchers e protocolos
 
 Importadores e launchers integram Steam, Lutris, Heroic, Bottles, itch,
-Legendary, RetroArch, Dolphin, Yuzu, Eden, TwinTail, Waydroid, Flatpak e arquivos
-`.desktop`. Valores vindos dessas fontes são não confiáveis.
+Legendary, RetroArch, Dolphin, Yuzu, Eden, UZDoom, TwinTail, Waydroid, Flatpak
+e arquivos `.desktop`. Valores vindos dessas fontes são não confiáveis.
 
 - Preserve argumentos como lista sempre que possível; evite `shell=True`.
 - Valide esquemas de URI e IDs antes de compor protocolos.
@@ -147,6 +147,37 @@ Eden (mesmo formato do yuzu) em `~/.var/app/dev.eden_emu.eden/config/eden/`
 Os jogos são lançados com `eden -f <rom>` ou
 `flatpak run dev.eden_emu.eden -f <rom>`. Nada é gravado no diretório do
 emulador.
+
+### UZDoom
+
+Fonte local, opt-in, sem rede e sem segredos. O importador lista os jogos de
+uma pasta escolhida pelo usuário (chave `uzdoom-location` do GSettings), sem
+descoberta automática: não há candidatos de pasta, apenas a configuração
+feita na tela de Preferências. Enquanto a chave `uzdoom` estiver desligada
+ou a pasta não estiver configurada (ou tiver sido removida), a localização é
+irresolvível e o importador apenas pula a fonte, sem podar os jogos já
+importados.
+
+O conteúdo do UZDoom são arquivos WAD, differentiate pelo cabeçalho mágico de
+4 bytes: `IWAD` é um jogo base (Doom, Doom II, …) e `PWAD` é um mod que
+precisa de outro IWAD para rodar. Apenas os IWADs viram jogos; os PWADs são
+ignorados em silêncio, sem virarem entradas na biblioteca. O nome e o id do
+jogo vêm do nome do arquivo sem extensão, o que dá um id estável no formato
+`uzdoom_<nome>`.
+
+O executável é detectado uma única vez por instância da fonte, porque a
+importação percorre muitos jogos: o binário nativo `uzdoom` tem prioridade,
+o Flatpak `org.zdoom.UZDoom` é usado quando o binário não existe e a forma
+nativa é mantida como melhor esforço quando nenhum dos dois é encontrado. A
+detecção é local (sem rede e sem segredos) e o jogo é aberto com
+`uzdoom -iwad <arquivo>`.
+
+Cada jogo pode ter uma lista ordenada de mods, `uzdoom_mods`, persistida pelo
+Jolven e aplicada no lançamento pela opção `-file`
+(`cartridges/game_launch.py:append_uzdoom_mods`, que cita cada caminho e
+preserva a ordem da lista). A lista é editada no diálogo
+`cartridges/uzdoom_mods_dialog.py`: a ordem dos mods é a ordem de aplicação
+e os argumentos gerados entram depois do `-iwad`.
 
 ### Sunshine
 

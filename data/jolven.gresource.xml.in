@@ -12,6 +12,7 @@
     <file preprocess="xml-stripblanks" alias="gtk/wallpaper-picker.ui">wallpaper-picker.ui</file>
     <file preprocess="xml-stripblanks" alias="gtk/window.ui">window.ui</file>
     <file preprocess="xml-stripblanks" alias="shortcuts-dialog.ui">shortcuts-dialog.ui</file>
+    <file preprocess="xml-stripblanks" alias="gtk/uzdoom-mods-dialog.ui">uzdoom-mods-dialog.ui</file>
     <file alias="style.css">gtk/style.css</file>
     <!-- Paletas de tema (cartridges/themes/catalog.py); preenchidas pelo Meson. -->
 @theme_files@    <!-- Previews SVG opcionais (lane de UI); o registro tolera o diretório vazio. -->
@@ -39,6 +40,7 @@
   <file alias="waydroid-source-symbolic.svg">icons/sources/waydroid-source-symbolic.svg</file>
   <file alias="yuzu-source-symbolic.svg">icons/sources/yuzu-source-symbolic.svg</file>
   <file alias="eden-source-symbolic.svg">icons/sources/eden-source-symbolic.svg</file>
+  <file alias="uzdoom-source-symbolic.svg">icons/sources/uzdoom-source-symbolic.svg</file>
   <file alias="xbox-cloud-symbolic.svg">icons/sources/xbox-cloud-symbolic.svg</file>
   </gresource>
   <gresource prefix="@PREFIX@/icons/scalable/actions/">

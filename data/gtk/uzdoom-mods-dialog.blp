@@ -1,0 +1,63 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $UzdoomModsDialog: Adw.Dialog {
+  content-width: 480;
+  content-height: 560;
+
+  Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar HeaderBar {
+      show-start-title-buttons: false;
+      show-end-title-buttons: false;
+
+      [start]
+      Button cancel_button {
+        label: _("Cancel");
+        action-name: "window.close";
+      }
+
+      [end]
+      Button apply_button {
+        label: _("Apply");
+        styles [
+          "suggested-action"
+        ]
+      }
+    }
+
+    ScrolledWindow {
+      hscrollbar-policy: never;
+      vexpand: true;
+
+      Box {
+        orientation: vertical;
+        spacing: 12;
+        margin-top: 12;
+        margin-bottom: 12;
+        margin-start: 12;
+        margin-end: 12;
+
+        Label empty_state_row {
+          label: _("No mods found in the WADs folder");
+          wrap: true;
+          xalign: 0;
+          visible: false;
+
+          styles [
+            "dim-label"
+          ]
+        }
+
+        ListBox mods_list {
+          selection-mode: none;
+          valign: start;
+
+          styles [
+            "boxed-list"
+          ]
+        }
+      }
+    }
+  }
+}

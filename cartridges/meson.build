@@ -68,6 +68,7 @@ install_data(
     'xcloud_player.py',
     'image_picker.py',
     'wallhaven_filter_bar.py',
+    'uzdoom_mods_dialog.py',
     configure_file(input: 'shared.py.in', output: 'shared.py', configuration: conf),
   ],
   install_dir: moduledir,

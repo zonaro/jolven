@@ -29,6 +29,7 @@ from gi.repository import Adw, GLib, GObject, Gtk
 
 from cartridges import shared
 from cartridges.game_cover import GameCover
+from cartridges.game_launch import append_uzdoom_mods
 from cartridges.utils.run_executable import run_executable
 
 
@@ -179,6 +180,9 @@ class Game(Gtk.Box):
     # Fundo manual da biblioteca (nome do arquivo em `wallpapers_dir`,
     # ex: "<game_id>-fundo.jpg"). None é automático (IGDB → TGDB → wallhaven).
     fundo_biblioteca: Optional[str] = None
+    # Ordered absolute paths of PWAD/PK3 mods loaded after the IWAD via
+    # `-file` at launch. Empty means vanilla.
+    uzdoom_mods: list[str] = []
 
     @property
     def has_update(self) -> bool:
@@ -231,6 +235,7 @@ class Game(Gtk.Box):
         self.launch_environment = dict(self.launch_environment or {})
         self.tgdb_screenshots = list(self.tgdb_screenshots or [])
         self.tgdb_fanart = list(self.tgdb_fanart or [])
+        self.uzdoom_mods = list(self.uzdoom_mods or [])
         self.base_source = self.source.split("_")[0]
 
         self.set_play_icon()
@@ -313,8 +318,11 @@ class Game(Gtk.Box):
             return
 
         try:
+            comando = self.executable
+            if self.base_source == "uzdoom" and self.uzdoom_mods:
+                comando = append_uzdoom_mods(comando, self.uzdoom_mods)
             launcher = run_executable(
-                self.executable,
+                comando,
                 use_gamemode=self.game_mode_use_gamemode,
                 use_mangohud=self.game_mode_use_mangohud,
                 working_directory=self.launch_working_directory or None,

@@ -1164,6 +1164,33 @@ template $CartridgesPreferences: Adw.PreferencesDialog {
         }
       }
 
+      Adw.ExpanderRow uzdoom_expander_row {
+        title: _("UZDoom");
+        show-enable-switch: true;
+
+        [prefix]
+        Image {
+          icon-name: "uzdoom-source-symbolic";
+        }
+
+        Adw.ActionRow uzdoom_data_action_row {
+          title: _("WADs Folder");
+
+          Button uzdoom_data_file_chooser_button {
+            icon-name: "folder-symbolic";
+            valign: center;
+
+            styles [
+              "flat"
+            ]
+          }
+
+          styles [
+            "property"
+          ]
+        }
+      }
+
       Adw.ExpanderRow twintail_expander_row {
         title: _("TwinTail");
         show-enable-switch: true;

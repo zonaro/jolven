@@ -122,6 +122,12 @@
     <key name="eden-location" type="s">
       <default>"~/.var/app/dev.eden_emu.eden/config/eden/"</default>
     </key>
+    <key name="uzdoom" type="b">
+      <default>true</default>
+    </key>
+    <key name="uzdoom-location" type="s">
+      <default>""</default>
+    </key>
     <key name="twintail" type="b">
       <default>true</default>
     </key>

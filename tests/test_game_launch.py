@@ -1,6 +1,6 @@
 import unittest
 
-from cartridges.game_launch import GameProfile, build_game_command
+from cartridges.game_launch import GameProfile, append_uzdoom_mods, build_game_command
 
 
 def programs(*available):
@@ -68,6 +68,42 @@ class GameLaunchTests(unittest.TestCase):
             find_program=programs("gamescope"),
         )
         self.assertEqual((command, enabled), ("game", ()))
+
+
+class UzdoomModsTests(unittest.TestCase):
+    def test_no_mods_leaves_the_command_untouched(self):
+        self.assertEqual(
+            append_uzdoom_mods("uzdoom -iwad doom2.wad", []),
+            "uzdoom -iwad doom2.wad",
+        )
+
+    def test_single_mod_is_appended(self):
+        self.assertEqual(
+            append_uzdoom_mods("uzdoom -iwad doom2.wad", ["/games/mods/cool.wad"]),
+            "uzdoom -iwad doom2.wad -file /games/mods/cool.wad",
+        )
+
+    def test_mods_keep_their_order(self):
+        self.assertEqual(
+            append_uzdoom_mods(
+                "uzdoom -iwad doom2.wad",
+                ["/mods/first.wad", "/mods/second.wad", "/mods/third.pk3"],
+            ),
+            "uzdoom -iwad doom2.wad -file "
+            "/mods/first.wad /mods/second.wad /mods/third.pk3",
+        )
+
+    def test_mod_with_spaces_is_quoted(self):
+        self.assertEqual(
+            append_uzdoom_mods("uzdoom", ["/mods/my cool mod.wad"]),
+            "uzdoom -file '/mods/my cool mod.wad'",
+        )
+
+    def test_only_one_file_flag_is_used(self):
+        command = append_uzdoom_mods(
+            "uzdoom", ["/mods/one.wad", "/mods/two.wad", "/mods/three.pk3"]
+        )
+        self.assertEqual(command.count("-file"), 1)
 
 
 if __name__ == "__main__":

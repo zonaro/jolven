@@ -6,8 +6,9 @@ from dataclasses import dataclass, field
 import re
 from shutil import which
 from shlex import join as shell_join
+from shlex import quote as shell_quote
 from shlex import split as shell_split
-from typing import Callable, Mapping
+from typing import Callable, Mapping, Sequence
 
 
 @dataclass(frozen=True)
@@ -67,3 +68,11 @@ def build_game_command(
         command = f"gamescope {shell_join(scope_args)} -- {command}"
         integrations.append("gamescope")
     return command, tuple(integrations)
+
+
+def append_uzdoom_mods(command: str, mods: Sequence[str]) -> str:
+    """Append ZDoom-family ``-file`` flags for an ordered mod list."""
+    if not mods:
+        return command
+    files = " ".join(shell_quote(mod) for mod in mods)
+    return f"{command} -file {files}"
