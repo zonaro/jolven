@@ -60,6 +60,7 @@ from cartridges.game import Game
 from cartridges.importer.bottles_source import BottlesSource
 from cartridges.importer.desktop_source import DesktopSource
 from cartridges.importer.dolphin_source import DolphinSource
+from cartridges.importer.eden_source import EdenSource
 from cartridges.importer.flatpak_source import FlatpakSource
 from cartridges.importer.heroic_source import HeroicSource
 from cartridges.importer.importer import Importer  # yo dawg
@@ -1010,6 +1011,9 @@ class CartridgesApplication(Adw.Application):
 
         if shared.schema.get_boolean("yuzu"):
             shared.importer.add_source(YuzuSource())
+
+        if shared.schema.get_boolean("eden"):
+            shared.importer.add_source(EdenSource())
 
         if shared.schema.get_boolean("quiver"):
             shared.importer.add_source(QuiverSource())

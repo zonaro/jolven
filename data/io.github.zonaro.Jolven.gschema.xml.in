@@ -116,6 +116,12 @@
     <key name="yuzu-location" type="s">
       <default>"~/.var/app/org.yuzu_emu.yuzu/config/yuzu/"</default>
     </key>
+    <key name="eden" type="b">
+      <default>true</default>
+    </key>
+    <key name="eden-location" type="s">
+      <default>"~/.var/app/dev.eden_emu.eden/config/eden/"</default>
+    </key>
     <key name="quiver" type="b">
       <default>true</default>
     </key>

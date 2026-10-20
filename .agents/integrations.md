@@ -129,7 +129,7 @@ executado durante a inicialização do aplicativo.
 ## Launchers e protocolos
 
 Importadores e launchers integram Steam, Lutris, Heroic, Bottles, itch,
-Legendary, RetroArch, Dolphin, Yuzu, TwinTail, Waydroid, Flatpak e arquivos
+Legendary, RetroArch, Dolphin, Yuzu, Eden, TwinTail, Waydroid, Flatpak e arquivos
 `.desktop`. Valores vindos dessas fontes são não confiáveis.
 
 - Preserve argumentos como lista sempre que possível; evite `shell=True`.
@@ -137,6 +137,16 @@ Legendary, RetroArch, Dolphin, Yuzu, TwinTail, Waydroid, Flatpak e arquivos
 - Não execute o campo genérico de um `.desktop` sem o parser/sanitização existente.
 - Resolva instalações nativas e Flatpak pelos helpers de `Locations`.
 - Ausência de launcher significa “fonte indisponível”, não biblioteca corrompida.
+
+### Eden
+
+Fonte local, sem rede e sem segredos. O importador lê o `qt-config.ini` do
+Eden (mesmo formato do yuzu) em `~/.var/app/dev.eden_emu.eden/config/eden/`
+(Flatpak) ou `~/.config/eden/` (nativo) e obtém os diretórios de jogos em
+`[UI]`, chaves `Paths\gamedirs\{i}\path` e `Paths\gamedirs\{i}\deep_scan`.
+Os jogos são lançados com `eden -f <rom>` ou
+`flatpak run dev.eden_emu.eden -f <rom>`. Nada é gravado no diretório do
+emulador.
 
 ### Quiver
 

@@ -38,6 +38,7 @@ from cartridges.hardware import drm_connectors, pipewire_nodes, vrr_supported
 from cartridges.importer.bottles_source import BottlesSource
 from cartridges.importer.desktop_source import DesktopSource
 from cartridges.importer.dolphin_source import DolphinSource
+from cartridges.importer.eden_source import EdenSource
 from cartridges.importer.flatpak_source import FlatpakSource
 from cartridges.importer.heroic_source import HeroicSource
 from cartridges.importer.itch_source import ItchSource
@@ -405,6 +406,10 @@ class CartridgesPreferences(Adw.PreferencesDialog):
     yuzu_data_action_row: Adw.ActionRow = Gtk.Template.Child()
     yuzu_data_file_chooser_button: Gtk.Button = Gtk.Template.Child()
 
+    eden_expander_row: Adw.ExpanderRow = Gtk.Template.Child()
+    eden_data_action_row: Adw.ActionRow = Gtk.Template.Child()
+    eden_data_file_chooser_button: Gtk.Button = Gtk.Template.Child()
+
     quiver_expander_row: Adw.ExpanderRow = Gtk.Template.Child()
     quiver_data_action_row: Adw.ActionRow = Gtk.Template.Child()
     quiver_data_file_chooser_button: Gtk.Button = Gtk.Template.Child()
@@ -582,6 +587,7 @@ class CartridgesPreferences(Adw.PreferencesDialog):
         for source_class in (
             BottlesSource,
             DolphinSource,
+            EdenSource,
             FlatpakSource,
             HeroicSource,
             ItchSource,

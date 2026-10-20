@@ -47,6 +47,7 @@ Manually add and edit games, or let Jolven pull them in automatically from:
 - RetroArch
 - Dolphin
 - Yuzu
+- Eden
 - TwinTail
 - Flatpak
 - Desktop Entries
