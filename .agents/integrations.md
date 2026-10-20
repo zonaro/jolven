@@ -138,6 +138,46 @@ Legendary, RetroArch, Dolphin, Yuzu, TwinTail, Waydroid, Flatpak e arquivos
 - Resolva instalações nativas e Flatpak pelos helpers de `Locations`.
 - Ausência de launcher significa “fonte indisponível”, não biblioteca corrompida.
 
+### Quiver
+
+Fonte local, com enriquecimento opcional pela API pública do catálogo do
+Quiver Launcher (`https://api.quiverlauncher.com/api/v1`): somente `GET`,
+sem autenticação e sem credencial. O importador lê o `apps.json` do Quiver e
+o `cartridges/utils/quiver_catalog.py` busca no catálogo a capa, a
+descrição, a versão, a desenvolvedora e as tags de cada app. A consulta
+acontece no worker do importador, nunca na thread GTK.
+
+- Só há consulta quando a entrada tem identidade (`catalogEntryId`,
+  `repository` ou `name`); uma entrada sem nenhum deles não gera requisição.
+- A identidade é resolvida em ordem: `GET /apps/{catalogEntryId}`; se o
+  catálogo não tem esse app, `GET /apps?search=…` com o repositório e, por
+  fim, com o nome. Um candidato só é aceito quando casa exatamente com o
+  repositório ou com o nome da entrada e é o único assim — nunca "o primeiro
+  resultado". Sem casamento único, não há enriquecimento.
+- Timeout de 10 s e teto de 2 MiB por resposta, lidos em stream pelo
+  `get_capped` das outras integrações.
+- Resposta JSON inválida, corpo grande demais ou erro de rede não são
+  fatais: a cadeia é rede → cache velho → sem enriquecimento. O app entra
+  na biblioteca do mesmo jeito, só sem os metadados do catálogo.
+- Cache versionado em `<cache_dir>/jolven/quiver_catalog.json`, TTL de 24 h,
+  no mesmo formato do `xcloud_catalog.py`.
+- O base pode ser trocado pela variável `QUIVER_API`; quando o domínio
+  próprio falha na conexão, o host da implantação
+  (`famous-wildebeest-660.convex.site`) é tentado em seguida, como no
+  upstream.
+- Privacidade: a única coisa enviada é o termo de busca — o nome do app ou o
+  repositório, que já estão no `apps.json` do próprio usuário. Nenhum dado do
+  usuário, identificador de máquina ou credencial é transmitido, e a API é
+  pública: não existe autenticação para guardar.
+
+Os dados do catálogo são consumidos sob a licença MIT do Quiver Launcher, e
+o conteúdo publicado nele é responsabilidade de quem o publica. A
+`TRADEMARKS.md` do upstream permite dizer que o Jolven é compatível com o
+Quiver Launcher; ela não permite usar "Quiver" no nome do Jolven nem
+reaproveitar o logotipo ou os ícones do Quiver. Na marca do Jolven, o nome e
+o logotipo do Quiver aparecem no máximo como o identificador da fonte e o
+ícone que apontam para o launcher importado.
+
 ### Sunshine
 
 Exportação opcional de jogos para o Sunshine (`lizardbyte/sunshine`),

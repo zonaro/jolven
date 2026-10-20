@@ -44,6 +44,7 @@ from cartridges.importer.itch_source import ItchSource
 from cartridges.importer.legendary_source import LegendarySource
 from cartridges.importer.location import UnresolvableLocationError
 from cartridges.importer.lutris_source import LutrisSource
+from cartridges.importer.quiver_source import QuiverSource
 from cartridges.importer.retroarch_source import RetroarchSource
 from cartridges.importer.shortcuts_source import ShortcutsSource
 from cartridges.importer.source import Source
@@ -404,6 +405,11 @@ class CartridgesPreferences(Adw.PreferencesDialog):
     yuzu_data_action_row: Adw.ActionRow = Gtk.Template.Child()
     yuzu_data_file_chooser_button: Gtk.Button = Gtk.Template.Child()
 
+    quiver_expander_row: Adw.ExpanderRow = Gtk.Template.Child()
+    quiver_data_action_row: Adw.ActionRow = Gtk.Template.Child()
+    quiver_data_file_chooser_button: Gtk.Button = Gtk.Template.Child()
+    quiver_enrich_switch: Adw.SwitchRow = Gtk.Template.Child()
+
     twintail_expander_row: Adw.ExpanderRow = Gtk.Template.Child()
     twintail_data_action_row: Adw.ActionRow = Gtk.Template.Child()
     twintail_data_file_chooser_button: Gtk.Button = Gtk.Template.Child()
@@ -581,6 +587,7 @@ class CartridgesPreferences(Adw.PreferencesDialog):
             ItchSource,
             LegendarySource,
             LutrisSource,
+            QuiverSource,
             RetroarchSource,
             ShortcutsSource,
             SteamSource,
@@ -838,6 +845,7 @@ class CartridgesPreferences(Adw.PreferencesDialog):
                 "heroic-import-gog",
                 "heroic-import-amazon",
                 "heroic-import-sideload",
+                "quiver-enrich",
                 "flatpak-import-launchers",
                 "shortcuts-recursive",
                 "sgdb",

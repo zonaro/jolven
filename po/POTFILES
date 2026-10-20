@@ -53,6 +53,7 @@ cartridges/importer/heroic_source.py
 cartridges/importer/itch_source.py
 cartridges/importer/legendary_source.py
 cartridges/importer/lutris_source.py
+cartridges/importer/quiver_source.py
 cartridges/importer/retroarch_source.py
 cartridges/importer/steam_source.py
 cartridges/importer/twintail_source.py
