@@ -5,17 +5,43 @@ set -euo pipefail
 
 readonly action="${1:-}"
 readonly session_file="@game_session_datadir@/wayland-sessions/io.github.zonaro.Jolven.GameMode.desktop"
-# Deduza o launcher a partir deste helper (libexec/../bin) para que o
-# tarball binario da release funcione em qualquer $PREFIX
-# (fallback: caminho da compilacao).
-readonly _SETUP_BINDIR="$(dirname -- "$(readlink -f -- "$0")")/../bin"
-if [[ -x "$_SETUP_BINDIR/jolven-session" ]]; then
-    readonly session_launcher="$_SETUP_BINDIR/jolven-session"
-elif [[ -x "$_SETUP_BINDIR/cartridges-session" ]]; then
-    # Compat: launcher legado do Cartridges
-    readonly session_launcher="$_SETUP_BINDIR/cartridges-session"
+# Resolve the session launcher from the user who invoked this helper.
+# This helper runs as root via pkexec (typically from /usr/libexec), so the
+# launcher must NOT be derived from $0: dirname($0)/../bin would point at
+# /usr/bin even when Jolven was installed per-user under $HOME/.local/bin.
+# Only the fixed candidate list below is considered; no path is ever accepted
+# from arguments or the environment.
+resolve_session_launcher() {
+    local invoking_uid="${PKEXEC_UID:-}" invoking_home=""
+    if [[ -n "$invoking_uid" ]]; then
+        # Do not trust $HOME: pkexec clears the environment. Look up the
+        # invoking user's home directory in the system database instead.
+        invoking_home="$(getent passwd "$invoking_uid" 2>/dev/null | cut -d: -f6 || true)"
+        if [[ -z "$invoking_home" && -r /etc/passwd ]]; then
+            invoking_home="$(awk -F: -v uid="$invoking_uid" '$3 == uid { print $6; exit }' /etc/passwd || true)"
+        fi
+        if [[ -n "$invoking_home" && -x "$invoking_home/.local/bin/jolven-session" ]]; then
+            printf '%s\n' "$invoking_home/.local/bin/jolven-session"
+            return 0
+        fi
+    fi
+    # System-wide candidates. Also used when PKEXEC_UID is unset (helper run
+    # directly as root instead of through pkexec): per-user resolution is
+    # impossible then, so only system locations are considered.
+    local candidate
+    for candidate in /usr/local/bin/jolven-session /usr/bin/jolven-session; do
+        if [[ -x "$candidate" ]]; then
+            printf '%s\n' "$candidate"
+            return 0
+        fi
+    done
+    return 1
+}
+
+if session_launcher="$(resolve_session_launcher)"; then
+    readonly session_launcher
 else
-    readonly session_launcher="@bindir@/jolven-session"
+    readonly session_launcher=""
 fi
 
 . /etc/os-release
@@ -55,8 +81,8 @@ if [[ "$action" == uninstall ]]; then
     exit 0
 fi
 
-if [[ ! -x "$session_launcher" ]]; then
-    printf 'Session launcher not found: %s\n' "$session_launcher" >&2
+if [[ -z "$session_launcher" || ! -x "$session_launcher" ]]; then
+    printf 'Session launcher not found. The Jolven installation looks incomplete: none of the expected session launchers exist.\n' >&2
     exit 69
 fi
 
@@ -97,9 +123,4 @@ fi
 chmod 0644 "$temporary"
 mv -- "$temporary" "$session_file"
 trap - EXIT
-if command -v systemctl >/dev/null 2>&1 \
-    && systemctl is-active --quiet polkit.service; then
-    systemctl reload polkit.service || \
-        printf 'Warning: polkit will load the new action after its next restart.\n' >&2
-fi
 printf 'Jolven Session installed.\n'

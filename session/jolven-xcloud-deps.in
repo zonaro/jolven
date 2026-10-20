@@ -1,4 +1,5 @@
 #!/usr/bin/bash
+# X-Jolven-Managed=true
 # Privileged helper invoked by pkexec. It accepts only the fixed operation below.
 # Instala os plugins GStreamer do WebRTC (ICE/libnice) para o Xbox Cloud Gaming.
 set -euo pipefail

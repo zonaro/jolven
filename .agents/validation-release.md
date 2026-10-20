@@ -87,10 +87,13 @@ O destino depende do `--prefix` usado na configuração. Para o padrão acima, o
 launcher fica sob `~/.local`. Reconfigure explicitamente se o prefixo desejado for
 outro; não copie partes do build manualmente.
 
-A instalação da Jolven Session é separada porque envolve arquivos do sistema e
-polkit. Use apenas os scripts/helper fornecidos e verifique propriedade do arquivo
-antes de remover. A instalação do aplicativo não concede autorização implícita
-para modificar a sessão gráfica do host.
+A integração de sistema da Jolven Session (helpers root-owned em
+`/usr/libexec` e policies em `/usr/share/polkit-1/actions`) é instalada pelo
+`install.sh` junto com o Jolven; verifique propriedade do arquivo antes de
+remover. A instalação do aplicativo não concede autorização implícita
+para modificar a sessão gráfica do host: instalar ou remover a sessão passa
+sempre pelo helper privilegiado via polkit, acionado pela tela de
+Preferências.
 
 ## CI e Flatpak
 

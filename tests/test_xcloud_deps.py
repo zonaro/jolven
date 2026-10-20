@@ -1,8 +1,51 @@
+import builtins
+import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 from unittest.mock import patch
 
 import cartridges.xcloud_deps as deps
+from cartridges.platform import system_integration
+
+if not hasattr(builtins, "_"):
+    builtins._ = lambda s: s  # type: ignore[attr-defined]
+
+ACTION = "io.github.zonaro.Jolven.install-xcloud-deps"
+
+
+def write_policy(directory, filename, action_id=ACTION, exec_path=None):
+    lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        "<policyconfig>",
+        f'  <action id="{action_id}">',
+        "    <description>test</description>",
+        "    <message>test</message>",
+        "    <defaults>",
+        "      <allow_any>no</allow_any>",
+        "      <allow_inactive>no</allow_inactive>",
+        "      <allow_active>auth_admin_keep</allow_active>",
+        "    </defaults>",
+    ]
+    if exec_path is not None:
+        lines.append(
+            '    <annotate key="org.freedesktop.policykit.exec.path">'
+            f"{exec_path}</annotate>"
+        )
+    lines += ["  </action>", "</policyconfig>"]
+    path = Path(directory) / filename
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
+
+
+def make_helper(directory, name="jolven-xcloud-deps", executable=True):
+    helper = Path(directory) / name
+    helper.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    # 0555 = executável e NÃO gravável pelo dono: simula o helper
+    # root-owned 0755 de um install correto. 0755 seria gravável pelo
+    # dono do teste = arquivo sob controle do usuário = rejeitado.
+    helper.chmod(0o555 if executable else 0o644)
+    return helper
 
 
 class FakeRegistry:
@@ -56,11 +99,86 @@ class XCloudDepsTests(unittest.TestCase):
             FakeGst.available.add("openh264dec")
             self.assertEqual(deps.missing_elements(), [])
 
-    def test_helper_found_in_repo_session_dir(self):
-        with patch.object(deps, "_shared_libexecdir", return_value=None):
-            path = deps._helper_path()
-        self.assertIsNotNone(path)
-        self.assertTrue(str(path).endswith("jolven-xcloud-deps.in"))
+    def test_helper_resolved_from_policy(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            helper = make_helper(tmp, executable=True)
+            write_policy(tmp, "test.policy", exec_path=str(helper))
+            with mock.patch.object(
+                system_integration, "POLKIT_ACTION_DIRS", (Path(tmp),)
+            ):
+                self.assertEqual(deps._helper_path(), helper)
+
+    def test_helper_none_without_policy(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch.object(
+                system_integration, "POLKIT_ACTION_DIRS", (Path(tmp),)
+            ):
+                self.assertIsNone(deps._helper_path())
+                self.assertFalse(deps.policy_registered())
+
+    def test_helper_ignores_repo_session_fallback(self):
+        # Fail-closed: mesmo existindo `session/jolven-xcloud-deps.in` no
+        # repositório, sem policy instalada o helper é None.
+        repo_fallback = (
+            Path(__file__).parents[1] / "session" / "jolven-xcloud-deps.in"
+        )
+        self.assertTrue(repo_fallback.is_file())
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch.object(
+                system_integration, "POLKIT_ACTION_DIRS", (Path(tmp),)
+            ):
+                self.assertIsNone(deps._helper_path())
+
+    def test_helper_none_when_not_executable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            helper = make_helper(tmp, executable=False)
+            write_policy(tmp, "test.policy", exec_path=str(helper))
+            with mock.patch.object(
+                system_integration, "POLKIT_ACTION_DIRS", (Path(tmp),)
+            ):
+                self.assertIsNone(deps._helper_path())
+
+    def test_helper_none_when_user_writable(self):
+        # Arquivo sob controle do usuário (gravável por quem invoca):
+        # mesmo executável, o helper deve ser rejeitado (fail-closed).
+        with tempfile.TemporaryDirectory() as tmp:
+            helper = make_helper(tmp, executable=True)
+            helper.chmod(0o755)
+            write_policy(tmp, "test.policy", exec_path=str(helper))
+            with mock.patch.object(
+                system_integration, "POLKIT_ACTION_DIRS", (Path(tmp),)
+            ):
+                self.assertIsNone(deps._helper_path())
+
+    def test_policy_registered_matches_action_content(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write_policy(
+                tmp,
+                "io.github.zonaro.Jolven.Devel.XCloudDeps.policy",
+                exec_path="/usr/bin/x",
+            )
+            with mock.patch.object(
+                system_integration, "POLKIT_ACTION_DIRS", (Path(tmp),)
+            ):
+                self.assertTrue(deps.policy_registered())
+
+    def test_unavailable_reason(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch.object(
+                system_integration, "POLKIT_ACTION_DIRS", (Path(tmp),)
+            ):
+                reason = deps.unavailable_reason()
+                self.assertIsInstance(reason, str)
+                self.assertNotIn("scripts", reason)
+                self.assertNotIn("sudo", reason)
+                self.assertFalse(deps.helper_available())
+            helper = make_helper(tmp, executable=True)
+            write_policy(tmp, "test.policy", exec_path=str(helper))
+            with mock.patch.object(
+                system_integration, "POLKIT_ACTION_DIRS", (Path(tmp),)
+            ):
+                self.assertIsNone(deps.unavailable_reason())
+                self.assertTrue(deps.helper_available())
 
     def test_install_without_helper_returns_false(self):
         with patch.object(deps, "_helper_path", return_value=None):

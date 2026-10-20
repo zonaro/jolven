@@ -2222,11 +2222,14 @@ class CartridgesWindow(Adw.ApplicationWindow):
             except Exception:
                 pass
             self._xcloud_deps_pending_game = None
-            self.toast_queue.add(
-                Adw.Toast.new(
-                    _("Instalador indisponível. Rode scripts/install-xcloud-deps.sh com sudo.")
-                )
-            )
+            reason = xcloud_deps.unavailable_reason()
+            if reason is None:
+                # Não deve acontecer: `install_async` só devolve False com
+                # o helper ausente. Segurança de tipo, mesma fonte única.
+                from cartridges.platform import system_integration  # noqa: PLC0415
+
+                reason = system_integration.unavailable_message()
+            self.toast_queue.add(Adw.Toast.new(reason))
 
     def _on_xcloud_deps_closed(self, _dialog: Adw.AlertDialog) -> None:
         self._xcloud_deps_waiting = False

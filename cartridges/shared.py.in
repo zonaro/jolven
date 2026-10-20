@@ -36,27 +36,6 @@ class AppState(IntEnum):
     UNDO_REMOVE_ALL_GAMES = auto()
 
 
-def _detect_prefix() -> "Path | None":
-    """Devolve o prefix de instalacao deduzido do caminho deste modulo.
-
-    Permite extrair o tarball binario da release em qualquer $PREFIX
-    (ex: ~/.local) em vez do prefix usado na compilacao. Devolve None
-    quando a arvore relocada nao e encontrada (fallback: paths de build).
-    """
-    try:
-        for parent in Path(__file__).resolve().parents:
-            if (parent / "share" / "jolven" / "jolven.gresource").exists():
-                return parent
-            # Compat: instalacoes antigas (Cartridges) no mesmo prefix
-            if (parent / "share" / "cartridges" / "cartridges.gresource").exists():
-                return parent
-    except OSError:
-        pass
-    return None
-
-
-_DETECTED_PREFIX = _detect_prefix()
-
 APP_ID = "@APP_ID@"
 _SETUP_VERSION = "@VERSION@"
 # Versão exibida no app (Fixes #6): gerada pela data de compilação no formato
@@ -86,18 +65,16 @@ if not isinstance(VERSION, str) or VERSION.startswith("@"):
         VERSION = _SETUP_VERSION
 # Raiz do GResource (ex: /page/redclaw/Cartridges), e NÃO caminho de disco:
 # Gtk.Template(resource_path=...) e new_from_resource() exigem o caminho do
-# recurso registrado, que independe de onde a árvore foi instalada. O prefix
-# de disco detectado acima serve só ao LIBEXECDIR; apontar o PREFIX para ele
-# quebrava todo template (o app nem abria após `ninja install`).
+# recurso registrado, que independe de onde a árvore foi instalada. Apontar
+# o PREFIX para um prefixo de disco quebrava todo template (o app nem abria
+# após `ninja install`).
 PREFIX = "@PREFIX@"
 PROFILE = "@PROFILE@"
 TIFF_COMPRESSION = "@TIFF_COMPRESSION@"
-LIBEXECDIR = (
-    str(_DETECTED_PREFIX / "libexec")
-    if _DETECTED_PREFIX is not None and (_DETECTED_PREFIX / "libexec").is_dir()
-    else "@libexecdir@"
-)
-GAME_MODE_HELPER = Path(LIBEXECDIR) / "jolven-game-mode-setup"
+# Action polkit da Jolven Session (fonte canônica do id; o texto também vive
+# em cartridges/platform/system_integration.py para as camadas sem gi).
+GAME_MODE_ACTION_ID = "io.github.zonaro.Jolven.configure-game-mode"
+
 GAME_SESSION_FILE = Path("@game_session_datadir@") / "wayland-sessions" / "io.github.zonaro.Jolven.GameMode.desktop"
 # Sessao legada (Cartridges) — mantida como fallback de leitura/deteccao.
 LEGACY_GAME_SESSION_FILE = Path("@game_session_datadir@") / "wayland-sessions" / "page.redclaw.Cartridges.GameMode.desktop"

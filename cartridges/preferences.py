@@ -211,6 +211,23 @@ class _CatalogoTemas:
         nome = getattr(self.tema(slug), "name", None)
         return nome if isinstance(nome, str) and nome else slug
 
+    def modo(self, slug: str) -> Optional[str]:
+        """Modo natural do tema (``"light"``/``"dark"``) ou ``None``.
+
+        Aceita a função publicada no catálogo ou a propriedade da paleta; sem
+        catálogo, devolve ``None`` e a página usa o recuo.
+        """
+        funcao = getattr(self._catalog, "modo_do_tema", None)
+        if callable(funcao):
+            try:
+                modo = funcao(slug)
+            except Exception:  # pylint: disable=broad-exception-caught
+                modo = None
+            if modo in ("light", "dark"):
+                return str(modo)
+        modo = getattr(self.tema(slug), "modo_sugerido", None)
+        return str(modo) if modo in ("light", "dark") else None
+
     def dark_only(self, slug: str) -> bool:
         funcao = getattr(self._catalog, "slug_é_dark_only", None)
         if callable(funcao):
@@ -326,6 +343,7 @@ class CartridgesPreferences(Adw.PreferencesDialog):
     sunshine_test_button: Gtk.Button = Gtk.Template.Child()
     sunshine_web_button: Gtk.Button = Gtk.Template.Child()
     sunshine_start_button: Gtk.Button = Gtk.Template.Child()
+    sunshine_autostart_switch: Adw.SwitchRow = Gtk.Template.Child()
     sunshine_apps_group: Adw.PreferencesGroup = Gtk.Template.Child()
     sunshine_api_sync_button: Gtk.Button = Gtk.Template.Child()
     sunshine_max_bitrate_row: Adw.EntryRow = Gtk.Template.Child()
@@ -527,6 +545,7 @@ class CartridgesPreferences(Adw.PreferencesDialog):
     _steam_ocupada: bool = False
     _sync_steam_id: Optional[int] = None
     _bloqueio_ui: int = 0
+    _autostart_sunshine_alterado: bool = False
 
     is_open = False
     _teste_em_curso: Optional[threading.Event] = None
@@ -671,6 +690,14 @@ class CartridgesPreferences(Adw.PreferencesDialog):
         self.sunshine_test_button.connect("clicked", self.testar_sunshine)
         self.sunshine_web_button.connect("clicked", self.abrir_sunshine_web)
         self.sunshine_start_button.connect("clicked", self.iniciar_sunshine)
+        # O estado do autostart é autoritativo no systemd, não no GSettings:
+        # lê de forma assíncrona e reflete no switch sob guarda de reentrada.
+        self.sunshine_autostart_switch.connect(
+            "notify::active", self.alternar_autostart_sunshine
+        )
+        threading.Thread(
+            target=self._carregar_autostart_sunshine, daemon=True
+        ).start()
         self.sunshine_apply_button.connect("clicked", self.aplicar_sunshine_host)
         self.sunshine_api_sync_button.connect("clicked", self.exportar_sunshine_api)
         self.sunshine_unpair_all_button.connect("clicked", self.desemparelhar_todos)
@@ -1590,6 +1617,69 @@ class CartridgesPreferences(Adw.PreferencesDialog):
         self.testar_sunshine()
         return GLib.SOURCE_REMOVE
 
+    def _carregar_autostart_sunshine(self) -> None:
+        """Lê o estado real do autostart fora da thread GTK."""
+        try:
+            from cartridges.utils import sunshine_servico  # noqa: PLC0415
+
+            disponivel = sunshine_servico.autostart_disponivel()
+            habilitado = (
+                sunshine_servico.autostart_habilitado() if disponivel else False
+            )
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.exception("Não foi possível ler o autostart do Sunshine")
+            disponivel, habilitado = False, False
+        entregar_na_tela(
+            self._mostrar_autostart_sunshine, disponivel, habilitado
+        )
+
+    def _mostrar_autostart_sunshine(
+        self, disponivel: bool, habilitado: bool
+    ) -> bool:
+        # Leitura atrasada não pode sobrescrever a ação do usuário no toggle.
+        if self._autostart_sunshine_alterado:
+            return GLib.SOURCE_REMOVE
+        with self._sem_reentrada():
+            self.sunshine_autostart_switch.set_active(bool(habilitado))
+            if not disponivel:
+                self.sunshine_autostart_switch.set_sensitive(False)
+                self.sunshine_autostart_switch.set_subtitle(
+                    _("Sunshine não instalado")
+                )
+        return GLib.SOURCE_REMOVE
+
+    def alternar_autostart_sunshine(
+        self, row: Adw.SwitchRow, *_args: Any
+    ) -> None:
+        if self._bloqueio_ui:
+            return
+        self._autostart_sunshine_alterado = True
+        habilitar = bool(row.get_active())
+        row.set_sensitive(False)
+
+        def concluir(resultado: tuple) -> bool:
+            ok, mensagem = bool(resultado[0]), str(resultado[1])
+            with self._sem_reentrada():
+                if not ok:
+                    row.set_active(not habilitar)
+                else:
+                    row.set_active(habilitar)
+            row.set_sensitive(True)
+            self.add_toast(Adw.Toast.new(mensagem))
+            return GLib.SOURCE_REMOVE
+
+        def executar() -> None:
+            try:
+                from cartridges.utils import sunshine_servico  # noqa: PLC0415
+
+                resultado = sunshine_servico.definir_autostart(habilitar)
+            except Exception as error:  # pylint: disable=broad-exception-caught
+                entregar_na_tela(concluir, (False, str(error)))
+                return
+            entregar_na_tela(concluir, resultado)
+
+        threading.Thread(target=executar, daemon=True).start()
+
     def atualizar_atalho_global(self) -> None:
         try:
             estado = global_shortcut.get_status()
@@ -1979,6 +2069,10 @@ class CartridgesPreferences(Adw.PreferencesDialog):
         self._ligar_modo()
         self._ligar_destaque()
         self.tema_glows_switch.connect("notify::active", self._alternar_glows)
+        with self._sem_reentrada():
+            self.tema_glows_switch.set_active(
+                shared.schema.get_boolean("theme-glows")
+            )
         self.tema_restaurar_row.connect("activated", self.restaurar_aparencia)
 
         self._ligar_tema_manager()
@@ -2162,19 +2256,24 @@ class CartridgesPreferences(Adw.PreferencesDialog):
     def _escolher_tema(
         self, _caixa: Gtk.FlowBox, filho: Gtk.FlowBoxChild
     ) -> None:
+        """Aplica o tema clicado — paleta, modo e destaque — na hora."""
         slug = getattr(filho, "slug", None)
         if not isinstance(slug, str):
             return
-        if self._bloqueado_no_modo(slug):
-            self.add_toast(
-                Adw.Toast.new(
-                    _("Este tema só funciona no modo escuro. Mude o Modo para Escuro.")
-                )
-            )
-            return
+
+        modo = self._modo_do_tema(slug)
+        # O tema traz o esquema de cor e o destaque: clicar já move os dois
+        # controles, sem depender de uma segunda ação do usuário.
         shared.schema.set_string("theme-slug", slug)
+        shared.schema.set_string("theme-mode", modo)
+        shared.schema.set_string("theme-accent-custom", "")
+
         self._refletir_tema()
+        self._refletir_modo()
+        self._refletir_destaque()
         self._aplicar_tema(slug)
+        self._aplicar_modo(modo)
+        self._aplicar_destaque()
         self._agendar_sync_steam()
         filho.grab_focus()
 
@@ -2305,15 +2404,16 @@ class CartridgesPreferences(Adw.PreferencesDialog):
     def _alternar_glows(self, row: Adw.SwitchRow, *_args: Any) -> None:
         if self._bloqueio_ui:
             return
+        shared.schema.set_boolean("theme-glows", bool(row.get_active()))
         self._aplicar_glows()
-        if row.get_active() and self._slug_atual() == SLUG_PADRAO:
-            self._agendar_sync_steam()
+        self._agendar_sync_steam()
 
     def restaurar_aparencia(self, *_args: Any) -> None:
         """Volta ao tema Jolven, modo automático e destaque padrão."""
         shared.schema.set_string("theme-slug", SLUG_PADRAO)
         shared.schema.set_string("theme-mode", MODO_PADRAO)
         shared.schema.set_string("theme-accent-custom", "")
+        shared.schema.set_boolean("theme-glows", False)
         with self._sem_reentrada():
             self.tema_glows_switch.set_active(False)
         self._refletir_tema()
@@ -2361,29 +2461,23 @@ class CartridgesPreferences(Adw.PreferencesDialog):
         modo = shared.schema.get_string("theme-mode")
         return modo if modo in MODOS else MODO_PADRAO
 
-    def _modo_escuro_efetivo(self) -> bool:
-        modo = self._modo_atual()
-        if modo == "dark":
-            return True
-        if modo == "light":
-            return False
-        try:
-            return bool(Adw.StyleManager.get_default().get_dark())
-        except Exception:  # pylint: disable=broad-exception-caught
-            return True
+    def _modo_do_tema(self, slug: str) -> str:
+        """Modo natural do tema clicado (``light``/``dark``).
 
-    def _bloqueado_no_modo(self, slug: str) -> bool:
+        A galeria traz o esquema junto com a paleta; sem informação do
+        catálogo, prevalece o escuro.
+        """
         catalogo = self._catalogo_temas
-        return bool(
-            catalogo is not None
-            and catalogo.disponivel
-            and catalogo.dark_only(slug)
-            and not self._modo_escuro_efetivo()
-        )
+        if catalogo is not None:
+            modo = catalogo.modo(slug)
+            if modo in ("light", "dark"):
+                return str(modo)
+        return "dark"
 
     def _glows_ativos(self) -> bool:
+        """Brilho efetivo: preferência ligada **e** tema Jolven escolhido."""
         return (
-            self.tema_glows_switch.get_active()
+            shared.schema.get_boolean("theme-glows")
             and self._slug_atual() == SLUG_PADRAO
         )
 
@@ -2393,8 +2487,11 @@ class CartridgesPreferences(Adw.PreferencesDialog):
         self.tema_selecionado_row.set_tooltip_text(slug)
         with self._sem_reentrada():
             self.tema_glows_switch.set_visible(slug == SLUG_PADRAO)
-            if slug != SLUG_PADRAO:
-                self.tema_glows_switch.set_active(False)
+            # O switch mostra a intenção guardada; fora do tema Jolven ela
+            # apenas não tem efeito (não é apagada ao trocar de tema).
+            self.tema_glows_switch.set_active(
+                shared.schema.get_boolean("theme-glows")
+            )
             self.temas_flowbox.unselect_all()
         for filho in self._filhos_da_galeria():
             if getattr(filho, "slug", None) == slug:
@@ -2403,25 +2500,26 @@ class CartridgesPreferences(Adw.PreferencesDialog):
         self._atualizar_disponibilidade_temas()
 
     def _atualizar_disponibilidade_temas(self) -> None:
-        """Marca os temas que só funcionam no modo escuro."""
-        escuro = self._modo_escuro_efetivo()
+        """Todos os temas são clicáveis: o clique já ajusta o modo.
+
+        O tooltip avisa quando a paleta usa o modo escuro. Antes o item era
+        desabilitado nesse caso, e um ``FlowBoxChild`` insensível não emite
+        ``child-activated`` — o tema ficava sem clique nenhum.
+        """
         catalogo = self._catalogo_temas
         for filho in self._filhos_da_galeria():
             slug = getattr(filho, "slug", None)
             if not isinstance(slug, str):
                 continue
+            filho.set_sensitive(True)
             nome = self._nome_do_tema(slug)
-            bloqueado = bool(
+            escuro = bool(
                 catalogo is not None
                 and catalogo.disponivel
                 and catalogo.dark_only(slug)
-                and not escuro
             )
-            filho.set_sensitive(not bloqueado)
             filho.set_tooltip_text(
-                _("{} — só funciona no modo escuro").format(nome)
-                if bloqueado
-                else nome
+                _("{} — usa o modo escuro").format(nome) if escuro else nome
             )
 
     # ── Aparência: integração com a Steam ─────────────────────────────────

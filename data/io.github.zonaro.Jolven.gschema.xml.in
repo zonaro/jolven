@@ -338,6 +338,11 @@
       <default>""</default>
       <summary>Custom accent colour in #RRGGBB format (empty = theme default)</summary>
     </key>
+    <key name="theme-glows" type="b">
+      <default>false</default>
+      <summary>Enable the Jolven theme RGB glow</summary>
+      <description>Glow effects are part of the jolven theme identity; the setting is kept but only has effect on that theme.</description>
+    </key>
     <key name="steam-skin-enabled" type="b">
       <default>false</default>
       <summary>Apply the selected theme as a skin to Steam</summary>

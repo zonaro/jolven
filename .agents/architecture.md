@@ -64,7 +64,7 @@ versão, schemas, caminhos de instalação e estado compartilhado. Pontos críti
 - `PREFIX` é o prefixo lógico do GResource, por exemplo
   `/io/github/zonaro/Jolven`; não representa `/usr` ou `~/.local`;
 - o perfil de desenvolvimento usa App ID e prefixo distintos;
-- `_detect_prefix` permite uma instalação relocável;
+- `_detect_prefix`, no launcher (`jolven.in`), permite uma instalação relocável;
 - caminhos de dados devem respeitar XDG e os helpers existentes.
 
 Templates Blueprint são compilados em `.ui` e incluídos no recurso descrito por

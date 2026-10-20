@@ -46,6 +46,7 @@ from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk
 from cartridges import platform
 from cartridges import shared
 from cartridges.platform import authentication
+from cartridges.platform import system_integration
 from cartridges.details_dialog import DetailsDialog
 from cartridges.controller import (
     ControllerAction,
@@ -116,6 +117,19 @@ def _exit_failed_game_session(
     """
     sys.__excepthook__(exception_type, exception, traceback)
     os._exit(1)  # pylint: disable=protected-access
+
+
+GAME_MODE_ACTION_ID = system_integration.GAME_MODE_ACTION_ID
+
+
+def game_mode_setup_unavailable_subtitle() -> str:
+    """Texto exato da indisponibilidade da integração de sistema.
+
+    Delega à fonte única (`system_integration.unavailable_message`) usada
+    pela UI (e pelo toast fail-closed de `_run_game_mode_setup`): nunca
+    orienta a rodar script.
+    """
+    return system_integration.unavailable_message()
 
 
 class CartridgesApplication(Adw.Application):
@@ -1033,11 +1047,18 @@ class CartridgesApplication(Adw.Application):
                 )
 
     def refresh_game_mode_setup_actions(self) -> None:
-        """Show only the install or uninstall action that currently applies."""
+        """Show only the install or uninstall action that currently applies.
+
+        Fail-closed: as actions só habilitam quando o helper autorizado
+        pela policy polkit existe e é executável
+        (`system_integration.helper_for`). Sem helper não há caminho
+        privilegiado aceitável — nunca se deriva caminho do prefixo. A UI
+        apresenta `game_mode_setup_unavailable_subtitle()` nesse caso.
+        """
+        helper = system_integration.helper_for(GAME_MODE_ACTION_ID)
         available = (
             not os.getenv("FLATPAK_ID")
-            and shared.GAME_MODE_HELPER.is_file()
-            and os.access(shared.GAME_MODE_HELPER, os.X_OK)
+            and helper is not None
             and self._game_mode_setup_process is None
         )
         installed = shared.GAME_SESSION_FILE.is_file()
@@ -1057,9 +1078,20 @@ class CartridgesApplication(Adw.Application):
     def _run_game_mode_setup(self, operation: str) -> None:
         if self._game_mode_setup_process is not None:
             return
+        # Fail-closed: resolve o helper autorizado de forma fresca e nunca
+        # executa caminho derivado do prefixo. Sem helper, o recurso fica
+        # indisponível (as actions já nascem desabilitadas nesse caso).
+        helper = system_integration.helper_for(GAME_MODE_ACTION_ID)
+        if helper is None:
+            logging.error("Jolven Session setup unavailable: no authorized helper")
+            shared.win.toast_queue.add(
+                Adw.Toast.new(game_mode_setup_unavailable_subtitle())
+            )
+            self.refresh_game_mode_setup_actions()
+            return
         try:
             process = Gio.Subprocess.new(
-                ["pkexec", str(shared.GAME_MODE_HELPER), operation],
+                ["pkexec", str(helper), operation],
                 Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE,
             )
         except GLib.Error as error:

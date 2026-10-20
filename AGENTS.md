@@ -37,6 +37,9 @@ repositório. Ele vale para toda a árvore. A documentação detalhada está em
   devem ser ignorados, não regravados.
 - Integrações externas são opcionais. Falha de rede, biblioteca ausente, serviço
   indisponível ou credencial inválida não deve impedir o uso da biblioteca local.
+- O Jolven não é distribuído com scripts de instalação de dependência além do
+  próprio `install.sh`: dependência obrigatória vem com a instalação do Jolven
+  e dependência opcional é instalada pelo app, pela tela de Configurações.
 
 ## Regras obrigatórias de implementação
 

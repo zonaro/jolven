@@ -4,7 +4,8 @@ Responsabilidades
 -----------------
 1. Guardar a paleta, o modo e o brilho atuais.
 2. Observar as chaves GSettings (``theme-slug``, ``theme-mode``,
-   ``theme-accent-custom``, ``steam-skin-enabled``) e reaplicar o tema.
+   ``theme-accent-custom``, ``theme-glows``, ``steam-skin-enabled``) e
+   reaplicar o tema.
 3. Aplicar via ``cartridges.themes.gtk_engine`` (um provider dedicado).
 4. Expor :meth:`perfil_compartilhado` para a integração de skin do Steam.
 5. Nunca bloquear a thread do GTK e nunca derrubar a aplicação: toda a
@@ -103,6 +104,7 @@ class ThemeManager(GObject.Object):
             schema.connect("changed::theme-slug", self._on_schema_changed)
             schema.connect("changed::theme-mode", self._on_schema_changed)
             schema.connect("changed::theme-accent-custom", self._on_schema_changed)
+            schema.connect("changed::theme-glows", self._on_schema_changed)
             schema.connect("changed::steam-skin-enabled", self._on_steam_skin_changed)
 
             # No modo "auto" o tema precisa acompanhar o esquema do sistema.
@@ -126,6 +128,7 @@ class ThemeManager(GObject.Object):
         self._slug = self._schema.get_string("theme-slug") or _SLUG_PADRAO
         self._modo = self._schema.get_string("theme-mode") or _MODO_PADRAO
         self._acento_custom = self._schema.get_string("theme-accent-custom") or ""
+        self._glows = self._schema.get_boolean("theme-glows")
         self._steam_skin = self._schema.get_boolean("steam-skin-enabled")
 
     def _on_schema_changed(self, *_args: object) -> None:

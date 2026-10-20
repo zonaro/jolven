@@ -11,6 +11,7 @@ from cartridges.themes.catalog import (
     NAMES_BY_SLUG,
     carregar_catalogo,
     get_palette,
+    modo_do_tema,
     nome_do_tema,
     obter_tema,
     palette_for_mode,
@@ -58,6 +59,14 @@ class CatalogoTests(unittest.TestCase):
         self.assertFalse(slug_é_dark_only("catppuccin-latte"))
         self.assertFalse(slug_é_dark_only("nord"))
         self.assertTrue(IS_DARK_ONLY_BY_SLUG["oled"])
+
+    def test_modo_do_tema_sugerido(self):
+        self.assertIn(modo_do_tema("jolven"), ("dark", "light"))
+        self.assertEqual(modo_do_tema("adwaita"), "light")
+        self.assertEqual(modo_do_tema("adwaita-gray"), "dark")
+        self.assertEqual(modo_do_tema("nord"), "dark")
+        self.assertEqual(modo_do_tema("oled"), "dark")
+
         self.assertFalse(IS_DARK_ONLY_BY_SLUG["catppuccin-latte"])
 
     def test_nome_do_tema_gruvbox(self):

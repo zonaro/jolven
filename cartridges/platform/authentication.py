@@ -52,13 +52,15 @@ from collections.abc import Iterable
 from enum import Enum
 from pathlib import Path
 
+from cartridges.platform import system_integration
+
 AUTH_ACTION_ID = "io.github.zonaro.Jolven.preferences"
 
-POLICY_SEARCH_DIRS = (
-    Path("/usr/share/polkit-1/actions"),
-    Path("/usr/local/share/polkit-1/actions"),
-    Path("/etc/polkit-1/actions"),
-)
+# Fonte única dos diretórios de policy: os mesmos que o polkitd lê (ver
+# `system_integration.POLKIT_ACTION_DIRS`). Mantido como alias para
+# compatibilidade; `policy_installed` lê a fonte viva em cada chamada para
+# acompanhar substituições em teste.
+POLICY_SEARCH_DIRS = system_integration.POLKIT_ACTION_DIRS
 
 PKCHECK_TIMEOUT = 120.0
 WINDOWS_TIMEOUT = 120.0
@@ -113,11 +115,14 @@ def policy_installed(search_dirs: Iterable[str | Path] | None = None) -> bool:
     (``~/.local``) never install the policy, so this is False there and
     the gate fails open instead of locking the user out of Preferences.
     ``search_dirs`` exists so tests can point at a temporary directory.
+    When omitted, the directories come from
+    ``system_integration.POLKIT_ACTION_DIRS`` (single source shared with
+    the privileged-helper resolution).
     """
     dirs = (
         [Path(d) for d in search_dirs]
         if search_dirs is not None
-        else list(POLICY_SEARCH_DIRS)
+        else list(system_integration.POLKIT_ACTION_DIRS)
     )
     for directory in dirs:
         try:

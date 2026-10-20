@@ -203,6 +203,13 @@ sem nenhum, segue o tipo de instalação detectado.
 - A linha **Iniciar o Sunshine** (`is_running` via `pgrep -x` no
   nativo e `flatpak ps` no Flatpak) inicia o servidor destacado quando
   parado, avisa quando já roda e retesta a conexão em seguida.
+- A linha **Iniciar o Sunshine automaticamente** habilita/desabilita o
+  autostart da unidade de usuário do Sunshine (`systemctl --user
+  enable/disable`, sem root e sem polkit) por
+  `cartridges/utils/sunshine_servico.py`. O nome da unidade é detectado
+  (AppId do LizardByte ou `sunshine.service`); o estado exibido vem do
+  systemd, nunca do GSettings, e é lido fora da thread GTK com entrega
+  por `entregar_na_tela`. Sem Sunshine instalado a linha fica insensível.
 - Flatpak: o Jolven confinado não enxerga o `~/.config` do host; nesse
   caso aponte `sunshine-apps-path` para um caminho acessível.
 
@@ -225,9 +232,14 @@ diálogo, fora da thread GTK, com a entrega por
 - Windows: Windows Hello por `UserConsentVerifier`, no pacote opcional
   `winrt-Windows.Security.Credentials.UI`, importado de forma lazy.
 - `DENIED` — recusa, diálogo dispensado ou tempo esgotado — bloqueia a abertura
-  com toast. `UNAVAILABLE` abre assim mesmo e registra aviso: um build local
-  (`~/.local`) não instala a policy polkit, e uma instalação Windows pode não ter
-  o pacote ou o Hello configurado.
+  com toast. `UNAVAILABLE` abre assim mesmo e registra aviso: o fail-open cobre
+  apenas plataformas sem polkit (Windows/sem policy instalada; uma instalação
+  Windows pode não ter o pacote ou o Hello configurado). Em instalações normais
+  no Linux o `install.sh` instala a policy com sudo junto do Jolven, então o
+  portão atua; se a integração de sistema faltar, o recurso fica indisponível
+  com aviso de reinstalar o Jolven.
+- O helper privilegiado é resolvido pelo `exec.path` da policy instalada, nunca
+  pelo prefixo do app.
 - O portão é higiene contra alteração casual por quem já está na sessão, não
   fronteira de segurança: o mesmo usuário consegue contorná-lo, e o app não
   decide autorização de sistema a partir dele.

@@ -107,6 +107,7 @@ Jolven exports your games to [Sunshine](https://github.com/LizardByte/Sunshine) 
 - Open a game's menu and choose **Add to Sunshine**, or turn on the automatic sync in Preferences to export new games as they arrive (Xbox Cloud Gaming titles are skipped).
 - The export writes to your local Sunshine `apps.json` — no account, no network — preserving anything already there.
 - The Sunshine Web UI password you type in Preferences is masked and kept in your system keyring (Secret Service), not in a plain settings file.
+- The Sunshine page also starts the server on demand and can enable its user service at login (systemd `--user`, no root needed); the toggle shows as unavailable when Sunshine is not installed.
 - Then open [Moonlight](https://moonlight-stream.org/) on your TV, phone or another PC and play.
 
 ### Gravação de tela e streaming (GPU Screen Recorder)
@@ -165,29 +166,22 @@ same application and library are used in both modes.
 
 ### Requirements and installation (Fedora)
 
-Build and install Jolven normally, then run:
+Build and install Jolven normally with `install.sh` — the only installer.
+It also installs the system integration (privileged helpers plus polkit
+policies) used for system-level operations.
 
-```sh
-./scripts/install-game-session.sh
-```
-
-The installer verifies Fedora, checks `gamescope`, `gamemode`, and
-`libmanette`, installs only missing packages with DNF, validates the session
-desktop file, and installs the session launcher under `/usr`. It never
-removes dependencies or changes GPU, SELinux, PAM, or GDM settings. MangoHud
-is optional.
-
-The application menu also exposes **Install Jolven Session** or **Uninstall
-Jolven Session**, according to the current state. It uses the normal polkit
-authorization dialog.
+Then open **Preferences** in the app itself and use **Install Jolven
+Session** or **Uninstall Jolven Session**, according to the current state.
+The operation is authorized with the normal polkit dialog. It verifies
+Fedora, checks `gamescope`, `gamemode`, and `libmanette`, installs only
+missing packages with DNF, validates the session desktop file, and installs
+the session launcher under `/usr`. It never removes dependencies or changes
+GPU, SELinux, PAM, or GDM settings. MangoHud is optional.
 
 Log out, select **Jolven Session** from the display manager's session
 chooser, and sign in. Closing Jolven ends Gamescope and returns to the login
-screen. To remove only the session integration:
-
-```sh
-./scripts/uninstall-game-session.sh
-```
+screen. To remove only the session integration, use **Uninstall Jolven
+Session** in Preferences.
 
 ### Development and configuration
 

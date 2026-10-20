@@ -87,7 +87,7 @@ Ainda sem equivalente no Windows, conforme o épico do port:
   (`UserConsentVerifier`, no pacote opcional
   `winrt-Windows.Security.Credentials.UI`); sem o pacote, sem Hello configurado
   ou com Hello desabilitado por política, as Preferências abrem com aviso no
-  log, como no build local do Linux;
+  log (fail-open restrito a plataformas sem polkit);
 - gamepads por libmanette dão lugar a XInput (`ctypes`);
 - xCloud embutido, GameMode, MangoHud, `wpctl`/WirePlumber e libei/snegg não têm
   equivalente direto;
@@ -106,7 +106,7 @@ Ainda sem equivalente no Windows, conforme o épico do port:
 | overlay | MangoHud | jogo inicia sem overlay | sem equivalente |
 | controle de áudio | `wpctl`/WirePlumber | não ajustar automaticamente | sem equivalente |
 | luzes inteligentes | `tinytuya` e Secret Service | integração desabilitada | sem Secret Service; segredos por DPAPI (planejado) |
-| autenticação das Preferências | polkit (`pkcheck`) / `winrt-Windows.Security.Credentials.UI` | Preferências abrem sem exigir autenticação, com aviso no log | pywinrt opcional, via CPython oficial (o do MSYS2 UCRT64 recusa os wheels `win_amd64`) |
+| autenticação das Preferências | polkit (`pkcheck`) / `winrt-Windows.Security.Credentials.UI` | integração de sistema (helpers + policies) vem instalada com o Jolven pelo `install.sh`; sem ela o recurso fica indisponível com aviso de reinstalar o Jolven (no Windows, abre sem exigir autenticação, com aviso no log) | pywinrt opcional, via CPython oficial (o do MSYS2 UCRT64 recusa os wheels `win_amd64`) |
 
 Imports dessas capacidades devem ser lazy ou protegidos. Nunca transforme uma
 dependência opcional em falha na importação global de `main.py`.
