@@ -21,6 +21,7 @@
     "--filesystem=~/.var/app/io.itch.itch/config/itch/:ro",
     "--filesystem=~/.var/app/org.libretro.RetroArch/config/retroarch/:ro",
     "--filesystem=~/.var/app/org.yuzu_emu.yuzu:ro",
+    "--filesystem=~/.var/app/dev.eden_emu.eden:ro",
     "--filesystem=/var/lib/flatpak/app:ro",
     "--filesystem=/var/lib/flatpak/exports:ro",
     "--filesystem=xdg-data/flatpak/app:ro",
