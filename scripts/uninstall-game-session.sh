@@ -14,6 +14,7 @@ fi
 targets=(
     "$prefix/bin/jolven-session"
     "$prefix/bin/cartridges-session"
+    "$prefix/libexec/jolven-session"
     "$helper"
     "$legacy_helper"
     "$prefix/share/polkit-1/actions/io.github.zonaro.Jolven.GameMode.policy"

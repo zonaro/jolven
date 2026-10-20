@@ -175,6 +175,12 @@ desktop file, and installs the session launcher under `/usr`. It never
 removes dependencies or changes GPU, SELinux, PAM, or GDM settings. MangoHud
 is optional.
 
+When the application itself lives in the user's prefix, the privileged setup
+also installs a small launcher relay system-wide. The display manager evaluates
+the session chooser as the `gdm` user, which cannot traverse a `0700` home
+directory, so a user-prefix path would make Jolven Session disappear from the
+chooser.
+
 The application menu also exposes **Install Jolven Session** or **Uninstall
 Jolven Session**, according to the current state. It uses the normal polkit
 authorization dialog.

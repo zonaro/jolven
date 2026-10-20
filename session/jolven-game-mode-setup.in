@@ -5,17 +5,25 @@ set -euo pipefail
 
 readonly action="${1:-}"
 readonly session_file="@game_session_datadir@/wayland-sessions/io.github.zonaro.Jolven.GameMode.desktop"
+readonly relay_file="@game_session_libexecdir@/jolven-session"
+# Escreve o arquivo de sessao sem componentes `..`: o valor vai para um arquivo
+# de sistema lido por outros usuarios (e pelo greeter), entao fica legivel.
+resolved_path() {
+    local path="$1" resolved
+    resolved="$(readlink -f -- "$path" 2>/dev/null)" || resolved=""
+    printf '%s\n' "${resolved:-$path}"
+}
 # Deduza o launcher a partir deste helper (libexec/../bin) para que o
 # tarball binario da release funcione em qualquer $PREFIX
 # (fallback: caminho da compilacao).
 readonly _SETUP_BINDIR="$(dirname -- "$(readlink -f -- "$0")")/../bin"
 if [[ -x "$_SETUP_BINDIR/jolven-session" ]]; then
-    readonly session_launcher="$_SETUP_BINDIR/jolven-session"
+    readonly session_launcher="$(resolved_path "$_SETUP_BINDIR/jolven-session")"
 elif [[ -x "$_SETUP_BINDIR/cartridges-session" ]]; then
     # Compat: launcher legado do Cartridges
-    readonly session_launcher="$_SETUP_BINDIR/cartridges-session"
+    readonly session_launcher="$(resolved_path "$_SETUP_BINDIR/cartridges-session")"
 else
-    readonly session_launcher="@bindir@/jolven-session"
+    readonly session_launcher="$(resolved_path "@bindir@/jolven-session")"
 fi
 
 . /etc/os-release
@@ -23,8 +31,115 @@ distro_name="${NAME:-Linux}"
 distro_name="${distro_name% Linux}"
 distro_name="${distro_name//$'\n'/ }"
 
+# Home do usuario que pediu a elevacao. O greeter roda como `gdm`, entao um
+# launcher dentro de uma home 0700 nunca e alcancavel por ele.
+invoking_user_home() {
+    local uid home
+    uid="${PKEXEC_UID:-${SUDO_UID:-}}"
+    [[ -n "$uid" ]] || return 1
+    home="$(getent passwd "$uid" 2>/dev/null | cut -d: -f6)"
+    [[ -n "$home" ]] || return 1
+    printf '%s\n' "$home"
+}
+
+# Diretorios ancestrais precisam de o+x para que outro usuario atravesse ate o
+# arquivo; o bit de execucao do proprio arquivo e testado separadamente.
+launcher_reachable() {
+    local path="$1" dir mode last home
+    [[ "$path" == /* ]] || return 1
+    dir="$(dirname -- "$path")"
+    while :; do
+        mode="$(stat -L -c '%a' -- "$dir" 2>/dev/null)" || return 1
+        last="${mode: -1}"
+        [[ "$last" =~ ^[1357]$ ]] || return 1
+        [[ "$dir" == "/" ]] && break
+        dir="$(dirname -- "$dir")"
+    done
+    if home="$(invoking_user_home)"; then
+        [[ "$path" != "$home"/* ]] || return 1
+    fi
+}
+
+# O modo `session-file` e uma pre-visualizacao: um launcher de sistema que
+# ainda nao existe continua sendo descrito como caminho direto, porque
+# `install` recusa launchers ausentes antes de escrever qualquer coisa.
+launcher_visible_to_others() {
+    local path="$1" require_executable="${2:-1}"
+    if (( require_executable )); then
+        [[ -x "$path" ]] || return 1
+    fi
+    launcher_reachable "$path"
+}
+
+print_session_file() {
+    local launcher="$1"
+    printf '%s\n' \
+        '[Desktop Entry]' \
+        'Name=Jolven Session' \
+        'Comment=Console-style gaming session powered by Jolven' \
+        "Exec=$launcher" \
+        "TryExec=$launcher" \
+        'Type=Application' \
+        'X-Jolven-Managed=true'
+}
+
+# Texto fixo: o helper privilegiado nunca copia conteudo controlado pelo
+# usuario para um caminho de sistema. O relay roda como o usuario da sessao
+# (o Exec do display manager ja e iniciado por ele), nunca como root.
+print_relay() {
+    cat <<'RELAY'
+#!/usr/bin/bash
+# X-Jolven-Managed=true
+# Installed by the Jolven Game Mode helper. The display manager evaluates
+# TryExec as the gdm user, which cannot traverse a 0700 home, so this fixed
+# system script locates the real launcher when the session starts. It runs as
+# the session user (the display manager starts Exec as that user), never root.
+set -u
+
+readonly SESSION_TAG="jolven-session"
+log() {
+    logger --tag "$SESSION_TAG" -- "$*" 2>/dev/null || printf '%s\n' "$*" >&2
+}
+
+HOME="${HOME:-}"
+candidates=(
+    "$HOME/.local/bin/jolven-session"
+    /usr/bin/jolven-session
+    /usr/local/bin/jolven-session
+)
+for candidate in "${candidates[@]}"; do
+    [[ -n "$HOME" ]] || [[ "$candidate" == /usr/* ]] || continue
+    if [[ -x "$candidate" ]]; then
+        exec "$candidate" "$@"
+    fi
+done
+log "Jolven session launcher was not found; reinstall Jolven Session"
+exit 127
+RELAY
+}
+
+is_managed_relay() {
+    [[ -f "$relay_file" ]] && grep -Eq '^# X-Jolven-Managed=true$' "$relay_file"
+}
+
 if [[ "$action" == name ]]; then
     printf 'Jolven Session\n'
+    exit 0
+fi
+
+if [[ "$action" == relay ]]; then
+    print_relay
+    exit 0
+fi
+
+if [[ "$action" == session-file ]]; then
+    preview_launcher="${2:-$session_launcher}"
+    if launcher_visible_to_others "$preview_launcher" 0; then
+        preview_target="$preview_launcher"
+    else
+        preview_target="$relay_file"
+    fi
+    print_session_file "$preview_target"
     exit 0
 fi
 
@@ -33,7 +148,7 @@ if [[ ${EUID:-$(id -u)} -ne 0 ]]; then
     exit 77
 fi
 if [[ "$action" != install && "$action" != uninstall ]]; then
-    printf 'Usage: jolven-game-mode-setup install|uninstall|name\n' >&2
+    printf 'Usage: jolven-game-mode-setup install|uninstall|name|session-file|relay\n' >&2
     exit 64
 fi
 
@@ -51,6 +166,14 @@ if [[ "$action" == uninstall ]]; then
         exit 73
     else
         printf 'Jolven Session is not installed.\n'
+    fi
+    if [[ -e "$relay_file" ]]; then
+        if is_managed_relay; then
+            rm -- "$relay_file"
+            printf 'Removed %s\n' "$relay_file"
+        else
+            printf 'Kept unmanaged file %s\n' "$relay_file"
+        fi
     fi
     exit 0
 fi
@@ -73,30 +196,79 @@ elif ! command -v gamescope >/dev/null 2>&1; then
     exit 69
 fi
 
+if launcher_visible_to_others "$session_launcher"; then
+    session_target="$session_launcher"
+else
+    session_target="$relay_file"
+fi
+
+temporary=""
+relay_installed=""
+cleanup_temporary() {
+    [[ -z "$temporary" ]] || rm -f -- "$temporary"
+}
+trap cleanup_temporary EXIT
+
 install -d -m 0755 -- "$(dirname -- "$session_file")"
+
+if [[ "$session_target" == "$relay_file" ]]; then
+    if [[ -e "$relay_file" ]] && ! is_managed_relay; then
+        # Sem controle do relay nao ha como garantir que o greeter enxergue a
+        # sessao; recusar e melhor do que instalar algo que nunca apareceu.
+        printf 'Refusing to use an unmanaged relay: %s\n' "$relay_file" >&2
+        printf 'Remove it manually if it is a leftover Jolven launcher.\n' >&2
+        exit 73
+    fi
+    install -d -m 0755 -- "$(dirname -- "$relay_file")"
+    temporary="$(mktemp "${relay_file}.tmp.XXXXXX")"
+    print_relay > "$temporary"
+    chmod 0755 -- "$temporary"
+    mv -- "$temporary" "$relay_file"
+    temporary=""
+    relay_installed="1"
+else
+    if [[ -e "$relay_file" ]]; then
+        if is_managed_relay; then
+            rm -- "$relay_file"
+            printf 'Removed %s\n' "$relay_file"
+        else
+            printf 'Warning: keeping unmanaged relay %s\n' "$relay_file" >&2
+        fi
+    fi
+fi
+
 if [[ -e "$session_file" ]] && ! is_managed; then
     backup="$session_file.backup.$(date +%Y%m%d%H%M%S)"
     cp --preserve=mode,timestamps -- "$session_file" "$backup"
     printf 'Existing unmanaged session preserved as %s\n' "$backup"
 fi
 
+# Um arquivo "instalado" que o usuario `gdm` nao consegue executar faria a
+# sessao desaparecer do seletor sem nenhum aviso (bug classico de TryExec).
+# A verificacao vem antes de gravar o arquivo de sessao: melhor falhar do que
+# deixar uma instalacao quebrada para tras.
+if command -v runuser >/dev/null 2>&1 && id nobody >/dev/null 2>&1; then
+    if ! runuser -u nobody -- test -x "$session_target"; then
+        printf 'Error: the display manager user cannot execute %s\n' "$session_target" >&2
+        printf 'Jolven Session would be silently hidden from the login screen.\n' >&2
+        if [[ -n "$relay_installed" ]] && is_managed_relay; then
+            rm -f -- "$relay_file"
+            printf 'Removed %s\n' "$relay_file" >&2
+        fi
+        exit 70
+    fi
+fi
+
 temporary="$(mktemp "${session_file}.tmp.XXXXXX.desktop")"
-trap 'rm -f -- "$temporary"' EXIT
-printf '%s\n' \
-    '[Desktop Entry]' \
-    'Name=Jolven Session' \
-    'Comment=Console-style gaming session powered by Jolven' \
-    "Exec=$session_launcher" \
-    "TryExec=$session_launcher" \
-    'Type=Application' \
-    'X-GDM-SessionRegisters=true' \
-    'X-Jolven-Managed=true' > "$temporary"
+print_session_file "$session_target" > "$temporary"
 if command -v desktop-file-validate >/dev/null 2>&1; then
     desktop-file-validate "$temporary"
 fi
-chmod 0644 "$temporary"
+chmod 0644 -- "$temporary"
 mv -- "$temporary" "$session_file"
+temporary=""
 trap - EXIT
+
 if command -v systemctl >/dev/null 2>&1 \
     && systemctl is-active --quiet polkit.service; then
     systemctl reload polkit.service || \
