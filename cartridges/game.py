@@ -44,6 +44,20 @@ def status_label(status: str) -> str:
     return STATUS_LABELS.get(status or "", "")
 
 
+def normalize_tags(value: Any) -> list[str]:
+    """The tags of a game, as a list that belongs to that game.
+
+    Only strings are kept, and the list is always a new one: the class
+    attribute of the game model is the default of every game, never a
+    container shared between them.
+    """
+    if isinstance(value, str):
+        value = [value]
+    if not isinstance(value, (list, tuple)):
+        return []
+    return [tag for tag in value if isinstance(tag, str)]
+
+
 # Mirror of the mappings in window.py so a per-game auto-recording session
 # builds exactly the same command line as the global recorder action.
 _RECORDER_VIDEO_SOURCES = {
@@ -99,6 +113,9 @@ class Game(Gtk.Box):
     # Already display-ready: picked from Steam's user tags, which have no
     # stable meaning to re-derive later, so the chosen name is what is kept.
     genre: Optional[str] = None
+    # Free-form labels of the game, shown in the details view. The class
+    # attribute is only the default: every game owns its own list.
+    tags: list[str] = []
     # "full" or "partial". None means Steam says neither, which is not the
     # same as "no gamepad support".
     controller_support: Optional[str] = None
@@ -257,6 +274,10 @@ class Game(Gtk.Box):
             if key == "executable" and isinstance(value, list):
                 value = shlex.join(value)
             setattr(self, key, value)
+        # The tags of a game belong to that game: the class attribute is
+        # only the default, and every game owns its own list, so editing
+        # the tags of one game never touches another.
+        self.tags = normalize_tags(self.tags)
 
     def update(self) -> None:
         self.emit("update-ready", {})

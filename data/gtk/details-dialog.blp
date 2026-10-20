@@ -296,6 +296,12 @@ template $DetailsDialog: Adw.Dialog {
           title: _("Gênero (opcional)");
         }
 
+        Adw.EntryRow tags {
+          title: _("Tags");
+          editable: false;
+          visible: false;
+        }
+
         Adw.ComboRow controller_support {
           title: _("Compatibilidade com controle");
 

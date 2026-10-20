@@ -55,6 +55,7 @@ class FileManager(AsyncManager):
             "metacritic",
             "steam_review",
             "genre",
+            "tags",
             "controller_support",
             "gamepad_recommended",
             "description",

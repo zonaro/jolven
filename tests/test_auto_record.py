@@ -98,14 +98,31 @@ class GameDefaultTests(unittest.TestCase):
             for node in game_class.body
             if isinstance(node, ast.FunctionDef) and node.name == "update_values"
         )
+        # The values of a game are filtered by this helper, so it has to
+        # travel with the method that uses it.
+        normalize_tags = next(
+            node
+            for node in tree.body
+            if isinstance(node, ast.FunctionDef) and node.name == "normalize_tags"
+        )
+        # The stand-in mirrors the model: every game has its own tags.
+        tags_field = next(
+            node
+            for node in game_class.body
+            if isinstance(node, ast.AnnAssign)
+            and isinstance(node.target, ast.Name)
+            and node.target.id == "tags"
+        )
         synthetic = ast.ClassDef(
             name="TestGame",
             bases=[],
             keywords=[],
-            body=[field, update_values],
+            body=[field, tags_field, update_values],
             decorator_list=[],
         )
-        module = ast.fix_missing_locations(ast.Module(body=[synthetic], type_ignores=[]))
+        module = ast.fix_missing_locations(
+            ast.Module(body=[normalize_tags, synthetic], type_ignores=[])
+        )
         namespace: dict[str, Any] = {"shlex": shlex, "Any": Any}
         exec(compile(module, "game.py", "exec"), namespace)  # pylint: disable=exec-used
         return namespace["TestGame"]

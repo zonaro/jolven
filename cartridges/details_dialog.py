@@ -78,6 +78,7 @@ class DetailsDialog(Adw.Dialog):
     publisher: Adw.EntryRow = Gtk.Template.Child()
     release_date: Adw.EntryRow = Gtk.Template.Child()
     genre: Adw.EntryRow = Gtk.Template.Child()
+    tags: Adw.EntryRow = Gtk.Template.Child()
     controller_support: Adw.ComboRow = Gtk.Template.Child()
     status: Adw.ComboRow = Gtk.Template.Child()
     rating_row: Adw.ActionRow = Gtk.Template.Child()
@@ -177,6 +178,10 @@ class DetailsDialog(Adw.Dialog):
                 self.release_date.set_text(self.game.release_date)
             if self.game.genre:
                 self.genre.set_text(self.game.genre)
+            if self.game.tags:
+                # The tags are a list: they are shown, not edited here.
+                self.tags.set_text(", ".join(self.game.tags))
+                self.tags.set_visible(True)
             self.set_controller_support(self.game.controller_support)
             self.set_status(self.game.status)
             self._rating = self.game.stars
