@@ -20,10 +20,14 @@
 import logging
 import os
 import re
+import stat
 import subprocess
 import time
+from pathlib import Path
 from shlex import quote
+from shlex import split as shell_split
 from shutil import which
+from typing import Optional
 
 from cartridges import shared
 from cartridges.game_launch import build_game_command
@@ -114,6 +118,92 @@ def aumid_from_command(executable: str) -> str:
     return match.group() if match else ""
 
 
+# The wrapper that only sets up the environment of the program that follows
+# it: the program itself is the next token.
+_ENV_WRAPPER = "env"
+
+
+def _is_assignment(token: str) -> bool:
+    """Whether a token is a ``NAME=value`` environment assignment."""
+    name, separator, _ = token.partition("=")
+    return bool(separator) and bool(name) and not name.startswith("-")
+
+
+def _program_token(command: str) -> str:
+    """The token of a command that names the program it runs."""
+    try:
+        tokens = shell_split(command)
+    except ValueError:
+        # An unbalanced quote: the shell would fail too, and the tokens of
+        # the raw text are the best guess available.
+        tokens = command.split()
+
+    index = 0
+    while index < len(tokens):
+        token = tokens[index]
+        if token == _ENV_WRAPPER:
+            index += 1
+            while index < len(tokens) and (
+                tokens[index].startswith("-") or _is_assignment(tokens[index])
+            ):
+                index += 1
+            continue
+        if _is_assignment(token):
+            index += 1
+            continue
+        break
+    return tokens[index] if index < len(tokens) else ""
+
+
+def local_executable(
+    command: str, working_directory: Optional[Path] = None
+) -> Optional[Path]:
+    """The program of this machine a launch command runs, when it names one.
+
+    A command that runs a file of the disk is a local launch. The launcher
+    URIs (``steam://…``), the Flatpak apps and the store clients run
+    something else, and the file they name is not a program the Jolven may
+    touch. Only the program the command runs is a target: the files it
+    takes as arguments (a ROM, a configuration) are none of its business.
+    """
+    token = _program_token(command or "")
+    if not token:
+        return None
+
+    path = Path(token)
+    if not path.is_absolute():
+        # A relative program is run from the folder of the launch.
+        if working_directory is None:
+            return None
+        path = Path(working_directory) / path
+    return path if path.is_file() else None
+
+
+def ensure_executable(path: Path) -> None:
+    """Give the owner the right to run a program that came without it.
+
+    An archive extracted without the executable bit, or a program a
+    launcher downloaded and forgot to mark as runnable, is listed as a game
+    but fails to spawn with "Permission denied". Only the owner bit is
+    added: the group and other bits belong to the user, and the rest of
+    the mode of the file is left as it is.
+
+    Best effort: a failure here never stops the launch. A file that cannot
+    be made runnable is reported by the launcher itself.
+    """
+    try:
+        if not path.is_file():
+            return
+        mode = path.stat().st_mode
+        if mode & stat.S_IXUSR:
+            return
+        os.chmod(path, stat.S_IMODE(mode) | stat.S_IXUSR)
+    except OSError as error:
+        # The path is not logged: the command that carries it is already
+        # in the log of the launch.
+        logging.debug("Could not set the owner execute bit: %s", error)
+
+
 def run_executable(
     executable,
     *,
@@ -173,6 +263,16 @@ def run_executable(
         str(args),
         f" with {', '.join(integrations)}" if integrations else "",
     )
+
+    # A program that came from an archive or from a download without the
+    # executable bit cannot be spawned: the launch would fail with
+    # "Permission denied". The owner bit is given right before the spawn,
+    # the way the launcher that wrote the command does it, and only for a
+    # file of this machine.
+    target = local_executable(resolved_executable, working_directory or shared.home)
+    if target is not None:
+        ensure_executable(target)
+
     # pylint: disable=consider-using-with
     return subprocess.Popen(
         args,

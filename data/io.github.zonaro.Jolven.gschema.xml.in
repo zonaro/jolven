@@ -131,6 +131,18 @@
     <key name="uzdoom-mods-location" type="s">
       <default>""</default>
     </key>
+    <key name="quiver" type="b">
+      <default>true</default>
+    </key>
+    <key name="quiver-location" type="s">
+      <default>"~/.local/share/QuiverLauncher"</default>
+    </key>
+    <key name="quiver-show-uninstalled" type="b">
+      <default>false</default>
+    </key>
+    <key name="quiver-enrich" type="b">
+      <default>true</default>
+    </key>
     <key name="twintail" type="b">
       <default>true</default>
     </key>

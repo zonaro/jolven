@@ -127,8 +127,9 @@ para fontes habilitadas que concluíram uma varredura inteira e foram incluídas
 
 Fontes cobertas hoje incluem Steam, Lutris, Heroic (Epic, GOG, Amazon e sideload),
 Bottles, Dolphin, itch, Legendary, RetroArch, Yuzu, Eden, UZDoom, TwinTail,
-Flatpak, arquivos `.desktop` e Waydroid. xCloud segue um fluxo próprio de
-catálogo remoto.
+Quiver Launcher (biblioteca local com enriquecimento opcional pelo catálogo
+público), Flatpak, arquivos `.desktop` e Waydroid. xCloud segue um fluxo próprio
+de catálogo remoto.
 
 O UZDoom tem duas localizações: a pasta de WADs (os IWADs, que são os jogos) e
 a pasta de mods (PWAD e PK3). As duas são detectadas na configuração do próprio

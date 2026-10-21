@@ -75,8 +75,8 @@ _originals = {name: sys.modules.pop(name, None) for name in _STUBBED_MODULES}
 
 sys.modules["cartridges.shared"] = _STUB_SHARED
 sys.modules["cartridges.game"] = _STUB_GAME_MODULE
-cartridges.shared = _STUB_SHARED
-cartridges.game = _STUB_GAME_MODULE
+setattr(cartridges, "shared", _STUB_SHARED)
+setattr(cartridges, "game", _STUB_GAME_MODULE)
 
 from cartridges.importer import eden_source  # noqa: E402
 from cartridges.importer.eden_source import (  # noqa: E402
@@ -91,9 +91,9 @@ for _name, _module in _originals.items():
     else:
         sys.modules[_name] = _module
 if _originals["cartridges.shared"] is not None:
-    cartridges.shared = _originals["cartridges.shared"]
+    setattr(cartridges, "shared", _originals["cartridges.shared"])
 if _originals["cartridges.game"] is not None:
-    cartridges.game = _originals["cartridges.game"]
+    setattr(cartridges, "game", _originals["cartridges.game"])
 
 # The stub instances are still referenced by the imported modules, so the
 # tests can retarget the candidate roots.

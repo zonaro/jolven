@@ -43,6 +43,7 @@ Manually add and edit games, or let Jolven pull them in automatically from:
 - Bottles
 - itch
 - Legendary
+- Quiver Launcher
 - RetroArch
 - Dolphin
 - Yuzu

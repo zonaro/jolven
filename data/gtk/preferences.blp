@@ -1208,6 +1208,38 @@ template $CartridgesPreferences: Adw.PreferencesDialog {
         }
       }
 
+      Adw.ExpanderRow quiver_expander_row {
+        title: _("Quiver");
+        show-enable-switch: true;
+
+        [prefix]
+        Image {
+          icon-name: "quiver-source-symbolic";
+        }
+
+        Adw.ActionRow quiver_data_action_row {
+          title: _("Install Location");
+
+          Button quiver_data_file_chooser_button {
+            icon-name: "folder-symbolic";
+            valign: center;
+
+            styles [
+              "flat"
+            ]
+          }
+
+          styles [
+            "property"
+          ]
+        }
+
+        Adw.SwitchRow quiver_enrich_switch {
+          title: _("Enrich with the Quiver catalog");
+          subtitle: _("Ask the public catalog for the cover and the description of the games");
+        }
+      }
+
       Adw.ExpanderRow twintail_expander_row {
         title: _("TwinTail");
         show-enable-switch: true;
