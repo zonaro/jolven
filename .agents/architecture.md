@@ -126,8 +126,8 @@ para fontes habilitadas que concluíram uma varredura inteira e foram incluídas
 `scanned_source_ids`.
 
 Fontes cobertas hoje incluem Steam, Lutris, Heroic (Epic, GOG, Amazon e sideload),
-Bottles, Dolphin, itch, Legendary, RetroArch, Yuzu, TwinTail, Flatpak, arquivos
-`.desktop` e Waydroid. xCloud segue um fluxo próprio de catálogo remoto.
+Bottles, Dolphin, Cemu, itch, Legendary, RetroArch, Yuzu, TwinTail, Flatpak,
+arquivos `.desktop` e Waydroid. xCloud segue um fluxo próprio de catálogo remoto.
 
 ## Persistência, migração e backup
 

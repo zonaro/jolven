@@ -129,14 +129,36 @@ executado durante a inicialização do aplicativo.
 ## Launchers e protocolos
 
 Importadores e launchers integram Steam, Lutris, Heroic, Bottles, itch,
-Legendary, RetroArch, Dolphin, Yuzu, TwinTail, Waydroid, Flatpak e arquivos
-`.desktop`. Valores vindos dessas fontes são não confiáveis.
+Legendary, RetroArch, Dolphin, Cemu, Yuzu, TwinTail, Waydroid, Flatpak e
+arquivos `.desktop`. Valores vindos dessas fontes são não confiáveis.
 
 - Preserve argumentos como lista sempre que possível; evite `shell=True`.
 - Valide esquemas de URI e IDs antes de compor protocolos.
 - Não execute o campo genérico de um `.desktop` sem o parser/sanitização existente.
 - Resolva instalações nativas e Flatpak pelos helpers de `Locations`.
 - Ausência de launcher significa “fonte indisponível”, não biblioteca corrompida.
+
+### Cemu
+
+Importação de jogos do Cemu (Wii U) lendo o `settings.xml` local via
+`cartridges/utils/cemu_config_reader.py` (stdlib puro, sem GTK) e
+produzindo jogos pelo `CemuSource`. Candidatos de config: Flatpak
+`~/.var/app/info.cemu.Cemu/config/Cemu`, `XDG_CONFIG_HOME/Cemu` e o
+`host_config_dir`; a escolha fica em `cemu-location`. A fonte dos jogos é
+o `<GameCache>` persistente do Cemu (cada `<Entry>` traz `title_id`,
+`name`, `custom_name` e o path do RPX/arquivo de disco); o `<GamePaths>`
+(a lista de varredura configurada no Cemu) não é necessária aqui.
+
+- Só jogos base entram na biblioteca (`title_id` iniciado em `00050000`);
+  DLC (`0005000c`), updates (`0005000e`) e títulos de sistema ficam de
+  fora. O cache é persistente e pode ficar obsoleto: entradas cujo path
+  não existe mais são ignoradas.
+- O nome exibido prefere `custom_name`, depois `name`, depois o stem do
+  arquivo; o ID estável é `cemu_<title_id>`.
+- Lançamento: `Cemu -f -g <path>` nativo ou
+  `flatpak run info.cemu.Cemu -f -g <path>` (flag `-f` de fullscreen).
+- Sem rede, sem segredos e sem escrita: o `settings.xml` é apenas lido;
+  falha de leitura/parse vira fonte vazia, nunca bloqueia a biblioteca.
 
 ### Sunshine
 

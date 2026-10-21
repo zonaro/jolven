@@ -45,6 +45,7 @@ Manually add and edit games, or let Jolven pull them in automatically from:
 - Legendary
 - RetroArch
 - Dolphin
+- Cemu
 - Yuzu
 - TwinTail
 - Flatpak

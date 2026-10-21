@@ -58,6 +58,7 @@ from cartridges.controller import (
 )
 from cartridges.game import Game
 from cartridges.importer.bottles_source import BottlesSource
+from cartridges.importer.cemu_source import CemuSource
 from cartridges.importer.desktop_source import DesktopSource
 from cartridges.importer.dolphin_source import DolphinSource
 from cartridges.importer.flatpak_source import FlatpakSource
@@ -988,6 +989,9 @@ class CartridgesApplication(Adw.Application):
 
         if shared.schema.get_boolean("bottles"):
             shared.importer.add_source(BottlesSource())
+
+        if shared.schema.get_boolean("cemu"):
+            shared.importer.add_source(CemuSource())
 
         if shared.schema.get_boolean("dolphin"):
             shared.importer.add_source(DolphinSource())

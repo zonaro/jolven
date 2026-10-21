@@ -80,6 +80,12 @@
     <key name="bottles-location" type="s">
       <default>"~/.var/app/com.usebottles.bottles/data/bottles/"</default>
     </key>
+    <key name="cemu" type="b">
+      <default>true</default>
+    </key>
+    <key name="cemu-location" type="s">
+      <default>"~/.var/app/info.cemu.Cemu/config/Cemu/"</default>
+    </key>
     <key name="dolphin" type="b">
       <default>true</default>
     </key>
