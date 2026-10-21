@@ -19,16 +19,19 @@
 
 UZDoom loads a PWAD (or a PK3 archive) on top of an IWAD with the ``-file``
 flag, and it accepts several of them: the last one loaded wins, so the order
-is part of the configuration. This dialog lists the mods found in the folder
-picked in Preferences, lets the user choose which ones are loaded and in
-which order, and stores the result in the game.
+is part of the configuration. This dialog lists the mods found in the folders
+UZDoom searches, lets the user choose which ones are loaded and in which
+order, and stores the result in the game.
 
-The folder is scanned in a worker thread: reading the header of every WAD of
-a big collection is slow enough to freeze the interface, and GTK must never
-be touched outside the main thread.
+The folders are the mods folder and the WADs folder, both read from the
+configuration of UZDoom and overridable in the preferences. They are scanned
+in a worker thread: reading the header of every WAD of a big collection is
+slow enough to freeze the interface, and GTK must never be touched outside
+the main thread.
 """
 
 import logging
+import os
 import threading
 from pathlib import Path
 from typing import Any, Optional
@@ -37,6 +40,7 @@ from gi.repository import Adw, Gtk
 
 from cartridges import shared
 from cartridges.game import Game
+from cartridges.importer import uzdoom_config
 from cartridges.utils.na_tela import entregar_na_tela
 
 
@@ -54,48 +58,84 @@ ARCHIVE_SUFFIXES = (".pk3", ".ipk3")
 SESSION_BUTTON_SIZE = 44
 
 
-def scan_mods(folder: Optional[Path]) -> list[str]:
-    """Return the mod candidates of *folder*, sorted by file name.
+def scan_mods(folders: Optional[Path | list[Path]]) -> list[str]:
+    """Return the mod candidates of *folders*, sorted by file name.
 
     A WAD is a candidate when its header says it is a PWAD; an archive is a
-    candidate when its name ends with a known mod extension. The folder is
-    read from a worker thread, so nothing here may touch GTK.
+    candidate when its name ends with a known mod extension. The same file
+    found in two folders is listed only once. The folders are read from a
+    worker thread, so nothing here may touch GTK.
     """
 
-    if folder is None:
+    if folders is None:
         return []
 
-    try:
-        entries = sorted(folder.iterdir())
-    except OSError:
-        return []
+    if isinstance(folders, Path):
+        folders = [folders]
 
-    mods: list[str] = []
-    for path in entries:
+    mods: dict[str, str] = {}
+    for folder in folders:
+        if folder is None:
+            continue
+
         try:
-            if not path.is_file():
+            entries = sorted(folder.iterdir())
+        except OSError:
+            continue
+
+        for path in entries:
+            try:
+                if not path.is_file():
+                    continue
+            except OSError:
                 continue
-        except OSError:
-            continue
 
-        suffix = path.suffix.lower()
-        if suffix in ARCHIVE_SUFFIXES:
-            mods.append(str(path))
-            continue
+            suffix = path.suffix.lower()
+            if suffix in ARCHIVE_SUFFIXES:
+                mods.setdefault(os.path.realpath(path), str(path))
+                continue
 
-        if suffix != ".wad":
-            continue
+            if suffix != ".wad":
+                continue
 
+            try:
+                with path.open("rb") as wad_file:
+                    magic = wad_file.read(4)
+            except OSError:
+                continue
+
+            if magic == PWAD_MAGIC:
+                mods.setdefault(os.path.realpath(path), str(path))
+
+    return sorted(mods.values(), key=lambda mod: Path(mod).name)
+
+
+def schema_folder(key: str) -> Optional[Path]:
+    """The folder of a setting of the preferences, when it holds a directory."""
+
+    raw = shared.schema.get_string(key).strip()
+    if not raw:
+        return None
+    try:
+        folder = Path(raw).expanduser()
+    except (OSError, RuntimeError, ValueError):
+        return None
+    if not folder.is_dir():
+        return None
+    return folder
+
+
+def detected_folder(section: str) -> Optional[Path]:
+    """The first folder of a section of the UZDoom configuration that exists."""
+
+    for folder in uzdoom_config.search_dirs(section):
         try:
-            with path.open("rb") as wad_file:
-                magic = wad_file.read(4)
-        except OSError:
+            path = Path(folder)
+        except (OSError, RuntimeError, ValueError):
             continue
-
-        if magic == PWAD_MAGIC:
-            mods.append(str(path))
-
-    return mods
+        if path.is_dir():
+            return path
+    return None
 
 
 def merge_mods(found: list[str], saved: list[str]) -> list[str]:
@@ -160,35 +200,66 @@ class UzdoomModsDialog(Adw.Dialog):
 
     @staticmethod
     def mod_folder() -> Optional[Path]:
-        """The folder picked in Preferences, when it holds a directory."""
+        """The folder that holds the mods, when it holds a directory.
 
-        raw = shared.schema.get_string("uzdoom-location").strip()
-        if not raw:
-            return None
-        try:
-            folder = Path(raw).expanduser()
-        except (OSError, RuntimeError, ValueError):
-            return None
-        if not folder.is_dir():
-            return None
-        return folder
+        The folder picked in the preferences comes first, then the folder
+        detected in the configuration of UZDoom, and then the WADs folder,
+        because a mod may live next to the game it modifies.
+        """
+
+        folder = schema_folder("uzdoom-mods-location")
+        if folder is not None:
+            return folder
+
+        folder = detected_folder(uzdoom_config.FILE_SECTION)
+        if folder is not None:
+            return folder
+
+        return schema_folder("uzdoom-location")
+
+    @staticmethod
+    def wads_folder() -> Optional[Path]:
+        """The folder that holds the WADs, when it holds a directory."""
+
+        folder = schema_folder("uzdoom-location")
+        if folder is not None:
+            return folder
+
+        return detected_folder(uzdoom_config.IWAD_SECTION)
+
+    def scan_folders(self) -> list[Path]:
+        """The folders that hold the mods: the mods folder and the WADs one.
+
+        UZDoom searches both of them for the files it loads, and the same
+        folder in the two lists is scanned only once.
+        """
+
+        folders: list[Path] = []
+        for folder in (self.mod_folder(), self.wads_folder()):
+            if folder is None:
+                continue
+            known = {os.path.realpath(item) for item in folders}
+            if os.path.realpath(folder) in known:
+                continue
+            folders.append(folder)
+        return folders
 
     def start_scan(self) -> None:
-        """Read the folder in a worker and deliver the result to the screen."""
+        """Read the folders in a worker and deliver the result to the screen."""
 
         if self._scanned:
             return
         self._scanned = True
 
-        folder = self.mod_folder()
+        folders = self.scan_folders()
         saved = list(getattr(self.game, "uzdoom_mods", None) or [])
         threading.Thread(
-            target=self.scan_thread, args=(folder, saved), daemon=True
+            target=self.scan_thread, args=(folders, saved), daemon=True
         ).start()
 
-    def scan_thread(self, folder: Optional[Path], saved: list[str]) -> None:
+    def scan_thread(self, folders: list[Path], saved: list[str]) -> None:
         try:
-            found = scan_mods(folder)
+            found = scan_mods(folders)
         except Exception as error:  # pylint: disable=broad-except
             # A folder that cannot be read must not leave the dialog empty:
             # the mods already saved still have to show up.

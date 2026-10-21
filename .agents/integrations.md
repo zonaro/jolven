@@ -151,12 +151,30 @@ emulador.
 ### UZDoom
 
 Fonte local, opt-in, sem rede e sem segredos. O importador lista os jogos de
-uma pasta escolhida pelo usuário (chave `uzdoom-location` do GSettings), sem
-descoberta automática: não há candidatos de pasta, apenas a configuração
-feita na tela de Preferências. Enquanto a chave `uzdoom` estiver desligada
-ou a pasta não estiver configurada (ou tiver sido removida), a localização é
-irresolvível e o importador apenas pula a fonte, sem podar os jogos já
-importados.
+uma pasta de WADs e usa uma pasta de mods, ambas detectadas na configuração do
+próprio UZDoom (`uzdoom.ini`) e sobrescritíveis pelo usuário nas Preferências
+(chaves `uzdoom-location` e `uzdoom-mods-location` do GSettings). Enquanto a
+chave `uzdoom` estiver desligada ou a pasta de WADs não estiver configurada
+(nem detectada, nem removida), a localização é irresolvível e o importador
+apenas pula a fonte, sem podar os jogos já importados.
+
+A detecção é feita por `cartridges/importer/uzdoom_config.py`, que lê os
+arquivos de configuração em ordem de prioridade
+(`$XDG_CONFIG_HOME/uzdoom/uzdoom.ini`, `~/.config/uzdoom/uzdoom.ini`,
+`~/.config/uzdoom.ini` e o do Flatpak
+`~/.var/app/org.zdoom.UZDoom/config/uzdoom/uzdoom.ini`) e usa a seção
+`[IWADSearch.Directories]` para os WADs e `[FileSearch.Directories]` para os
+mods: o UZDoom não tem uma pasta de mods separada, um mod é um arquivo que o
+motor encontra nas pastas que procura. As pastas que o próprio motor adiciona
+(`/usr/share`, `/app/share` e equivalentes) são descartadas, porque não são
+uma escolha do usuário. O arquivo nunca é escrito.
+
+Como a resolução de uma localização grava o valor encontrado no GSettings, a
+primeira resolução persiste a pasta detectada. O valor escolhido pelo usuário
+sempre vence a detecção, e uma mudança no `uzdoom.ini` só volta a valer depois
+que a chave do GSettings for limpa. A pasta de mods é opcional para a
+importação: sem ela os jogos da pasta de WADs continuam sendo importados, e as
+Preferências mostram o aviso da linha.
 
 O conteúdo do UZDoom são arquivos WAD, differentiate pelo cabeçalho mágico de
 4 bytes: `IWAD` é um jogo base (Doom, Doom II, …) e `PWAD` é um mod que
@@ -176,8 +194,9 @@ Cada jogo pode ter uma lista ordenada de mods, `uzdoom_mods`, persistida pelo
 Jolven e aplicada no lançamento pela opção `-file`
 (`cartridges/game_launch.py:append_uzdoom_mods`, que cita cada caminho e
 preserva a ordem da lista). A lista é editada no diálogo
-`cartridges/uzdoom_mods_dialog.py`: a ordem dos mods é a ordem de aplicação
-e os argumentos gerados entram depois do `-iwad`.
+`cartridges/uzdoom_mods_dialog.py`: a pasta de mods e a pasta de WADs são
+varridas em união (sem repetir o mesmo arquivo), a ordem dos mods é a ordem de
+aplicação e os argumentos gerados entram depois do `-iwad`.
 
 ### Sunshine
 

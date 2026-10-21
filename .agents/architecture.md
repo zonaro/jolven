@@ -130,6 +130,22 @@ Bottles, Dolphin, itch, Legendary, RetroArch, Yuzu, Eden, UZDoom, TwinTail,
 Flatpak, arquivos `.desktop` e Waydroid. xCloud segue um fluxo próprio de
 catálogo remoto.
 
+O UZDoom tem duas localizações: a pasta de WADs (os IWADs, que são os jogos) e
+a pasta de mods (PWAD e PK3). As duas são detectadas na configuração do próprio
+UZDoom e podem ser sobrescritas pelo usuário nas Preferências. A detecção lê
+os arquivos `uzdoom.ini` em ordem de prioridade
+(`$XDG_CONFIG_HOME/uzdoom/uzdoom.ini`, `~/.config/uzdoom/uzdoom.ini`,
+`~/.config/uzdoom.ini` e o do Flatpak
+`~/.var/app/org.zdoom.UZDoom/config/uzdoom/uzdoom.ini`), usando a seção
+`[IWADSearch.Directories]` para os WADs e `[FileSearch.Directories]` para os
+mods: o UZDoom não tem uma pasta de mods separada, um mod é um arquivo que o
+motor encontra nas pastas que procura. A resolução de uma localização grava o
+valor encontrado no GSettings, então a primeira resolução persiste a pasta
+detectada: o valor escolhido pelo usuário sempre vence a detecção e uma
+mudança no `uzdoom.ini` só volta a valer depois que a chave do GSettings for
+limpa. Uma pasta ausente continua irresolvível, e o importador apenas pula a
+fonte, sem podar os jogos já importados.
+
 ## Persistência, migração e backup
 
 O `FileManager` persiste a biblioteca em JSON na área de dados XDG do Jolven.

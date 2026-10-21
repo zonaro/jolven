@@ -1189,6 +1189,23 @@ template $CartridgesPreferences: Adw.PreferencesDialog {
             "property"
           ]
         }
+
+        Adw.ActionRow uzdoom_mods_action_row {
+          title: _("Mods Folder");
+
+          Button uzdoom_mods_file_chooser_button {
+            icon-name: "folder-symbolic";
+            valign: center;
+
+            styles [
+              "flat"
+            ]
+          }
+
+          styles [
+            "property"
+          ]
+        }
       }
 
       Adw.ExpanderRow twintail_expander_row {

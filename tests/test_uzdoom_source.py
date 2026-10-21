@@ -10,11 +10,13 @@ no display, no GTK, no GSettings database and no subprocess.
 """
 
 import builtins
+import os
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 from shlex import quote as shell_quote
+from unittest.mock import patch
 
 if not hasattr(builtins, "_"):
     builtins._ = lambda s: s  # type: ignore[attr-defined]
@@ -73,6 +75,7 @@ sys.modules["cartridges.game"] = _STUB_GAME_MODULE
 cartridges.shared = _STUB_SHARED
 cartridges.game = _STUB_GAME_MODULE
 
+from cartridges.importer import uzdoom_config  # noqa: E402
 from cartridges.importer import uzdoom_source  # noqa: E402
 from cartridges.importer.location import UnresolvableLocationError  # noqa: E402
 from cartridges.importer.uzdoom_source import (  # noqa: E402
@@ -112,15 +115,46 @@ class UzdoomSourceTestCase(unittest.TestCase):
         self.tmp = Path(self._tmp.name)
         self.wads = self.tmp / "wads"
         self.wads.mkdir()
+        self.mods = self.tmp / "mods"
+        self.mods.mkdir()
         self._old_location = _shared_stub.schema.strings.get("uzdoom-location")
+        self._old_mods = _shared_stub.schema.strings.get("uzdoom-mods-location")
         self.addCleanup(self._restore_location)
         _shared_stub.schema.set_string("uzdoom-location", str(self.wads))
+        _shared_stub.schema.set_string("uzdoom-mods-location", str(self.mods))
+        # The configuration of UZDoom is never read from the machine that
+        # runs the tests: the home directory points to an empty folder.
+        self._use_home(self.tmp / "empty-home")
+
+    def _use_home(self, home: Path) -> None:
+        """Make the tests read the configuration of *home* only.
+
+        The home directory of the module and the environment are both
+        pointed at a folder of the test: the configuration of the machine
+        that runs the tests is never read.
+        """
+
+        patcher = patch.object(uzdoom_config, "default_home", lambda: home)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+        env_patcher = patch.dict(os.environ, {"HOME": str(home)})
+        env_patcher.start()
+        self.addCleanup(env_patcher.stop)
+        # The XDG folder of the machine that runs the tests is ignored.
+        os.environ.pop("XDG_CONFIG_HOME", None)
 
     def _restore_location(self):
         if self._old_location is None:
             _shared_stub.schema.strings.pop("uzdoom-location", None)
         else:
             _shared_stub.schema.set_string("uzdoom-location", self._old_location)
+        if self._old_mods is None:
+            _shared_stub.schema.strings.pop("uzdoom-mods-location", None)
+        else:
+            _shared_stub.schema.set_string(
+                "uzdoom-mods-location", self._old_mods
+            )
 
     def _make_source(self, **kwargs) -> UzdoomSource:
         """Create a source pointing at the temporary WADs folder.
@@ -287,6 +321,32 @@ class ExecutableTests(UzdoomSourceTestCase):
 
 
 class LocationTests(UzdoomSourceTestCase):
+    def test_the_source_has_a_wads_and_a_mods_location(self):
+        source = self._make_source()
+        self.assertEqual(
+            list(source.locations._asdict()), ["data", "mods"]
+        )
+
+    def test_the_locations_use_their_own_key(self):
+        source = self._make_source()
+        self.assertEqual(source.locations.data.schema_key, "uzdoom-location")
+        self.assertEqual(
+            source.locations.mods.schema_key, "uzdoom-mods-location"
+        )
+
+    def test_the_candidates_are_read_at_resolution_time(self):
+        source = self._make_source()
+        for location in source.locations:
+            self.assertTrue(callable(location.candidates))
+
+    def test_the_mods_folder_does_not_stop_the_import(self):
+        # Without a mods folder the games of the WADs folder are still
+        # imported: only the mods are missing.
+        _shared_stub.schema.set_string("uzdoom-mods-location", "")
+        source = self._make_source()
+        self.assertIsNone(source.locations.mods["dir"])
+        self.assertEqual(source.locations.data["dir"], self.wads)
+
     def test_blank_location_is_unresolvable(self):
         _shared_stub.schema.set_string("uzdoom-location", "")
         source = self._make_source()
@@ -296,6 +356,67 @@ class LocationTests(UzdoomSourceTestCase):
     def test_deleted_folder_is_unresolvable(self):
         missing = self.tmp / "gone"
         _shared_stub.schema.set_string("uzdoom-location", str(missing))
+        source = self._make_source()
+        with self.assertRaises(UnresolvableLocationError):
+            list(iter(source))
+
+
+class AutoDetectionTests(UzdoomSourceTestCase):
+    """The folders are detected in the configuration of UZDoom."""
+
+    def setUp(self):
+        super().setUp()
+        # The schema is blank: the folders come from the configuration.
+        _shared_stub.schema.set_string("uzdoom-location", "")
+        _shared_stub.schema.set_string("uzdoom-mods-location", "")
+
+        self.config_home = self.tmp / "config-home"
+        self.iwads = self.config_home / "iwads"
+        self.mods = self.config_home / "mods"
+        self.iwads.mkdir(parents=True)
+        self.mods.mkdir()
+        ini = self.config_home / ".config" / "uzdoom" / "uzdoom.ini"
+        ini.parent.mkdir(parents=True)
+        ini.write_text(
+            "[IWADSearch.Directories]\n"
+            f"Path={self.iwads}\n"
+            "[FileSearch.Directories]\n"
+            f"Path={self.mods}\n",
+            encoding="utf-8",
+        )
+        self._use_home(self.config_home)
+
+    def test_the_wads_folder_is_detected(self):
+        source = self._make_source()
+        self.assertEqual(source.locations.data["dir"], self.iwads)
+
+    def test_the_mods_folder_is_detected(self):
+        source = self._make_source()
+        self.assertEqual(source.locations.mods["dir"], self.mods)
+
+    def test_the_detected_folder_is_kept_in_the_schema(self):
+        source = self._make_source()
+        source.locations.data["dir"]
+        self.assertEqual(
+            _shared_stub.schema.get_string("uzdoom-location"), str(self.iwads)
+        )
+
+    def test_the_folder_of_the_user_wins(self):
+        _shared_stub.schema.set_string("uzdoom-location", str(self.wads))
+        source = self._make_source()
+        self.assertEqual(source.locations.data["dir"], self.wads)
+
+    def test_the_games_are_imported_without_a_setting(self):
+        wad = _make_wad(self.iwads / "doom2.wad")
+        source = self._make_source()
+        results = list(UzdoomSourceIterable(source))
+        self.assertEqual(len(results), 1)
+        game, _additional = results[0]
+        self.assertEqual(game.values["name"], "doom2")
+        self.assertTrue(game.values["executable"].endswith(str(wad)))
+
+    def test_nothing_is_detected_without_configuration(self):
+        self._use_home(self.tmp / "no-config-home")
         source = self._make_source()
         with self.assertRaises(UnresolvableLocationError):
             list(iter(source))

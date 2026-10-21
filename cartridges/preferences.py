@@ -413,6 +413,8 @@ class CartridgesPreferences(Adw.PreferencesDialog):
     uzdoom_expander_row: Adw.ExpanderRow = Gtk.Template.Child()
     uzdoom_data_action_row: Adw.ActionRow = Gtk.Template.Child()
     uzdoom_data_file_chooser_button: Gtk.Button = Gtk.Template.Child()
+    uzdoom_mods_action_row: Adw.ActionRow = Gtk.Template.Child()
+    uzdoom_mods_file_chooser_button: Gtk.Button = Gtk.Template.Child()
 
     twintail_expander_row: Adw.ExpanderRow = Gtk.Template.Child()
     twintail_data_action_row: Adw.ActionRow = Gtk.Template.Child()

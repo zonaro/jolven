@@ -3,11 +3,14 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: Copyright 2026 Geoffrey Coulaud
 
-"""UZDoom source: lists the base games (IWADs) of a user-picked folder.
+"""UZDoom source: lists the base games (IWADs) of the WADs folder.
 
 UZDoom is a source port for the Doom engine. Its content is made of WAD
 files: an IWAD holds a base game (Doom, Doom II, ...) and a PWAD holds a
 mod that needs another IWAD to run. Only the IWADs are listed as games.
+
+The WADs folder and the mods folder are read from the configuration of
+UZDoom itself, and the user can still pick them in the preferences.
 """
 
 from pathlib import Path
@@ -17,6 +20,7 @@ from typing import Callable, Generator, NamedTuple, Optional
 
 from cartridges import shared
 from cartridges.game import Game
+from cartridges.importer import uzdoom_config
 from cartridges.importer.location import Location, LocationSubPath
 from cartridges.importer.source import (
     ExecutableFormatSource,
@@ -113,6 +117,7 @@ class UzdoomSourceIterable(SourceIterable):
 
 class UzdoomLocations(NamedTuple):
     data: Location
+    mods: Location
 
 
 class UzdoomSource(ExecutableFormatSource):
@@ -133,18 +138,38 @@ class UzdoomSource(ExecutableFormatSource):
         self.locations = UzdoomLocations(
             Location(
                 schema_key="uzdoom-location",
-                # No auto-discovery: the folder is picked by the user, so
-                # there is no candidate to try. A blank schema makes the
-                # location unresolvable, and the importer then skips the
-                # source instead of pruning its games.
-                candidates=[],
+                # The folders are the ones of the configuration of UZDoom,
+                # and the user can still pick one in the preferences. A
+                # blank schema with no detected folder makes the location
+                # unresolvable, and the importer then skips the source
+                # instead of pruning its games.
+                candidates=lambda: uzdoom_config.search_dirs(
+                    uzdoom_config.IWAD_SECTION
+                ),
                 # The "." subpath makes the picked folder the only valid
                 # root: a configured folder that was deleted raises
                 # UnresolvableLocationError instead of scanning nothing and
                 # pruning the games of the source.
                 paths={"dir": LocationSubPath(".", is_directory=True)},
                 invalid_subtitle=Location.DATA_INVALID_SUBTITLE,
-            )
+            ),
+            Location(
+                schema_key="uzdoom-mods-location",
+                # The mods are the files UZDoom finds in the folders it
+                # searches, so there is no separate "mods folder": the
+                # folders of the file search of the configuration are the
+                # candidates.
+                candidates=lambda: uzdoom_config.search_dirs(
+                    uzdoom_config.FILE_SECTION
+                ),
+                paths={"dir": LocationSubPath(".", is_directory=True)},
+                invalid_subtitle=_("Select the {} mods directory."),
+                # The mods folder is optional for the import: a user
+                # without one still gets the games of the WADs folder. The
+                # preferences still show the warning of the row, because
+                # an unresolvable location is reported there either way.
+                optional=True,
+            ),
         )
         self._find_program = find_program
         self._has_flatpak = has_flatpak

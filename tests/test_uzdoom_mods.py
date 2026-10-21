@@ -11,12 +11,16 @@ runs with no display, no GTK and no GSettings database.
 import ast
 import json
 import logging
+import os
 import shutil
 import tempfile
 import types
 import unittest
 from pathlib import Path
 from typing import Any, Optional
+from unittest.mock import patch
+
+from cartridges.importer import uzdoom_config
 
 
 ROOT = Path(__file__).parents[1]
@@ -238,12 +242,32 @@ class FileManagerSerializationTests(unittest.TestCase):
             self.assertEqual(saved["uzdoom_mods"], mods)
 
 
+class _StubSchema:
+    """The part of GSettings the dialog reads."""
+
+    def __init__(self) -> None:
+        self.strings: dict[str, str] = {}
+
+    def get_string(self, key: str) -> str:
+        return self.strings.get(key, "")
+
+
+class _StubShared:
+    def __init__(self) -> None:
+        self.schema = _StubSchema()
+
+
 def _load_helpers() -> dict[str, Any]:
     """Compile the pure helpers of the dialog without importing GTK."""
 
     tree = _parse("cartridges/uzdoom_mods_dialog.py")
     wanted_constants = {"PWAD_MAGIC", "ARCHIVE_SUFFIXES"}
-    wanted_functions = {"scan_mods", "merge_mods"}
+    wanted_functions = {
+        "scan_mods",
+        "merge_mods",
+        "schema_folder",
+        "detected_folder",
+    }
     body = [
         node
         for node in tree.body
@@ -258,11 +282,27 @@ def _load_helpers() -> dict[str, Any]:
             isinstance(node, ast.FunctionDef) and node.name in wanted_functions
         )
     ]
+
+    # The methods of the dialog that resolve the folders are compiled as
+    # plain functions: they do not touch the widgets.
+    dialog = _class_node(tree, "UzdoomModsDialog")
+    for method in ("mod_folder", "wads_folder"):
+        node = next(
+            item
+            for item in dialog.body
+            if isinstance(item, ast.FunctionDef) and item.name == method
+        )
+        node.decorator_list = []
+        body.append(node)
+
     module = ast.fix_missing_locations(ast.Module(body=body, type_ignores=[]))
     namespace: dict[str, Any] = {
         "Path": Path,
         "Optional": Optional,
         "logging": logging,
+        "os": os,
+        "shared": _StubShared(),
+        "uzdoom_config": uzdoom_config,
     }
     exec(compile(module, "uzdoom_mods_dialog.py", "exec"), namespace)  # pylint: disable=exec-used
     return namespace
@@ -337,6 +377,103 @@ class MergeModsTests(unittest.TestCase):
     def test_nothing_saved_keeps_the_found_order(self) -> None:
         merged = self.merge_mods(["/mods/b.wad", "/mods/a.wad"], [])
         self.assertEqual(merged, ["/mods/b.wad", "/mods/a.wad"])
+
+
+class UnionScanTests(unittest.TestCase):
+    """The mods of the mods folder and of the WADs folder are listed."""
+
+    def setUp(self) -> None:
+        self.namespace = _load_helpers()
+        self.scan_mods = self.namespace["scan_mods"]
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.root = Path(self._tmp.name)
+        self.mods = self.root / "mods"
+        self.wads = self.root / "wads"
+        self.mods.mkdir()
+        self.wads.mkdir()
+
+    def _write(self, folder: Path, name: str, content: bytes) -> Path:
+        path = folder / name
+        path.write_bytes(content)
+        return path
+
+    def test_a_mod_of_the_wads_folder_is_found(self) -> None:
+        mod = self._write(self.wads, "cool.wad", b"PWAD" + b"\x00" * 16)
+        self.assertEqual(self.scan_mods([self.mods, self.wads]), [str(mod)])
+
+    def test_the_same_folder_is_scanned_once(self) -> None:
+        mod = self._write(self.mods, "cool.wad", b"PWAD" + b"\x00" * 16)
+        self.assertEqual(self.scan_mods([self.mods, self.mods]), [str(mod)])
+
+    def test_the_mods_of_both_folders_are_listed(self) -> None:
+        first = self._write(self.mods, "a.wad", b"PWAD")
+        second = self._write(self.wads, "b.wad", b"PWAD")
+        self.assertEqual(
+            self.scan_mods([self.mods, self.wads]), [str(first), str(second)]
+        )
+
+    def test_a_single_folder_is_still_accepted(self) -> None:
+        mod = self._write(self.mods, "cool.wad", b"PWAD")
+        self.assertEqual(self.scan_mods(self.mods), [str(mod)])
+
+
+class ModFolderTests(unittest.TestCase):
+    """The chain of the folders that hold the mods."""
+
+    def setUp(self) -> None:
+        self.namespace = _load_helpers()
+        self.shared = self.namespace["shared"]
+        self.mod_folder = self.namespace["mod_folder"]
+        self.wads_folder = self.namespace["wads_folder"]
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.root = Path(self._tmp.name)
+        self.mods = self.root / "mods"
+        self.wads = self.root / "wads"
+        self.mods.mkdir()
+        self.wads.mkdir()
+        # The configuration of the machine that runs the tests is never
+        # read: the detection is replaced by an empty list.
+        patcher = patch.object(uzdoom_config, "search_dirs", lambda *a, **k: [])
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def _set(self, key: str, value: str) -> None:
+        self.shared.schema.strings[key] = value
+
+    def test_the_folder_of_the_preferences_wins(self) -> None:
+        self._set("uzdoom-mods-location", str(self.mods))
+        self._set("uzdoom-location", str(self.wads))
+        self.assertEqual(self.mod_folder(), self.mods)
+
+    def test_the_detected_folder_is_used_next(self) -> None:
+        with patch.object(
+            uzdoom_config, "search_dirs", lambda section, **k: [str(self.mods)]
+        ):
+            self.assertEqual(self.mod_folder(), self.mods)
+
+    def test_the_wads_folder_is_the_last_resort(self) -> None:
+        self._set("uzdoom-location", str(self.wads))
+        self.assertEqual(self.mod_folder(), self.wads)
+
+    def test_nothing_is_known(self) -> None:
+        self.assertIsNone(self.mod_folder())
+
+    def test_a_folder_that_is_gone_is_not_used(self) -> None:
+        self._set("uzdoom-mods-location", str(self.root / "gone"))
+        self._set("uzdoom-location", str(self.wads))
+        self.assertEqual(self.mod_folder(), self.wads)
+
+    def test_the_wads_folder_falls_back_to_the_detection(self) -> None:
+        with patch.object(
+            uzdoom_config, "search_dirs", lambda section, **k: [str(self.wads)]
+        ):
+            self.assertEqual(self.wads_folder(), self.wads)
+
+    def test_the_wads_folder_of_the_preferences_wins(self) -> None:
+        self._set("uzdoom-location", str(self.wads))
+        self.assertEqual(self.wads_folder(), self.wads)
 
 
 class DialogWiringTests(unittest.TestCase):
