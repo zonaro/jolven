@@ -27,6 +27,7 @@
   </gresource>
   <gresource prefix="@PREFIX@/icons/scalable/categories/">
   <file alias="bottles-source-symbolic.svg">icons/sources/bottles-source-symbolic.svg</file>
+  <file alias="cemu-source-symbolic.svg">icons/sources/cemu-source-symbolic.svg</file>
   <file alias="desktop-source-symbolic.svg">icons/sources/desktop-source-symbolic.svg</file>
   <file alias="dolphin-source-symbolic.svg">icons/sources/dolphin-source-symbolic.svg</file>
   <file alias="flatpak-source-symbolic.svg">icons/sources/flatpak-source-symbolic.svg</file>

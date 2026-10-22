@@ -36,6 +36,7 @@ from cartridges.errors.friendly_error import FriendlyError
 from cartridges.game import Game
 from cartridges.hardware import drm_connectors, pipewire_nodes, vrr_supported
 from cartridges.importer.bottles_source import BottlesSource
+from cartridges.importer.cemu_source import CemuSource
 from cartridges.importer.desktop_source import DesktopSource
 from cartridges.importer.dolphin_source import DolphinSource
 from cartridges.importer.eden_source import EdenSource
@@ -385,6 +386,10 @@ class CartridgesPreferences(Adw.PreferencesDialog):
     bottles_data_action_row: Adw.ActionRow = Gtk.Template.Child()
     bottles_data_file_chooser_button: Gtk.Button = Gtk.Template.Child()
 
+    cemu_expander_row: Adw.ExpanderRow = Gtk.Template.Child()
+    cemu_config_action_row: Adw.ActionRow = Gtk.Template.Child()
+    cemu_config_file_chooser_button: Gtk.Button = Gtk.Template.Child()
+
     dolphin_expander_row: Adw.ExpanderRow = Gtk.Template.Child()
     dolphin_cache_action_row: Adw.ActionRow = Gtk.Template.Child()
     dolphin_cache_file_chooser_button: Gtk.Button = Gtk.Template.Child()
@@ -593,6 +598,7 @@ class CartridgesPreferences(Adw.PreferencesDialog):
         # Sources settings
         for source_class in (
             BottlesSource,
+            CemuSource,
             DolphinSource,
             EdenSource,
             FlatpakSource,

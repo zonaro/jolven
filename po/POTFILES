@@ -48,6 +48,7 @@ cartridges/importer/importer.py
 cartridges/importer/source.py
 cartridges/importer/location.py
 cartridges/importer/bottles_source.py
+cartridges/importer/cemu_source.py
 cartridges/importer/desktop_source.py
 cartridges/importer/dolphin_source.py
 cartridges/importer/eden_source.py

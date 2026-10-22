@@ -991,6 +991,33 @@ template $CartridgesPreferences: Adw.PreferencesDialog {
         }
       }
 
+      Adw.ExpanderRow cemu_expander_row {
+        title: _("Cemu");
+        show-enable-switch: true;
+
+        [prefix]
+        Image {
+          icon-name: "cemu-source-symbolic";
+        }
+
+        Adw.ActionRow cemu_config_action_row {
+          title: _("Config Location");
+
+          Button cemu_config_file_chooser_button {
+            icon-name: "folder-symbolic";
+            valign: center;
+
+            styles [
+              "flat"
+            ]
+          }
+
+          styles [
+            "property"
+          ]
+        }
+      }
+
       Adw.ExpanderRow dolphin_expander_row {
         title: _("Dolphin");
         show-enable-switch: true;

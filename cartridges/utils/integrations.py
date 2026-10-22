@@ -172,6 +172,11 @@ _REGISTRO: tuple[Integracao, ...] = (
         "org.DolphinEmu.dolphin-emu", "dolphin-emu",
     ),
     Integracao(
+        "cemu", _("Cemu"), "emuladores",
+        _("Emulador de Wii U"),
+        "info.cemu.Cemu", "Cemu",
+    ),
+    Integracao(
         "retrodeck", _("RetroDECK"), "emuladores",
         _("Suíte de emuladores empacotada como um único aplicativo"),
         "net.retrodeck.retrodeck", "retrodeck",

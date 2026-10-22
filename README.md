@@ -46,6 +46,7 @@ Manually add and edit games, or let Jolven pull them in automatically from:
 - Quiver Launcher
 - RetroArch
 - Dolphin
+- Cemu
 - Yuzu
 - Eden
 - TwinTail
