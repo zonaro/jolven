@@ -674,6 +674,23 @@ template $CartridgesPreferences: Adw.PreferencesDialog {
       }
     }
 
+    Adw.PreferencesGroup game_session_install_group {
+      title: _("Sessão do sistema");
+      description: _("Instala a Jolven Session no seletor de sessões do display manager.");
+
+      Adw.ActionRow game_session_row {
+        title: _("Jolven Session");
+        subtitle: _("Verificando…");
+        activatable-widget: game_session_button;
+
+        [suffix]
+        Button game_session_button {
+          valign: center;
+          label: _("Instalar");
+        }
+      }
+    }
+
     Adw.PreferencesGroup game_mode_devices_group {
       title: _("Session devices");
       description: _("Leave blank to use the system default. Gamescope expects a DRM connector such as HDMI-A-1 or DP-1.");
