@@ -14,6 +14,13 @@ numérico incluso): "The Outer Worlds" nunca cai no grupo de
 Desfeitas vão para `agrupamento.json` na pasta do app: a chave desagrupada
 nunca mais junta (nem para cópias futuras com o mesmo nome), e o preferido
 vira o padrão do botão jogar.
+
+O título sozinho não diz qual produto é: o "DOOM" do UZDoom é o IWAD original
+de 1993 e o "DOOM" da Steam ou da xCloud é o relançamento de 2016. São jogos
+diferentes, e um card só esconde um deles. Por isso o agrupamento também
+considera a linha de produto, derivada da fonte que trouxe o jogo: fontes como
+o UZDoom entregam o original do motor, que fica em linha própria, e cada
+linha só agrupa com a sua.
 """
 
 import json
@@ -29,6 +36,14 @@ from cartridges.utils.title_match import (
 )
 
 _ARQUIVO = "agrupamento.json"
+
+# O mesmo título pode ser produtos diferentes: o "DOOM" do UZDoom é o
+# IWAD original de 1993 e o "DOOM" da Steam ou da xCloud é o
+# relançamento de 2016. São jogos diferentes, e um card só esconde um
+# deles. Cada linha de produto se agrupa apenas com a sua.
+LINHAS_PRODUTO = {
+    "uzdoom": "motor",
+}
 
 _prefs: Optional[dict] = None
 _curando = False
@@ -70,14 +85,24 @@ def ativo() -> bool:
         return True
 
 
-def chave_para(nome: str) -> str:
+def chave_para(nome: str, linha: str = "") -> str:
     tokens = tokenize(nome or "")
     numeros = numeric_signature(tokens)
     nucleo = sorted({w for w in core_words(tokens) if w not in _EDITION_WORDS})
     chave = "|".join(numeros) + "||" + "+".join(nucleo)
     if not nucleo:
         chave += "||" + (nome or "").casefold().strip()
+    if linha:
+        chave += "#" + linha
     return chave
+
+
+def linha_de(game) -> str:
+    """A linha de produto do jogo, pela fonte que o trouxe."""
+    base = getattr(game, "base_source", "") or ""
+    if not base:
+        base = (getattr(game, "source", "") or "").split("_")[0]
+    return LINHAS_PRODUTO.get(base, "")
 
 
 def elegivel(game) -> bool:
@@ -92,9 +117,14 @@ def elegivel(game) -> bool:
 
 def atualizar(game) -> str:
     nome = game.name or ""
-    if getattr(game, "_grupo_nome", None) != nome:
-        game._grupo_chave = chave_para(nome)
+    linha = linha_de(game)
+    if (
+        getattr(game, "_grupo_nome", None) != nome
+        or getattr(game, "_grupo_linha", None) != linha
+    ):
+        game._grupo_chave = chave_para(nome, linha)
         game._grupo_nome = nome
+        game._grupo_linha = linha
         limpar_indice()
     return game._grupo_chave
 

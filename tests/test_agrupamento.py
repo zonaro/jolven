@@ -4,7 +4,7 @@ from types import SimpleNamespace
 from cartridges.utils import agrupamento
 
 
-def make_game(name, game_id=None, **overrides):
+def make_game(name, game_id=None, base_source="", **overrides):
     data = {
         "name": name,
         "game_id": game_id or f"id_{name}",
@@ -14,6 +14,7 @@ def make_game(name, game_id=None, **overrides):
         "is_launcher": False,
         "last_played": 0,
         "added": 0,
+        "base_source": base_source,
     }
     data.update(overrides)
     return SimpleNamespace(**data)
@@ -30,7 +31,9 @@ class FakeStore:
         return iter(self.games)
 
 
-class AgrupamentoIndexTests(unittest.TestCase):
+class BaseAgrupamento:
+    """Preparação comum: schema ligado, preferências vazias e store falsa."""
+
     def setUp(self):
         import cartridges.utils.agrupamento as ag
         from cartridges import shared
@@ -68,6 +71,8 @@ class AgrupamentoIndexTests(unittest.TestCase):
         shared.store = FakeStore(games)
         return shared.store
 
+
+class AgrupamentoIndexTests(BaseAgrupamento, unittest.TestCase):
     def test_same_name_groups(self):
         games = [make_game("Hollow Knight", "a"), make_game("Hollow Knight", "b")]
         self._use(games)
@@ -116,6 +121,51 @@ class AgrupamentoIndexTests(unittest.TestCase):
         members = self.ag.membros(games[0])
         self.assertEqual(members, [games[0]])
         self.assertGreater(store.iters, scans)
+
+
+class LinhaProdutoTests(BaseAgrupamento, unittest.TestCase):
+    def test_doom_1993_e_doom_2016_nao_se_agrupam(self):
+        classico = make_game("Doom", "classico", base_source="uzdoom")
+        relancamento = make_game("Doom", "steam", base_source="steam")
+        self._use([classico, relancamento])
+        self.assertEqual(self.ag.membros(classico), [classico])
+        self.assertEqual(self.ag.membros(relancamento), [relancamento])
+
+    def test_steam_e_xcloud_se_agrupam(self):
+        steam = make_game("Doom", "steam", base_source="steam")
+        xcloud = make_game("Doom", "xcloud", base_source="xcloud")
+        self._use([steam, xcloud])
+        members = self.ag.membros(steam)
+        self.assertEqual({g.game_id for g in members}, {"steam", "xcloud"})
+
+    def test_duas_copias_do_uzdoom_se_agrupam(self):
+        primeira = make_game("Doom", "a", base_source="uzdoom")
+        segunda = make_game("Doom", "b", base_source="uzdoom")
+        self._use([primeira, segunda])
+        members = self.ag.membros(primeira)
+        self.assertEqual({g.game_id for g in members}, {"a", "b"})
+
+    def test_chave_sem_linha_permanece_igual(self):
+        self.assertEqual(self.ag.chave_para("Doom"), "||doom")
+        self.assertNotEqual(
+            self.ag.chave_para("Doom", "motor"),
+            self.ag.chave_para("Doom"),
+        )
+
+    def test_sem_fonte_agrupa_por_nome(self):
+        sem_fonte = make_game("Doom", "a")
+        del sem_fonte.base_source
+        outro = make_game("Doom", "b")
+        del outro.base_source
+        self._use([sem_fonte, outro])
+        members = self.ag.membros(sem_fonte)
+        self.assertEqual({g.game_id for g in members}, {"a", "b"})
+
+    def test_linha_vem_do_source_quando_falta_base_source(self):
+        jogo = make_game("Doom", "a", source="uzdoom_iwad")
+        del jogo.base_source
+        self.assertEqual(self.ag.linha_de(jogo), "motor")
+        self.assertEqual(self.ag.linha_de(make_game("Doom", "b")), "")
 
 
 if __name__ == "__main__":

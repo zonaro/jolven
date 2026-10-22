@@ -141,6 +141,23 @@ def game_mode_setup_unavailable_subtitle() -> str:
     return system_integration.unavailable_message()
 
 
+def registrar_icones_enviados(tema: Optional[Gtk.IconTheme] = None) -> None:
+    """Registra no tema de ícones os SVGs que o Jolven envia.
+
+    Os ícones das fontes das plataformas e das ações da interface vivem no
+    GResource, em `shared.PREFIX + "/icons"`. Sem registrar esse caminho no
+    `Gtk.IconTheme` o GTK não encontra nenhum deles: o filtro lateral da
+    fonte cai no ícone genérico de executável e o badge do card mostra o
+    ícone de imagem ausente.
+    """
+    if tema is None:
+        display = Gdk.Display.get_default()
+        if display is None:
+            return
+        tema = Gtk.IconTheme.get_for_display(display)
+    tema.add_resource_path(shared.PREFIX + "/icons")
+
+
 class CartridgesApplication(Adw.Application):
     state = shared.AppState.DEFAULT
     win: CartridgesWindow
@@ -550,6 +567,12 @@ class CartridgesApplication(Adw.Application):
         from cartridges.utils import app_icon
 
         app_icon.ensure()
+
+        # Os ícones que o Jolven envia (fontes das plataformas e ações da
+        # interface) vivem no GResource; sem registrá-los no tema, o GTK
+        # não encontra nenhum deles e a interface cai no ícone de imagem
+        # ausente.
+        registrar_icones_enviados()
 
         # A janela principal já nasce no tema do Windows.
         self.apply_windows_theme()

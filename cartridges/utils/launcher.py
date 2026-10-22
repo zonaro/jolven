@@ -62,6 +62,18 @@ _APLICATIVOS = {
     "emudeck": ("emudeck",),
 }
 
+# Ícones reais das plataformas: procurados no tema do sistema quando o
+# aplicativo está instalado (Flatpak ou nativo). Ficam fora de
+# _APLICATIVOS porque aquela tabela também decide o que é um launcher, e
+# um emulador com biblioteca própria não deve virar launcher por causa do
+# ícone.
+_ICONES_PLATAFORMA = {
+    "uzdoom": ("org.zdoom.UZDoom", "uzdoom"),
+    "eden": ("dev.eden_emu.eden", "eden"),
+    "cemu": ("info.cemu.Cemu", "cemu"),
+    "quiver": ("io.github.tgeorgiadis.QuiverLauncher", "quiver"),
+}
+
 _ALIASES = {
     "heroicgameslauncher": "heroic",
     "heroic games launcher": "heroic",
@@ -136,7 +148,17 @@ def nomes_de_icone_da_fonte(source_id: str) -> tuple[str, ...]:
         return ("desktop-source-symbolic", "user-desktop-symbolic")
     if tipo == "xcloud":
         return ("xbox-cloud-symbolic", "xbox-symbolic", "xbox")
-    return (f"{tipo}-source-symbolic", *(_APLICATIVOS.get(tipo, ())))
+    # O símbolo enviado pelo app vem primeiro; depois os nomes conhecidos da
+    # plataforma e, por último, o ícone que o próprio sistema instala. O
+    # ícone do sistema é o último recurso, para o caso de o asset enviado
+    # faltar. Nomes repetidos saem: a ordem do primeiro aparecimento é a
+    # que vale e o tema não deve ser consultado duas vezes pelo mesmo nome.
+    nomes = (
+        f"{tipo}-source-symbolic",
+        *(_APLICATIVOS.get(tipo, ())),
+        *(_ICONES_PLATAFORMA.get(tipo, ())),
+    )
+    return tuple(dict.fromkeys(nomes))
 
 
 # Tipos que nunca viram ícone no topo. O próprio Jolven chega via
