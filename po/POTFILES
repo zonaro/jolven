@@ -36,6 +36,8 @@ cartridges/wallpaper_picker.py
 cartridges/zerados_picker.py
 cartridges/uzdoom_mods_dialog.py
 
+cartridges/platform/system_integration.py
+
 cartridges/utils/create_dialog.py
 cartridges/utils/relative_date.py
 cartridges/utils/format_playtime.py
@@ -43,6 +45,7 @@ cartridges/utils/hltb.py
 cartridges/utils/install_size.py
 cartridges/utils/integrations.py
 cartridges/utils/ligacao_zerado.py
+cartridges/utils/single_instance.py
 cartridges/utils/sunshine_servico.py
 cartridges/utils/updates_checker.py
 
@@ -61,6 +64,7 @@ cartridges/importer/legendary_source.py
 cartridges/importer/lutris_source.py
 cartridges/importer/quiver_source.py
 cartridges/importer/retroarch_source.py
+cartridges/importer/shortcuts_source.py
 cartridges/importer/steam_source.py
 cartridges/importer/twintail_source.py
 cartridges/importer/uzdoom_source.py
