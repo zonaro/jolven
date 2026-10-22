@@ -56,6 +56,7 @@ vivo, DNS ou disponibilidade de launcher instalado na máquina.
 | lançamento | ordem dos wrappers, espaços no caminho, Flatpak/URI, processo filho |
 | integração HTTP | timeout, status, corpo grande, auth inválida, cache e offline |
 | sessão | Gamescope ausente, fallback, áudio restaurado e saída limpa |
+| Jolven Session | Preferências → Sessão → Sessão do sistema (Instalar/Remover), menu do app, diálogo polkit e entrada no seletor do display manager |
 | Flatpak | permissões mínimas, caminhos sandbox/host e dependência no manifesto |
 
 ## Inspeção manual de UI
@@ -88,13 +89,16 @@ launcher fica sob `~/.local`. Reconfigure explicitamente se o prefixo desejado f
 outro; não copie partes do build manualmente.
 
 A instalação da Jolven Session é separada porque envolve arquivos do sistema e
-polkit. Use apenas os scripts/helper fornecidos e verifique propriedade do arquivo
-antes de remover. A instalação do aplicativo não concede autorização implícita
-para modificar a sessão gráfica do host. Depois de instalar, confirme que o
-`Exec`/`TryExec` da entrada desktop é executável por um usuário não relacionado
-(por exemplo, `runuser -u nobody -- test -x /usr/libexec/jolven-session`) e que a
-sessão aparece no seletor do display manager; um `TryExec` ilegível pelo `gdm`
-remove a sessão do seletor sem aviso.
+polkit. Ela acontece pela tela **Preferências → Sessão → Sessão do sistema**
+(linha **Jolven Session**, botão **Instalar**/**Remover**) ou pelo menu do
+aplicativo, e as duas rotas usam o diálogo de autorização do sistema: o app não
+pede senha de root por conta própria. A instalação do aplicativo não concede
+autorização implícita para modificar a sessão gráfica do host. Depois de
+instalar, confirme que o `Exec`/`TryExec` da entrada desktop é executável por um
+usuário não relacionado (por exemplo,
+`runuser -u nobody -- test -x /usr/libexec/jolven-session`) e que a sessão
+aparece no seletor do display manager; um `TryExec` ilegível pelo `gdm` remove
+a sessão do seletor sem aviso.
 
 ## CI e Flatpak
 
