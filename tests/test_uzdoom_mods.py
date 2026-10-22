@@ -77,6 +77,26 @@ class GameFieldTests(unittest.TestCase):
             and node.target.id == "uzdoom_mods"
         )
 
+    def _normalize_tags(self) -> ast.FunctionDef:
+        """The module-level helper that ``update_values`` now calls."""
+
+        return next(
+            node
+            for node in _parse("cartridges/game.py").body
+            if isinstance(node, ast.FunctionDef) and node.name == "normalize_tags"
+        )
+
+    def _tags_field(self) -> ast.AnnAssign:
+        """The ``tags`` field that ``update_values`` normalizes."""
+
+        return next(
+            node
+            for node in self._game_class().body
+            if isinstance(node, ast.AnnAssign)
+            and isinstance(node.target, ast.Name)
+            and node.target.id == "tags"
+        )
+
     def test_field_exists_with_an_empty_default(self) -> None:
         field = self._field()
         self.assertIsInstance(field.value, ast.List)
@@ -122,10 +142,12 @@ class GameFieldTests(unittest.TestCase):
             name="TestGame",
             bases=[],
             keywords=[],
-            body=[field, update_values],
+            body=[field, self._tags_field(), update_values],
             decorator_list=[],
         )
-        module = ast.fix_missing_locations(ast.Module(body=[synthetic], type_ignores=[]))
+        module = ast.fix_missing_locations(
+            ast.Module(body=[self._normalize_tags(), synthetic], type_ignores=[])
+        )
         namespace: dict[str, Any] = {"Any": Any}
         exec(compile(module, "game.py", "exec"), namespace)  # pylint: disable=exec-used
         game = namespace["TestGame"]()
@@ -144,10 +166,12 @@ class GameFieldTests(unittest.TestCase):
             name="TestGame",
             bases=[],
             keywords=[],
-            body=[field, update_values],
+            body=[field, self._tags_field(), update_values],
             decorator_list=[],
         )
-        module = ast.fix_missing_locations(ast.Module(body=[synthetic], type_ignores=[]))
+        module = ast.fix_missing_locations(
+            ast.Module(body=[self._normalize_tags(), synthetic], type_ignores=[])
+        )
         namespace: dict[str, Any] = {"Any": Any}
         exec(compile(module, "game.py", "exec"), namespace)  # pylint: disable=exec-used
         game = namespace["TestGame"]()
