@@ -19,6 +19,7 @@ cartridges/window.py
 cartridges/gamepad_visual.py
 cartridges/details_dialog.py
 cartridges/game.py
+cartridges/game_session.py
 cartridges/integrations_page.py
 cartridges/onscreen_keyboard.py
 cartridges/preferences.py

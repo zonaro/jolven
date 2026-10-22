@@ -168,19 +168,24 @@ Jolven can also be the frontend of a standalone Gamescope session. This
 does not start GNOME Shell and does not change normal desktop launches. The
 same application and library are used in both modes.
 
-### Requirements and installation (Fedora)
+### Requirements and installation
 
-Build and install Jolven normally, then run:
+Jolven installs its own session entry, so there is no extra script to run.
+Open **Preferences → Session** and use the **Sessão do sistema** group: the
+**Jolven Session** row ends with a button that reads **Instalar** or
+**Remover**, according to the current state. The application menu offers the
+same operation as **Install Jolven Session** or **Uninstall Jolven Session**.
 
-```sh
-./scripts/install-game-session.sh
-```
+Both routes call the same privileged helper,
+`/usr/libexec/jolven-game-mode-setup`, through the system authorization
+dialog, so the desktop asks for the system password. The application never
+asks for a root password on its own.
 
-The installer verifies Fedora, checks `gamescope`, `gamemode`, and
-`libmanette`, installs only missing packages with DNF, validates the session
-desktop file, and installs the session launcher under `/usr`. It never
-removes dependencies or changes GPU, SELinux, PAM, or GDM settings. MangoHud
-is optional.
+On Fedora the helper installs the missing packages — `gamescope`, `gamemode`,
+`libmanette`, `desktop-file-utils`, `polkit` and `wireplumber` — with DNF. On
+other distributions Gamescope has to be installed beforehand. The helper never
+removes dependencies and never changes GPU, SELinux, PAM or GDM settings.
+MangoHud is optional.
 
 When the application itself lives in the user's prefix, the privileged setup
 also installs a small launcher relay system-wide. The display manager evaluates
@@ -188,17 +193,10 @@ the session chooser as the `gdm` user, which cannot traverse a `0700` home
 directory, so a user-prefix path would make Jolven Session disappear from the
 chooser.
 
-The application menu also exposes **Install Jolven Session** or **Uninstall
-Jolven Session**, according to the current state. It uses the normal polkit
-authorization dialog.
-
 Log out, select **Jolven Session** from the display manager's session
 chooser, and sign in. Closing Jolven ends Gamescope and returns to the login
-screen. To remove only the session integration:
-
-```sh
-./scripts/uninstall-game-session.sh
-```
+screen. Removing the session from the same page or from the application menu
+takes it out of the chooser again.
 
 ### Development and configuration
 
@@ -211,10 +209,11 @@ jolven --game-mode --windowed
 (`--jolven-session` works as an alias for `--game-mode`.)
 
 The Session preferences page controls GameMode, optional MangoHud, Gamescope
-VRR/FPS limiting, cursor hiding, and the preferred display, audio output and
-audio input when multiple devices are available. It also selects whether the
-in-game overlay opens with Button Mode, Button Home, or either one. Default
-settings preserve the existing desktop launch behavior. Each game's details dialog has a
+VRR/FPS limiting, cursor hiding, the installation or removal of the Jolven
+Session, and the preferred display, audio output and audio input when multiple
+devices are available. It also selects whether the in-game overlay opens with
+Button Mode, Button Home, or either one. Default settings preserve the
+existing desktop launch behavior. Each game's details dialog has a
 persisted launch profile for global GameMode/MangoHud overrides, working
 directory, JSON environment, Gamescope options, FPS limit, resolution,
 scaling and an optional process name for launcher hand-offs.

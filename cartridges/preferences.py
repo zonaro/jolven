@@ -505,6 +505,9 @@ class CartridgesPreferences(Adw.PreferencesDialog):
     game_mode_monitor_entry_row: Adw.ComboRow = Gtk.Template.Child()
     game_mode_audio_output_entry_row: Adw.ComboRow = Gtk.Template.Child()
     game_mode_audio_input_entry_row: Adw.ComboRow = Gtk.Template.Child()
+    game_session_install_group: Adw.PreferencesGroup = Gtk.Template.Child()
+    game_session_row: Adw.ActionRow = Gtk.Template.Child()
+    game_session_button: Gtk.Button = Gtk.Template.Child()
     fita_brilho_row: Adw.SpinRow = Gtk.Template.Child()
     fita_brilho_individual_row: Adw.ActionRow = Gtk.Template.Child()
     fita_brilho_individual_button: Gtk.Button = Gtk.Template.Child()
@@ -569,6 +572,14 @@ class CartridgesPreferences(Adw.PreferencesDialog):
     _sync_steam_id: Optional[int] = None
     _bloqueio_ui: int = 0
     _autostart_sunshine_alterado: bool = False
+
+    # Jolven Session (sessão do display manager instalada pelo helper
+    # privilegiado): o estado vem do sistema, nunca de um texto fixo.
+    _game_session_em_andamento: bool = False
+    _game_session_instalada: bool = False
+    #: Geração da leitura de estado: uma leitura antiga que chega depois
+    #: da operação é descartada em vez de sobrescrever o estado novo.
+    _game_session_leitura: int = 0
 
     is_open = False
     _teste_em_curso: Optional[threading.Event] = None
@@ -948,6 +959,12 @@ class CartridgesPreferences(Adw.PreferencesDialog):
         gamescope_available = which("gamescope") is not None
         self.game_mode_enable_fps_limiter_switch.set_sensitive(gamescope_available)
         self.setup_game_overlay_button_row()
+
+        # Jolven Session: instalar ou remover a sessão do display manager é
+        # privilégio do helper autorizado (pkexec). A leitura do estado real
+        # e a operação acontecem fora da thread GTK.
+        self.game_session_button.connect("clicked", self.alternar_game_session)
+        self._recarregar_estado_game_session()
 
         def set_sgdb_sensitive(widget: Adw.EntryRow) -> None:
             if not widget.get_text():
@@ -3106,6 +3123,178 @@ class CartridgesPreferences(Adw.PreferencesDialog):
                 shared.schema.set_string("game-overlay-button", choices[selected])
 
         self.game_overlay_button_row.connect("notify::selected", selected_changed)
+
+    # ── Jolven Session (sessão do display manager) ──────────────────────────
+
+    @staticmethod
+    def _modulo_game_session() -> Any:
+        """Importa o módulo da Jolven Session sob demanda.
+
+        Import tardio de propósito: o módulo do backend de sessão não é
+        necessário para abrir o diálogo de Preferências e a falha de
+        importação não pode derrubar a tela inteira.
+        """
+        try:
+            from cartridges import game_session  # noqa: PLC0415
+
+            return game_session
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.exception("Módulo da Jolven Session indisponível")
+            return None
+
+    def _motivo_game_session(self, modulo: Any) -> str:
+        """Motivo da indisponibilidade da integração de sistema (texto puro)."""
+        try:
+            return str(modulo.unavailable_reason() or "")
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.exception("Não foi possível ler o motivo da indisponibilidade")
+            return ""
+
+    def _recarregar_estado_game_session(self) -> None:
+        """Agenda a leitura do estado da Jolven Session fora da thread GTK."""
+        self._game_session_leitura += 1
+        leitura = self._game_session_leitura
+        threading.Thread(
+            target=self._carregar_estado_game_session, args=(leitura,), daemon=True
+        ).start()
+
+    def _carregar_estado_game_session(self, leitura: int) -> None:
+        """Lê o estado real da Jolven Session fora da thread GTK.
+
+        Toca o sistema (helper autorizado e arquivo da sessão), então nunca
+        acontece na thread principal.
+        """
+        modulo = self._modulo_game_session()
+        if modulo is None:
+            entregar_na_tela(
+                self._mostrar_estado_game_session, leitura, False, "", False
+            )
+            return
+        try:
+            disponivel = bool(modulo.helper_available())
+            motivo = self._motivo_game_session(modulo)
+            instalada = bool(modulo.session_installed())
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.exception("Não foi possível ler o estado da Jolven Session")
+            disponivel, motivo, instalada = False, "", False
+        entregar_na_tela(
+            self._mostrar_estado_game_session, leitura, disponivel, motivo, instalada
+        )
+
+    def _mostrar_estado_game_session(
+        self, leitura: int, disponivel: bool, motivo: str, instalada: bool
+    ) -> bool:
+        """Reflete na linha o estado que o sistema respondeu.
+
+        Três estados: sem helper autorizado (botão insensível), não
+        instalada (botão "Instalar") e instalada (botão "Remover").
+        """
+        if self._game_session_em_andamento:
+            return GLib.SOURCE_REMOVE
+        # Leitura antiga: o estado atual é mais novo, não sobrescreve.
+        if leitura != self._game_session_leitura:
+            return GLib.SOURCE_REMOVE
+        self._game_session_instalada = bool(instalada)
+        botao = self.game_session_button
+        if not disponivel:
+            # Sem helper autorizado o botão não age, mas o rótulo ainda
+            # precisa refletir o estado real: a sessão pode já estar
+            # instalada (por uma instalação anterior) e o rótulo "Instalar"
+            # seria enganoso.
+            botao.set_label(_("Remover") if instalada else _("Instalar"))
+            botao.set_sensitive(False)
+            self.game_session_row.set_subtitle(
+                motivo or _("Integração de sistema ausente — reinstale o Jolven")
+            )
+            return GLib.SOURCE_REMOVE
+        botao.set_sensitive(True)
+        if instalada:
+            botao.set_label(_("Remover"))
+            self.game_session_row.set_subtitle(
+                _("Instalada — aparece no seletor de sessões no próximo login")
+            )
+        else:
+            botao.set_label(_("Instalar"))
+            self.game_session_row.set_subtitle(
+                _("Não instalada — o Jolven não aparece no seletor de sessões")
+            )
+        return GLib.SOURCE_REMOVE
+
+    def alternar_game_session(self, *_args: Any) -> None:
+        """Instala ou remove a Jolven Session pelo helper privilegiado."""
+        if self._game_session_em_andamento:
+            return
+        modulo = self._modulo_game_session()
+        if modulo is None:
+            self.add_toast(
+                Adw.Toast.new(
+                    _("Integração de sistema ausente — reinstale o Jolven")
+                )
+            )
+            return
+        try:
+            disponivel = bool(modulo.helper_available())
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.exception("Não foi possível verificar o helper da Jolven Session")
+            disponivel = False
+        if not disponivel:
+            self.add_toast(
+                Adw.Toast.new(
+                    self._motivo_game_session(modulo)
+                    or _("Integração de sistema ausente — reinstale o Jolven")
+                )
+            )
+            return
+
+        operacao = "uninstall" if self._game_session_instalada else "install"
+        self._game_session_em_andamento = True
+        self.game_session_button.set_sensitive(False)
+        self.game_session_row.set_subtitle(
+            _("Instalando a Jolven Session…")
+            if operacao == "install"
+            else _("Removendo a Jolven Session…")
+        )
+
+        def concluir(ok: bool, mensagem: str) -> None:
+            # O callback vem na thread worker: entrega na thread principal.
+            entregar_na_tela(self._concluir_game_session, bool(ok), str(mensagem))
+
+        try:
+            iniciado = bool(modulo.setup_async(operacao, concluir))
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.exception("Não foi possível iniciar a Jolven Session")
+            iniciado = False
+        if not iniciado:
+            # Sem helper (ou sem pkexec) o `setup_async` nem chama o
+            # callback: fail-closed, o estado real continua valendo.
+            self._game_session_em_andamento = False
+            self.game_session_button.set_sensitive(True)
+            self.add_toast(
+                Adw.Toast.new(
+                    self._motivo_game_session(modulo)
+                    or _("Não foi possível iniciar a Jolven Session")
+                )
+            )
+            self._recarregar_estado_game_session()
+
+    def _concluir_game_session(self, ok: bool, mensagem: str) -> bool:
+        """Fim da operação da Jolven Session (thread principal)."""
+        self._game_session_em_andamento = False
+        self.game_session_button.set_sensitive(True)
+        texto = mensagem.strip()
+        if not texto:
+            texto = (
+                _("Jolven Session instalada.")
+                if ok
+                else _("Não foi possível alterar a Jolven Session.")
+            )
+        toast = Adw.Toast.new(texto)
+        toast.set_priority(Adw.ToastPriority.HIGH)
+        self.add_toast(toast)
+        # O estado real mora no sistema: relê para o botão refletir o que
+        # aconteceu de fato (instalou → Remover, desinstalou → Instalar).
+        self._recarregar_estado_game_session()
+        return GLib.SOURCE_REMOVE
 
     @staticmethod
     def _setup_recorder_combo(

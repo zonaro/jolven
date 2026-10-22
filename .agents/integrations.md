@@ -383,7 +383,7 @@ aviso recuperável e nunca encerrar o jogo ou a sessão.
 | xdg-desktop-portal/libei | emulação autorizada de entrada | sem acesso bruto a dispositivos |
 | PipeWire/WirePlumber | volume e sink da sessão | restaurar estado ao sair |
 | `/sys/class/drm` | detecção de monitor/VRR | somente leitura |
-| polkit | instalar/remover sessão e abrir as Preferências | operações fixas, sem comando arbitrário |
+| polkit | instalar/remover a Jolven Session pelo helper `/usr/libexec/jolven-game-mode-setup` e abrir as Preferências | operações fixas, sem comando arbitrário |
 | Windows Hello | abrir as Preferências (Windows) | pacote opcional; sem ele, abre com aviso |
 | Gamescope | compositor da Jolven Session | não aninhar em sessão dedicada |
 | GameMode/MangoHud | wrappers por jogo | opcionais e composicionalmente testados |

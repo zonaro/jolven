@@ -43,6 +43,7 @@ except (ValueError, ImportError):
 # pylint: disable=wrong-import-position
 from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk
 
+from cartridges import game_session
 from cartridges import platform
 from cartridges import shared
 from cartridges.platform import authentication
@@ -127,7 +128,7 @@ def _exit_failed_game_session(
     os._exit(1)  # pylint: disable=protected-access
 
 
-GAME_MODE_ACTION_ID = system_integration.GAME_MODE_ACTION_ID
+GAME_MODE_ACTION_ID = game_session.GAME_MODE_ACTION_ID
 
 
 def game_mode_setup_unavailable_subtitle() -> str:
@@ -160,6 +161,10 @@ class CartridgesApplication(Adw.Application):
     # Guarda contra dois `pkcheck` simultâneos: dois toques rápidos no
     # Preferences compartilham uma única tentativa de autenticação.
     _preferences_authenticating = False
+    # Guarda contra duas operações da Jolven Session simultâneas: o helper
+    # privilegiado abre o diálogo do polkit e o segundo toque deve esperar
+    # o primeiro terminar.
+    _game_mode_setup_running: bool = False
 
     @GObject.Signal(name="emulate-key", arg_types=[int])
     def emulate_key(self, keyval) -> None:
@@ -669,7 +674,7 @@ class CartridgesApplication(Adw.Application):
         power_action = self.lookup_action("power_menu")
         if power_action is not None:
             power_action.set_enabled(shared.runtime.is_game_mode)
-        self._game_mode_setup_process = None
+        self._game_mode_setup_running = False
         self.refresh_game_mode_setup_actions()
 
         sort_action = Gio.SimpleAction.new_stateful(
@@ -1158,17 +1163,16 @@ class CartridgesApplication(Adw.Application):
 
         Fail-closed: as actions só habilitam quando o helper autorizado
         pela policy polkit existe e é executável
-        (`system_integration.helper_for`). Sem helper não há caminho
+        (`game_session.helper_available`). Sem helper não há caminho
         privilegiado aceitável — nunca se deriva caminho do prefixo. A UI
         apresenta `game_mode_setup_unavailable_subtitle()` nesse caso.
         """
-        helper = system_integration.helper_for(GAME_MODE_ACTION_ID)
         available = (
             not os.getenv("FLATPAK_ID")
-            and helper is not None
-            and self._game_mode_setup_process is None
+            and game_session.helper_available()
+            and not self._game_mode_setup_running
         )
-        installed = shared.GAME_SESSION_FILE.is_file()
+        installed = game_session.session_installed()
         install = self.lookup_action("install_game_mode")
         uninstall = self.lookup_action("uninstall_game_mode")
         if install is not None:
@@ -1183,32 +1187,40 @@ class CartridgesApplication(Adw.Application):
         self._run_game_mode_setup("uninstall")
 
     def _run_game_mode_setup(self, operation: str) -> None:
-        if self._game_mode_setup_process is not None:
+        if self._game_mode_setup_running:
             return
         # Fail-closed: resolve o helper autorizado de forma fresca e nunca
         # executa caminho derivado do prefixo. Sem helper, o recurso fica
         # indisponível (as actions já nascem desabilitadas nesse caso).
-        helper = system_integration.helper_for(GAME_MODE_ACTION_ID)
-        if helper is None:
+        if not game_session.helper_available():
             logging.error("Jolven Session setup unavailable: no authorized helper")
             shared.win.toast_queue.add(
                 Adw.Toast.new(game_mode_setup_unavailable_subtitle())
             )
             self.refresh_game_mode_setup_actions()
             return
-        try:
-            process = Gio.Subprocess.new(
-                ["pkexec", str(helper), operation],
-                Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE,
-            )
-        except GLib.Error as error:
-            logging.error("Could not start Jolven Session setup: %s", error.message)
+
+        def _finished(ok: bool, message: str) -> None:
+            # Roda na thread worker: o resultado vai para a thread principal.
+            entregar_na_tela(self._on_game_mode_setup_finished, ok, message)
+
+        if not game_session.setup_async(operation, _finished):
+            # Nada rodou: helper ausente, operação inválida ou pkexec
+            # indisponível. Com o helper presente, a autorização do sistema
+            # é que não abriu.
+            logging.error("Could not start Jolven Session setup: %s", operation)
+            reason = game_session.unavailable_reason()
             shared.win.toast_queue.add(
-                Adw.Toast.new(_("Could not open the system authorization dialog"))
+                Adw.Toast.new(
+                    reason
+                    if reason is not None
+                    else _("Could not open the system authorization dialog")
+                )
             )
+            self.refresh_game_mode_setup_actions()
             return
 
-        self._game_mode_setup_process = process
+        self._game_mode_setup_running = True
         self.refresh_game_mode_setup_actions()
         shared.win.toast_queue.add(
             Adw.Toast.new(
@@ -1217,30 +1229,16 @@ class CartridgesApplication(Adw.Application):
                 else _("Uninstalling Jolven Session…")
             )
         )
-        process.communicate_utf8_async(
-            None, None, self._on_game_mode_setup_finished, operation
-        )
 
-    def _on_game_mode_setup_finished(
-        self, process: Gio.Subprocess, result: Gio.AsyncResult, operation: str
-    ) -> None:
-        try:
-            _ok, stdout, stderr = process.communicate_utf8_finish(result)
-            successful = process.get_successful()
-        except GLib.Error as error:
-            stdout, stderr, successful = "", error.message, False
-        self._game_mode_setup_process = None
+    def _on_game_mode_setup_finished(self, ok: bool, message: str) -> None:
+        """Resultado da Jolven Session, entregue na thread principal."""
+        self._game_mode_setup_running = False
         self.refresh_game_mode_setup_actions()
-        if successful:
-            message = (
-                _("Jolven Session installed. It will appear at the next login.")
-                if operation == "install"
-                else _("Jolven Session uninstalled")
-            )
-            logging.info("Jolven Session setup completed: %s", (stdout or "").strip())
+        if ok:
+            logging.info("Jolven Session setup completed: %s", message)
         else:
+            logging.error("Jolven Session setup failed: %s", message)
             message = _("Jolven Session setup was not completed")
-            logging.error("Jolven Session setup failed: %s", (stderr or "").strip())
         toast = Adw.Toast.new(message)
         toast.set_priority(Adw.ToastPriority.HIGH)
         shared.win.toast_queue.add(toast)

@@ -192,9 +192,15 @@ seguros em caso de falha e restaura o áudio ao sair. Ele nunca deve rodar como
 root.
 
 A instalação do marcador de sessão do display manager é feita por um helper
-privilegiado limitado, autorizado por polkit. O helper aceita somente operações
-e destinos fixos; não o transforme em um executor genérico. Arquivos de sessão
-que não sejam reconhecidamente gerenciados pelo Jolven não podem ser removidos.
+privilegiado limitado, `/usr/libexec/jolven-game-mode-setup`, autorizado pela
+action polkit `io.github.zonaro.Jolven.configure-game-mode`. O app não pede
+senha de root por conta própria: quem autoriza é o diálogo do sistema. O helper
+é acionado por duas rotas — o menu do aplicativo (**Install Jolven Session** /
+**Uninstall Jolven Session**) e a tela **Preferências → Sessão → Sessão do
+sistema** (linha **Jolven Session**, botão **Instalar**/**Remover**) — que
+convergem para o mesmo módulo. O helper aceita somente operações e destinos
+fixos; não o transforme em um executor genérico. Arquivos de sessão que não
+sejam reconhecidamente gerenciados pelo Jolven não podem ser removidos.
 
 O arquivo de sessão precisa apontar para um caminho de sistema: o seletor do
 display manager é avaliado pelo usuário `gdm`, que não atravessa uma home `0700`

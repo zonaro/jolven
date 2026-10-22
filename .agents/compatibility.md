@@ -44,8 +44,8 @@ portanto tem requisitos mais estritos que o aplicativo desktop.
 
 O instalador automatiza dependências e a integração com o display manager em
 Fedora. Outras distribuições podem executar o desktop e, se fornecerem as
-dependências, a sessão; não prometa instalação automática fora do que o script
-realmente implementa.
+dependências, a sessão; não prometa instalação automática fora do que o helper
+privilegiado realmente implementa.
 
 Em sessão dedicada:
 

@@ -43,6 +43,7 @@ install_data(
     'details_dialog.py',
     'game.py',
     'game_cover.py',
+    'game_session.py',
     'integrations_page.py',
     'onscreen_keyboard.py',
     'keyboard_emulator.py',
