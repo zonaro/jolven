@@ -17,14 +17,6 @@ resolved_path() {
 # tarball binario da release funcione em qualquer $PREFIX
 # (fallback: caminho da compilacao).
 readonly _SETUP_BINDIR="$(dirname -- "$(readlink -f -- "$0")")/../bin"
-if [[ -x "$_SETUP_BINDIR/jolven-session" ]]; then
-    readonly session_launcher="$(resolved_path "$_SETUP_BINDIR/jolven-session")"
-elif [[ -x "$_SETUP_BINDIR/cartridges-session" ]]; then
-    # Compat: launcher legado do Cartridges
-    readonly session_launcher="$(resolved_path "$_SETUP_BINDIR/cartridges-session")"
-else
-    readonly session_launcher="$(resolved_path "@bindir@/jolven-session")"
-fi
 
 . /etc/os-release
 distro_name="${NAME:-Linux}"
@@ -33,6 +25,8 @@ distro_name="${distro_name//$'\n'/ }"
 
 # Home do usuario que pediu a elevacao. O greeter roda como `gdm`, entao um
 # launcher dentro de uma home 0700 nunca e alcancavel por ele.
+# A home vem SEMPRE do `getent` (base do sistema), nunca do `$HOME` do
+# processo root e nunca de um argumento do app.
 invoking_user_home() {
     local uid home
     uid="${PKEXEC_UID:-${SUDO_UID:-}}"
@@ -42,10 +36,43 @@ invoking_user_home() {
     printf '%s\n' "$home"
 }
 
+# Launcher da sessao, resolvido no momento da acao (o `PKEXEC_UID` so vale
+# enquanto o helper roda):
+#   1. instalacao do usuario que pediu a elevacao ($HOME/.local, $HOME/bin);
+#   2. caminho relativo a este helper (instalacao do sistema em /usr);
+#   3. caminho assado da compilacao (@bindir@).
+# O primeiro caminho que existir E for executavel vence.
+resolve_session_launcher() {
+    local home candidate
+    if home="$(invoking_user_home)"; then
+        for candidate in \
+            "$home/.local/bin/jolven-session" \
+            "$home/bin/jolven-session" \
+            "$home/.local/bin/cartridges-session" \
+            "$home/bin/cartridges-session"; do
+            if [[ -x "$candidate" ]]; then
+                resolved_path "$candidate"
+                return 0
+            fi
+        done
+    fi
+    for candidate in \
+        "$_SETUP_BINDIR/jolven-session" \
+        "$_SETUP_BINDIR/cartridges-session"; do
+        if [[ -x "$candidate" ]]; then
+            resolved_path "$candidate"
+            return 0
+        fi
+    done
+    resolved_path "@bindir@/jolven-session"
+}
+
 # Diretorios ancestrais precisam de o+x para que outro usuario atravesse ate o
 # arquivo; o bit de execucao do proprio arquivo e testado separadamente.
+# Uma home 0700 bloqueia o greeter (e cai no relay); uma home atravessavel
+# (0755) permite o caminho direto.
 launcher_reachable() {
-    local path="$1" dir mode last home
+    local path="$1" dir mode last
     [[ "$path" == /* ]] || return 1
     dir="$(dirname -- "$path")"
     while :; do
@@ -55,9 +82,17 @@ launcher_reachable() {
         [[ "$dir" == "/" ]] && break
         dir="$(dirname -- "$dir")"
     done
-    if home="$(invoking_user_home)"; then
-        [[ "$path" != "$home"/* ]] || return 1
-    fi
+}
+
+# O greeter (gdm) roda como "outro" usuario: o bit de execucao que decide e o
+# de "outros" (ultimo digito do modo, como no laco de diretorios acima), nao o
+# `-x` do root — que vale com QUALQUER bit de execucao, inclusive um 0700
+# que pertence ao usuario e que o greeter nao consegue executar.
+launcher_executable_by_others() {
+    local path="$1" mode last
+    mode="$(stat -L -c '%a' -- "$path" 2>/dev/null)" || return 1
+    last="${mode: -1}"
+    [[ "$last" =~ ^[1357]$ ]]
 }
 
 # O modo `session-file` e uma pre-visualizacao: um launcher de sistema que
@@ -66,7 +101,14 @@ launcher_reachable() {
 launcher_visible_to_others() {
     local path="$1" require_executable="${2:-1}"
     if (( require_executable )); then
-        [[ -x "$path" ]] || return 1
+        [[ -e "$path" ]] || return 1
+        launcher_executable_by_others "$path" || return 1
+    elif [[ -e "$path" ]]; then
+        # A pre-visualizacao nao exige que o launcher exista, mas um launcher
+        # que existe precisa ser executavel pelo greeter: e o mesmo criterio
+        # do `install`, que escreve o relay quando o greeter nao alcanca o
+        # launcher direto.
+        launcher_executable_by_others "$path" || return 1
     fi
     launcher_reachable "$path"
 }
@@ -104,6 +146,9 @@ log() {
 HOME="${HOME:-}"
 candidates=(
     "$HOME/.local/bin/jolven-session"
+    "$HOME/bin/jolven-session"
+    "$HOME/.local/bin/cartridges-session"
+    "$HOME/bin/cartridges-session"
     /usr/bin/jolven-session
     /usr/local/bin/jolven-session
 )
@@ -133,7 +178,7 @@ if [[ "$action" == relay ]]; then
 fi
 
 if [[ "$action" == session-file ]]; then
-    preview_launcher="${2:-$session_launcher}"
+    preview_launcher="${2:-$(resolve_session_launcher)}"
     if launcher_visible_to_others "$preview_launcher" 0; then
         preview_target="$preview_launcher"
     else
@@ -178,6 +223,7 @@ if [[ "$action" == uninstall ]]; then
     exit 0
 fi
 
+session_launcher="$(resolve_session_launcher)"
 if [[ ! -x "$session_launcher" ]]; then
     printf 'Session launcher not found: %s\n' "$session_launcher" >&2
     exit 69
