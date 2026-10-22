@@ -49,6 +49,7 @@ Manually add and edit games, or let Jolven pull them in automatically from:
 - Cemu
 - Yuzu
 - Eden
+- Waydroid
 - TwinTail
 - UZDoom
 - Flatpak
