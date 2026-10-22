@@ -172,6 +172,19 @@ class Palette:
             variaveis["--accent-color"] = accent_texto
         return variaveis
 
+    @property
+    def modo_sugerido(self) -> str:
+        """Modo natural do tema: ``"dark"`` ou ``"light"``.
+
+        Escolher um tema no Jolven leva o esquema junto: uma paleta de fundo
+        escuro pede modo escuro e vice-versa. Quando a cor do fundo não pode
+        ser lida, prevalece o escuro (identidade do tema ``jolven``).
+        """
+        luminancia = _luminancia(self.bg or self.headerbar_bg or "")
+        if luminancia is None:
+            return "dark"
+        return "dark" if luminancia < 0.5 else "light"
+
     def gtk_variables(self, modo: str) -> dict[str, str]:
         """Paleta COMPLETA do libadwaita a partir dos campos desta ``Palette``.
 

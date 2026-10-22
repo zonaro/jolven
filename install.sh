@@ -46,22 +46,6 @@ while (($#)); do
     shift
 done
 
-# Quando instalado via pipe (`curl ... | bash`), nao ha copia local do
-# repositorio, entao o script de atalho e baixado do GitHub.
-configure_shortcut() {
-    if ! command -v gsettings >/dev/null 2>&1; then
-        printf 'Para o atalho Super+G no GNOME, execute: ./scripts/install-gnome-shortcut.sh\n'
-        return 0
-    fi
-    local shortcut_url="https://raw.githubusercontent.com/zonaro/jolven/main/scripts/install-gnome-shortcut.sh"
-    if CARTRIDGES_COMMAND="$INSTALL_PREFIX/bin/jolven" \
-        bash <(curl -fsSL "$shortcut_url"); then
-        printf 'Atalho global configurado: Super+G abre o Jolven.\n'
-    else
-        printf 'Nao foi possivel configurar o atalho Super+G automaticamente.\n' >&2
-    fi
-}
-
 print_path_hint() {
     if [[ ":$PATH:" != *":$INSTALL_PREFIX/bin:"* ]]; then
         printf 'Se necessario, adicione %s/bin ao PATH para usar o comando jolven.\n' \
@@ -82,6 +66,100 @@ install_runtime_packages() {
     else
         printf 'Todas as dependencias ja estao instaladas.\n'
     fi
+}
+
+promote_system_integration() {
+    local src_prefix="${1:-$INSTALL_PREFIX}"
+    local policy_src_dir="${2:-$src_prefix/share/polkit-1/actions}"
+    local dest_libexec="${CARTRIDGES_SYSTEM_LIBEXECDIR:-/usr/libexec}"
+    local dest_polkit="${CARTRIDGES_POLKIT_DIR:-/usr/share/polkit-1/actions}"
+
+    if [[ $src_prefix == /usr || $src_prefix == /usr/local ]]; then
+        printf 'Prefixo do sistema (%s): helpers e policies ja instalados pelo meson; promocao dispensada.\n' "$src_prefix"
+        return 0
+    fi
+
+    local sudo_cmd=""
+    if [[ ${EUID:-$(id -u)} -ne 0 ]] && [[ $dest_libexec == /usr/* || $dest_polkit == /usr/* ]] && command -v sudo >/dev/null 2>&1; then
+        sudo_cmd="sudo"
+    fi
+
+    local helper src dest backup
+    for helper in jolven-game-mode-setup jolven-xcloud-deps; do
+        src="$src_prefix/libexec/$helper"
+        dest="$dest_libexec/$helper"
+        if [[ ! -f $src ]]; then
+            printf 'Helper nao encontrado em %s; promocao abortada.\n' "$src" >&2
+            return 1
+        fi
+        if [[ -e $dest ]] && ! grep -q 'X-Jolven-Managed=true' "$dest" 2>/dev/null; then
+            backup="$dest.bak-$(date +%Y%m%d%H%M%S)"
+            printf 'Arquivo alheio em %s; preservado como %s.\n' "$dest" "$backup"
+            $sudo_cmd mv -- "$dest" "$backup"
+        fi
+        $sudo_cmd install -D -m 0755 -- "$src" "$dest"
+        printf 'Helper promovido: %s\n' "$dest"
+    done
+
+    local spec policy action psrc pdest pbackup
+    for spec in \
+        "io.github.zonaro.Jolven.GameMode.policy:io.github.zonaro.Jolven.configure-game-mode" \
+        "io.github.zonaro.Jolven.XCloudDeps.policy:io.github.zonaro.Jolven.install-xcloud-deps" \
+        "io.github.zonaro.Jolven.Preferences.policy:io.github.zonaro.Jolven.preferences"; do
+        policy="${spec%%:*}"
+        action="${spec##*:}"
+        psrc="$policy_src_dir/$policy"
+        pdest="$dest_polkit/$policy"
+        if [[ ! -f $psrc ]]; then
+            printf 'Policy nao encontrada em %s; promocao abortada.\n' "$psrc" >&2
+            return 1
+        fi
+        if [[ -e $pdest ]] && ! grep -Fq "$action" "$pdest" 2>/dev/null; then
+            pbackup="$pdest.bak-$(date +%Y%m%d%H%M%S)"
+            printf 'Arquivo alheio em %s; preservado como %s.\n' "$pdest" "$pbackup"
+            $sudo_cmd mv -- "$pdest" "$pbackup"
+        fi
+        $sudo_cmd install -D -m 0644 -- "$psrc" "$pdest"
+        printf 'Policy instalada: %s\n' "$pdest"
+    done
+
+    # Remove as copias inertes do prefixo do usuario. O search-provider e o
+    # jolven-session ficam onde estao, por design (D-Bus e sessao de usuario).
+    rm -f -- "$src_prefix/libexec/jolven-game-mode-setup" "$src_prefix/libexec/jolven-xcloud-deps"
+    rm -rf -- "$src_prefix/share/polkit-1"
+
+    local failures=0
+    local installed exec_path
+    for installed in "$dest_polkit"/io.github.zonaro.Jolven.GameMode.policy \
+        "$dest_polkit"/io.github.zonaro.Jolven.XCloudDeps.policy \
+        "$dest_polkit"/io.github.zonaro.Jolven.Preferences.policy; do
+        if [[ ! -f $installed ]]; then
+            printf 'Verificacao falhou: policy ausente: %s\n' "$installed" >&2
+            failures=1
+            continue
+        fi
+        while IFS= read -r exec_path; do
+            [[ -n $exec_path ]] || continue
+            if [[ ! -x $exec_path ]]; then
+                printf 'Verificacao falhou: %s (de %s) nao existe ou nao e executavel.\n' "$exec_path" "$installed" >&2
+                failures=1
+            elif [[ ${EUID:-$(id -u)} -eq 0 && $(stat -c '%u' -- "$exec_path" 2>/dev/null) != 0 ]]; then
+                printf 'Verificacao falhou: %s (de %s) nao pertence a root.\n' "$exec_path" "$installed" >&2
+                failures=1
+            elif [[ -n "$(find "$exec_path" -perm /022 2>/dev/null)" ]]; then
+                printf 'Verificacao falhou: %s (de %s) e gravavel por grupo ou outros.\n' "$exec_path" "$installed" >&2
+                failures=1
+            elif [[ ${EUID:-$(id -u)} -ne 0 && -w $exec_path ]]; then
+                printf 'Verificacao falhou: %s (de %s) e gravavel pelo usuario corrente.\n' "$exec_path" "$installed" >&2
+                failures=1
+            fi
+        done < <(sed -n 's/.*org.freedesktop.policykit.exec.path">\([^<]*\)<.*/\1/p' "$installed")
+    done
+    if ((failures)); then
+        printf 'Integracao de sistema inconsistente; verifique os caminhos acima.\n' >&2
+        return 1
+    fi
+    printf 'Integracao de sistema verificada.\n'
 }
 
 install_binary() {
@@ -161,7 +239,8 @@ install_binary() {
 
     printf '\nJolven instalado com sucesso. Abra-o pelo menu de aplicativos.\n'
     print_path_hint
-    configure_shortcut
+
+    promote_system_integration "$INSTALL_PREFIX" "$INSTALL_PREFIX/share/polkit-1/actions"
 }
 
 install_source() {
@@ -208,22 +287,19 @@ install_source() {
     printf 'Instalando em %s...\n' "$INSTALL_PREFIX"
     meson install -C "$work_dir/jolven/build"
 
+    promote_system_integration "$INSTALL_PREFIX" "$work_dir/jolven/build/data"
+
     printf '\nJolven instalado com sucesso. Abra-o pelo menu de aplicativos.\n'
     print_path_hint
-
-    # Atalho global Super+G no GNOME (nao falha a instalacao se indisponivel).
-    if command -v gsettings >/dev/null 2>&1; then
-        if CARTRIDGES_COMMAND="$INSTALL_PREFIX/bin/jolven" \
-            bash "$work_dir/jolven/scripts/install-gnome-shortcut.sh"; then
-            printf 'Atalho global configurado: Super+G abre o Jolven.\n'
-        else
-            printf 'Nao foi possivel configurar o atalho Super+G automaticamente.\n' >&2
-            printf 'Execute depois: ./scripts/install-gnome-shortcut.sh\n' >&2
-        fi
-    else
-        printf 'Para o atalho Super+G no GNOME, execute: ./scripts/install-gnome-shortcut.sh\n'
-    fi
 }
+
+# Ensaio da promocao sem tocar no sistema (validacao do issue #42):
+# CARTRIDGES_PROMOTE_ONLY=<prefixo> CARTRIDGES_SYSTEM_LIBEXECDIR=<dir> \
+#   CARTRIDGES_POLKIT_DIR=<dir> bash install.sh
+if [[ -n "${CARTRIDGES_PROMOTE_ONLY:-}" ]]; then
+    promote_system_integration "${CARTRIDGES_PROMOTE_ONLY}"
+    exit $?
+fi
 
 if [[ ${EUID:-$(id -u)} -eq 0 ]]; then
     printf 'Nao execute este instalador como root ou com sudo.\n' >&2

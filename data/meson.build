@@ -182,29 +182,38 @@ endif
 
 subdir('icons')
 
-if host_machine.system() == 'linux' and get_option('prefix') in ['/usr', '/usr/local']
+if host_machine.system() == 'linux'
+  _polkit_install = get_option('prefix') in ['/usr', '/usr/local']
+  _polkit_dir = join_paths(get_option('prefix'), 'share/polkit-1/actions')
+  # O exec.path precisa apontar para onde o helper foi instalado nesta
+  # compilacao (prefixo + libexecdir). Em build de usuario (~/.local) as
+  # policies nao sao instaladas, mas o arquivo gerado mantem
+  # system_libexecdir (/usr/libexec) porque e ele que o install.sh promove.
+  _policy_execdir = get_option('system_libexecdir')
+  if _polkit_install
+    _policy_execdir = join_paths(get_option('prefix'), get_option('libexecdir'))
+  endif
+  _policy_conf = configuration_data()
+  _policy_conf.set('system_libexecdir', _policy_execdir)
   configure_file(
     input: 'io.github.zonaro.Jolven.GameMode.policy.in',
     output: app_id + '.GameMode.policy',
-    configuration: conf,
-    install: true,
-    # Polkit uses a system integration directory. User-local builds leave
-    # this file to the dedicated Game Mode installer instead of requiring
-    # root for an otherwise user-local application update.
-    install_dir: '/usr/share/polkit-1/actions',
+    configuration: _policy_conf,
+    install: _polkit_install,
+    install_dir: _polkit_dir,
   )
   configure_file(
     input: 'io.github.zonaro.Jolven.XCloudDeps.policy.in',
     output: app_id + '.XCloudDeps.policy',
-    configuration: conf,
-    install: true,
-    install_dir: '/usr/share/polkit-1/actions',
+    configuration: _policy_conf,
+    install: _polkit_install,
+    install_dir: _polkit_dir,
   )
   configure_file(
     input: 'io.github.zonaro.Jolven.Preferences.policy.in',
     output: app_id + '.Preferences.policy',
-    configuration: conf,
-    install: true,
-    install_dir: '/usr/share/polkit-1/actions',
+    configuration: _policy_conf,
+    install: _polkit_install,
+    install_dir: _polkit_dir,
   )
 endif

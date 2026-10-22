@@ -499,6 +499,10 @@ O comportamento da sessão real deve continuar separado.
 
 # 21. INSTALADOR
 
+> Nota (issue #42, caminho vigente): este plano histórico citava
+> `scripts/install-game-session.sh` como exemplo; hoje o único instalador é o
+> `install.sh` e a sessão é instalada/removida pela tela de Preferências do app.
+
 Crie scripts ou targets apropriados.
 
 Exemplos aceitáveis:

@@ -362,6 +362,15 @@ def nome_do_tema(slug: str) -> str:
     return obter_tema(slug).name
 
 
+def modo_do_tema(slug: str) -> str:
+    """Modo natural do tema: ``"dark"`` ou ``"light"``.
+
+    A página Aparência aplica este modo ao escolher o tema, para o esquema de
+    cor acompanhar a paleta clicada.
+    """
+    return obter_tema(slug).modo_sugerido
+
+
 # ── Aliases de compatibilidade (outras lanes já consumiam estes nomes) ────
 
 CATALOG_SLUGS: list[str] = list(CATALOGO)

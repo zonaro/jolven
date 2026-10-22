@@ -18,6 +18,8 @@ import threading
 from pathlib import Path
 from typing import Callable, List, Optional, Tuple
 
+from cartridges.platform import system_integration
+
 logger = logging.getLogger(__name__)
 
 REQUIRED_ELEMENTS = (
@@ -37,6 +39,7 @@ REQUIRED_ELEMENTS = (
 )
 H264_DECODERS = ("vah264dec", "nvh264dec", "avdec_h264", "openh264dec")
 HELPER_OPERATION = "install-xcloud-deps"
+XCLOUD_DEPS_ACTION_ID = system_integration.XCLOUD_DEPS_ACTION_ID
 
 
 def build_restart_command(argv: List[str]) -> List[str]:
@@ -56,29 +59,34 @@ except (ImportError, ValueError):
     _Gst = None  # type: ignore[assignment]
 
 
-def _shared_libexecdir() -> Optional[str]:
-    try:
-        from cartridges import shared  # noqa: PLC0415
-
-        return str(shared.LIBEXECDIR)
-    except Exception as error:
-        logger.debug("shared indisponível para localizar helper: %s", error)
-        return None
-
-
 def _helper_path() -> Optional[Path]:
-    libexecdir = _shared_libexecdir()
-    if libexecdir:
-        candidate = Path(libexecdir) / "jolven-xcloud-deps"
-        if candidate.is_file():
-            return candidate
-    repo_session = Path(__file__).resolve().parents[1] / "session"
-    for name in ("jolven-xcloud-deps", "jolven-xcloud-deps.in"):
-        fallback = repo_session / name
-        if fallback.is_file():
-            return fallback
-    which = shutil.which("jolven-xcloud-deps")
-    return Path(which) if which else None
+    """Único caminho privilegiado aceitável: o helper da policy polkit.
+
+    Fail-closed: devolve None quando a policy ou o binário executável
+    estão ausentes. Nunca deriva caminho do prefixo de instalação, do
+    repositório (``session/*.in``) ou do ``PATH``: executar helper em
+    caminho controlado pelo usuário permitiria a qualquer processo do
+    usuário obter root via pkexec/auth_admin_keep.
+    """
+    return system_integration.helper_for(XCLOUD_DEPS_ACTION_ID)
+
+
+def helper_available() -> bool:
+    """True quando o helper autorizado está pronto para execução."""
+    return _helper_path() is not None
+
+
+def unavailable_reason() -> Optional[str]:
+    """Motivo da indisponibilidade do instalador, para a UI exibir.
+
+    None quando o helper autorizado está pronto. Delega o texto à fonte
+    única (`system_integration.unavailable_message`); nunca orienta a
+    rodar scripts com sudo — a apresentação final do texto é de outra
+    camada.
+    """
+    if helper_available():
+        return None
+    return system_integration.unavailable_message()
 
 
 def missing_elements(elements: Tuple[str, ...] = REQUIRED_ELEMENTS) -> List[str]:
@@ -106,11 +114,9 @@ def missing_elements(elements: Tuple[str, ...] = REQUIRED_ELEMENTS) -> List[str]
 
 def policy_registered() -> bool:
     """True se a action polkit do helper existe no sistema."""
-    for base in ("/usr/share/polkit-1/actions", "/etc/polkit-1/actions"):
-        matches = list(Path(base).glob("*XCloudDeps.policy"))
-        if matches:
-            return True
-    return False
+    return (
+        system_integration.find_policy(XCLOUD_DEPS_ACTION_ID) is not None
+    )
 
 
 def install_async(
@@ -128,7 +134,7 @@ def install_async(
         return False
     pkexec = shutil.which("pkexec")
     if pkexec is None:
-        callback(False, "pkexec indisponível neste sistema")
+        callback(False, _("pkexec indisponível neste sistema"))
         return True
 
     def work() -> None:
@@ -156,20 +162,23 @@ def install_async(
             code = proc.wait(timeout=600)
             message = lines[-1] if lines else ""
             if code == 0:
-                callback(True, message or "Dependências instaladas.")
+                callback(True, message or _("Dependências instaladas."))
             elif "dismissed" in message.lower() or "cancel" in message.lower():
-                callback(False, "Instalação cancelada.")
+                callback(False, _("Instalação cancelada."))
             else:
-                callback(False, message or f"Falha na instalação (código {code}).")
+                callback(
+                    False,
+                    message or _("Falha na instalação (código %s).") % code,
+                )
         except subprocess.TimeoutExpired:
             if proc is not None:
                 try:
                     proc.kill()
                 except Exception:
                     pass
-            callback(False, "Tempo esgotado instalando dependências.")
+            callback(False, _("Tempo esgotado instalando dependências."))
         except Exception as error:
-            callback(False, f"Não foi possível instalar: {error}")
+            callback(False, _("Não foi possível instalar: %s") % error)
 
     threading.Thread(target=work, daemon=True, name="xcloud-deps").start()
     return True

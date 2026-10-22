@@ -16,3 +16,9 @@ option(
   ],
   value: 'webp'
 )
+option(
+  'system_libexecdir',
+  type: 'string',
+  value: '/usr/libexec',
+  description: 'System libexec directory for privileged helpers referenced by polkit policies',
+)

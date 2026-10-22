@@ -22,6 +22,7 @@ cartridges/game.py
 cartridges/integrations_page.py
 cartridges/onscreen_keyboard.py
 cartridges/preferences.py
+cartridges/xcloud_deps.py
 cartridges/xcloud_login.py
 cartridges/botao_tarefas.py
 cartridges/fita_wizard.py
@@ -42,6 +43,7 @@ cartridges/utils/hltb.py
 cartridges/utils/install_size.py
 cartridges/utils/integrations.py
 cartridges/utils/ligacao_zerado.py
+cartridges/utils/sunshine_servico.py
 cartridges/utils/updates_checker.py
 
 cartridges/importer/importer.py

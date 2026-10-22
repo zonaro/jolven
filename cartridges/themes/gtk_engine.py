@@ -49,10 +49,26 @@ _estado_aplicado: tuple[str, str, bool, str | None] | None = None
 #: Provider dedicado do tema (um só por processo, reutilizado a cada troca).
 _provider: Gtk.CssProvider | None = None
 
-#: Brilho opt-in do tema Jolven. As classes vivem no ``data/gtk/style.css``;
-#: aqui só reforçamos o foco, sem duplicar as regras visuais.
+#: Brilho opt-in do tema Jolven. As classes ``.jolven-glow-*``/``.jolven-rgb-border``
+#: seguem em ``data/gtk/style.css`` para widgets que queiram optar por elas; aqui
+#: vão os alvos reais do libadwaita, que é o que faz o switch "Brilhos" aparecer.
 _GLOW_CSS = """\
 /* Jolven: brilho RGB opt-in (só no tema jolven) */
+.jolven-glow-accent,
+button.suggested-action {
+  box-shadow: 0 0 6px 1px alpha(var(--accent-bg-color), 0.55);
+}
+
+.jolven-glow-card,
+.card {
+  box-shadow: 0 0 12px 2px alpha(var(--accent-bg-color), 0.28);
+}
+
+.jolven-rgb-border {
+  border: 1px solid alpha(var(--accent-bg-color), 0.6);
+  box-shadow: 0 0 8px alpha(var(--accent-bg-color), 0.4);
+}
+
 .jolven-glow-accent:focus-visible,
 .jolven-glow-card:focus-visible,
 .jolven-rgb-border:focus-visible {
