@@ -515,6 +515,7 @@ class CartridgesPreferences(Adw.PreferencesDialog):
     game_mode_hide_mouse_cursor_switch: Adw.SwitchRow = Gtk.Template.Child()
     game_overlay_button_row: Adw.ComboRow = Gtk.Template.Child()
     game_mode_monitor_entry_row: Adw.ComboRow = Gtk.Template.Child()
+    window_monitor_entry_row: Adw.ComboRow = Gtk.Template.Child()
     game_mode_audio_output_entry_row: Adw.ComboRow = Gtk.Template.Child()
     game_mode_audio_input_entry_row: Adw.ComboRow = Gtk.Template.Child()
     game_session_install_group: Adw.PreferencesGroup = Gtk.Template.Child()
@@ -950,10 +951,16 @@ class CartridgesPreferences(Adw.PreferencesDialog):
         self.atualizar_atalho_global()
 
         sinks, sources = pipewire_nodes()
+        connectors = drm_connectors()
         self.setup_device_row(
             self.game_mode_monitor_entry_row,
             "game-mode-monitor",
-            drm_connectors(),
+            connectors,
+        )
+        self.setup_device_row(
+            self.window_monitor_entry_row,
+            "window-monitor",
+            connectors,
         )
         self.setup_device_row(
             self.game_mode_audio_output_entry_row,
@@ -2095,8 +2102,11 @@ class CartridgesPreferences(Adw.PreferencesDialog):
         if saved and saved not in values:
             shared.schema.set_string(setting, "")
             saved = ""
-        row.set_selected(choices.index(saved) if saved in choices else 0)
-        row.set_visible(len(values) > 1)
+        try:
+            row.set_selected(choices.index(saved) if saved in choices else 0)
+        except ValueError:
+            row.set_selected(0)
+        row.set_visible(True)
 
         def selected_changed(widget: Adw.ComboRow, *_args: Any) -> None:
             selected = widget.get_selected()

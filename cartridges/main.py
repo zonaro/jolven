@@ -716,8 +716,40 @@ class CartridgesApplication(Adw.Application):
         self.watch_windows_theme()
         # Uma segunda cópia do app pede a esta que se mostre.
         watch_second_launch(lambda: entregar_na_tela(self.on_second_launch))
+        try:
+            from cartridges.utils import monitor_position  # pylint: disable=import-outside-toplevel
+
+            monitor_position.apply_window_monitor(shared.win)
+            if shared.schema is not None:
+                try:
+                    shared.schema.connect("changed", monitor_position.apply_monitor_change, shared.win)
+                except Exception:
+                    pass
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.exception("Não foi possível posicionar a janela no monitor configurado")
         if shared.runtime.is_session:
-            shared.win.fullscreen()
+            try:
+                monitor = None
+                try:
+                    monitor_name = shared.schema.get_string("game-mode-monitor") if shared.schema else ""
+                except Exception:  # pylint: disable=broad-exception-caught
+                    monitor_name = ""
+                if monitor_name:
+                    display = Gdk.Display.get_default()
+                    if display is not None:
+                        monitors = display.get_monitors()
+                        for i in range(monitors.get_n_items()):
+                            m = monitors.get_item(i)
+                            if getattr(m, "get_connector", None) and m.get_connector() == monitor_name:
+                                monitor = m
+                                break
+                if monitor is not None:
+                    shared.win.fullscreen_on_monitor(monitor)
+                else:
+                    shared.win.fullscreen()
+            except Exception:  # pylint: disable=broad-exception-caught
+                logging.exception("Não foi possível colocar a janela em tela cheia no monitor da sessão")
+                shared.win.fullscreen()
         if shared.runtime.is_game_mode:
             shared.win.focus_game_mode_home()
 

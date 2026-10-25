@@ -305,6 +305,9 @@
     <key name="game-mode-monitor" type="s">
       <default>""</default>
     </key>
+    <key name="window-monitor" type="s">
+      <default>""</default>
+    </key>
     <key name="game-mode-audio-output" type="s">
       <default>""</default>
     </key>

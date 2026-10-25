@@ -685,6 +685,16 @@ template $CartridgesPreferences: Adw.PreferencesDialog {
       Adw.ComboRow game_mode_monitor_entry_row {
         title: _("Monitor connector");
       }
+    }
+
+    Adw.PreferencesGroup window_monitor_group {
+      title: _("Janela do aplicativo");
+      description: _("Define em qual monitor a janela principal deve abrir no modo desktop.");
+
+      Adw.ComboRow window_monitor_entry_row {
+        title: _("Monitor connector");
+        subtitle: _("\"Nenhum\" abre no comportamento padrão.");
+      }
 
       Adw.ComboRow game_mode_audio_output_entry_row {
         title: _("Audio output");
