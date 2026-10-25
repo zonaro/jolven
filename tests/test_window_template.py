@@ -87,6 +87,17 @@ class WindowNewsPortalTests(unittest.TestCase):
         self.assertIn("set_source_enabled", py)
         self.assertIn("rebuild_news_sources_menu", py)
 
+    def test_source_filter_menu_items_use_qualified_action_names(self) -> None:
+        """O muxer do GTK só resolve "grupo.ação"; um nome cru nasce morto.
+
+        Sem o prefixo "win." o GtkMenuTracker deixa a ação "missing from
+        the start": a linha nasce insensível e o clique nunca chega ao
+        change-state — o menu parece não ligar nem desligar nada. Os
+        demais menus do arquivo já usam "win."/"app.".
+        """
+        py = (ROOT / "cartridges" / "window.py").read_text(encoding="utf-8")
+        self.assertIn('section.append(source, f"win.{name}")', py)
+
     def test_news_css_avoids_properties_gtk_css_rejects(self) -> None:
         """O CSS do GTK recusa propriedades de widget e quebra o arquivo.
 

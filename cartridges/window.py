@@ -2156,8 +2156,10 @@ class CartridgesWindow(Adw.ApplicationWindow):
             action.connect("change-state", self.on_news_source_changed, source)
             self.add_action(action)
             self._news_source_actions.append(action)
-            # O rótulo da fonte é nome próprio, mostrado como veio.
-            section.append(source, name)
+            # O rótulo da fonte é nome próprio, mostrado como veio. A ação
+            # vai qualificada: o muxer do GTK só resolve "grupo.ação" —
+            # sem o "win." a linha nasce insensível e o clique não chega.
+            section.append(source, f"win.{name}")
 
         menu = Gio.Menu()
         menu.append_section(_("Fontes"), section)
