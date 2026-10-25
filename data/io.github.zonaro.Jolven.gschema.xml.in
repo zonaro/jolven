@@ -107,6 +107,15 @@
     <key name="legendary-show-uninstalled" type="b">
       <default>false</default>
     </key>
+    <key name="epic" type="b">
+      <default>true</default>
+    </key>
+    <key name="epic-location" type="s">
+      <default>"~/.local/share/com.epicgames.eglv2/"</default>
+    </key>
+    <key name="epic-cache-location" type="s">
+      <default>"~/.cache/com.epicgames.eglv2/"</default>
+    </key>
     <key name="retroarch" type="b">
       <default>true</default>
     </key>
@@ -169,6 +178,15 @@
     </key>
     <key name="flatpak-import-launchers" type="b">
       <default>false</default>
+    </key>
+    <key name="appimage" type="b">
+      <default>true</default>
+    </key>
+    <key name="appimage-import-launchers" type="b">
+      <default>false</default>
+    </key>
+    <key name="appimage-location" type="s">
+      <default>""</default>
     </key>
     <key name="sgdb-key" type="s">
       <default>""</default>
@@ -302,8 +320,10 @@
     <key name="xbox-cloud-gaming" type="b">
       <default>false</default>
     </key>
-    <key name="xcloud-fullscreen-on-start" type="b">
-      <default>false</default>
+    <key name="xcloud-browser" type="s">
+      <default>""</default>
+      <summary>Browser used for Xbox Cloud Gaming</summary>
+      <description>Desktop id of the browser that opens Xbox Cloud Gaming in a kiosk window. Empty means the system default browser.</description>
     </key>
     <key name="sunshine-auto-sync" type="b">
       <default>false</default>

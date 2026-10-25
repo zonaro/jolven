@@ -203,13 +203,6 @@ if host_machine.system() == 'linux'
     install_dir: _polkit_dir,
   )
   configure_file(
-    input: 'io.github.zonaro.Jolven.XCloudDeps.policy.in',
-    output: app_id + '.XCloudDeps.policy',
-    configuration: _policy_conf,
-    install: _polkit_install,
-    install_dir: _polkit_dir,
-  )
-  configure_file(
     input: 'io.github.zonaro.Jolven.Preferences.policy.in',
     output: app_id + '.Preferences.policy',
     configuration: _policy_conf,

@@ -12,7 +12,6 @@ install_subdir('platform', install_dir: moduledir)
 install_subdir('store', install_dir: moduledir)
 install_subdir('logging', install_dir: moduledir)
 install_subdir('errors', install_dir: moduledir)
-install_subdir('xcloud_native', install_dir: moduledir)
 install_subdir('recorder', install_dir: moduledir)
 install_subdir('themes', install_dir: moduledir)
 install_subdir('integrations', install_dir: moduledir)
@@ -64,9 +63,6 @@ install_data(
     'gamepad_visual.py',
     'launchers.py',
     'xcloud_catalog.py',
-    'xcloud_deps.py',
-    'xcloud_login.py',
-    'xcloud_player.py',
     'image_picker.py',
     'wallhaven_filter_bar.py',
     'uzdoom_mods_dialog.py',
@@ -87,14 +83,6 @@ if host_machine.system() == 'linux'
   configure_file(
     input: '../session/jolven-game-mode-setup.in',
     output: 'jolven-game-mode-setup',
-    configuration: conf,
-    install: true,
-    install_mode: 'rwxr-xr-x',
-    install_dir: get_option('libexecdir'),
-  )
-  configure_file(
-    input: '../session/jolven-xcloud-deps.in',
-    output: 'jolven-xcloud-deps',
     configuration: conf,
     install: true,
     install_mode: 'rwxr-xr-x',

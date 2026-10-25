@@ -28,7 +28,7 @@ class GamepadPureLogicTests(unittest.TestCase):
             self.assertFalse(should_confine_gamepad(True, page), page)
 
     def test_no_confine_off_library(self):
-        for page in ("", "details", "home", "game-mode", "xcloud"):
+        for page in ("", "details", "home", "game-mode"):
             self.assertFalse(should_confine_gamepad(False, page), page)
             self.assertFalse(should_confine_gamepad(True, page), page)
 

@@ -9,10 +9,10 @@ root, então a operação passa pelo helper privilegiado
 ``jolven-game-mode-setup``, executado via ``pkexec`` (o polkit abre o
 diálogo de senha do sistema).
 
-Espelha ``cartridges/xcloud_deps.py``: o caminho do helper vem da policy
-polkit (fail-closed — nunca do prefixo de instalação nem do ``PATH``), a
-execução sai da thread principal e o resultado volta por callback. Sem
-GTK aqui: o chamador entrega o resultado à UI.
+O caminho do helper vem da policy polkit (fail-closed — nunca do prefixo
+de instalação nem do ``PATH``), a execução sai da thread principal e o
+resultado volta por callback. Sem GTK aqui: o chamador entrega o resultado
+à UI.
 """
 
 from __future__ import annotations

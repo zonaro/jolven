@@ -89,7 +89,7 @@ Ainda sem equivalente no Windows, conforme o épico do port:
   ou com Hello desabilitado por política, as Preferências abrem com aviso no
   log (fail-open restrito a plataformas sem polkit);
 - gamepads por libmanette dão lugar a XInput (`ctypes`);
-- xCloud embutido, GameMode, MangoHud, `wpctl`/WirePlumber e libei/snegg não têm
+- GameMode, MangoHud, `wpctl`/WirePlumber e libei/snegg não têm
   equivalente direto;
 - distribuição por MSYS2 UCRT64 + Inno Setup, com patch DComp no GTK (sem ele as
   janelas GTK no Windows podem não pintar fora do monitor principal).
@@ -98,7 +98,7 @@ Ainda sem equivalente no Windows, conforme o épico do port:
 
 | Capacidade | Dependência | Comportamento sem ela | Windows |
 | --- | --- | --- | --- |
-| xCloud embutido | WebKitGTK 6.0 ou 4.1 | recurso oculto/desabilitado com orientação | sem WebKitGTK; indisponível no port |
+| xCloud (navegador externo) | navegador com modo quiosque | abre em janela nova sem tela cheia | navegador padrão do Windows |
 | gamepad | libmanette | teclado e mouse continuam funcionais | sem libmanette; XInput planejado |
 | emulação de entrada | libei/snegg + portal | ação específica indisponível | sem equivalente |
 | Jolven Session | Gamescope | desktop funciona; sessão não instala/inicia | fora do escopo (standalone) |

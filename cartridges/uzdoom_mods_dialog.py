@@ -21,7 +21,8 @@ UZDoom loads a PWAD (or a PK3 archive) on top of an IWAD with the ``-file``
 flag, and it accepts several of them: the last one loaded wins, so the order
 is part of the configuration. This dialog lists the mods found in the folders
 UZDoom searches, lets the user choose which ones are loaded and in which
-order, and stores the result in the game.
+order, and stores the result in the game. An IPK3 archive is not a mod: it
+holds a whole game, which the library lists on its own.
 
 The folders are the mods folder and the WADs folder, both read from the
 configuration of UZDoom and overridable in the preferences. They are scanned
@@ -50,8 +51,9 @@ PWAD_MAGIC = b"PWAD"
 
 #: Archives that hold mods. They are accepted by their extension alone: a
 #: PK3 is a zip file and reading its content would cost much more than what
-#: the extension already tells us.
-ARCHIVE_SUFFIXES = (".pk3", ".ipk3")
+#: the extension already tells us. An IPK3 is not one of them: it holds a
+#: whole game, which is listed in the library on its own.
+ARCHIVE_SUFFIXES = (".pk3",)
 
 #: Size of the move buttons in session mode, where the controls are used
 #: with a gamepad from a distance.
@@ -62,9 +64,10 @@ def scan_mods(folders: Optional[Path | list[Path]]) -> list[str]:
     """Return the mod candidates of *folders*, sorted by file name.
 
     A WAD is a candidate when its header says it is a PWAD; an archive is a
-    candidate when its name ends with a known mod extension. The same file
-    found in two folders is listed only once. The folders are read from a
-    worker thread, so nothing here may touch GTK.
+    candidate when its name ends with a known mod extension (a PK3). An
+    IPK3 is not a mod: it holds a whole game, which the library lists on
+    its own. The same file found in two folders is listed only once. The
+    folders are read from a worker thread, so nothing here may touch GTK.
     """
 
     if folders is None:

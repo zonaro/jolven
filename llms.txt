@@ -9,7 +9,7 @@
 
 ## What it does
 
-Jolven gathers games from Steam, Heroic (Epic/GOG/Amazon/sideloaded), Lutris, Bottles, itch, Legendary, RetroArch, Dolphin, Cemu, Yuzu, Eden, Waydroid, TwinTail, UZDoom, Quiver Launcher, Flatpak, Desktop Entries and Xbox Cloud Gaming (experimental) into one console-style library. Two modes: Desktop app (GNOME/KDE) and Jolven Session (dedicated Gamescope session from the display manager, gamepad-driven, returns to login on exit).
+Jolven gathers games from Steam, Heroic (Epic/GOG/Amazon/sideloaded), Lutris, Bottles, itch, Legendary, RetroArch, Dolphin, Cemu, Yuzu, Eden, Waydroid, TwinTail, UZDoom, Quiver Launcher, Flatpak, Desktop Entries and Xbox Cloud Gaming (experimental, opens in an external browser kiosk) into one console-style library. Two modes: Desktop app (GNOME/KDE) and Jolven Session (dedicated Gamescope session from the display manager, gamepad-driven, returns to login on exit).
 
 ## Exclusive features
 

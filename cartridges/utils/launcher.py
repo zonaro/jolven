@@ -17,6 +17,7 @@ import json
 import logging
 
 from cartridges import shared
+from cartridges.utils.appimage_scan import is_launcher_name
 
 _APLICATIVOS = {
     "steam": (
@@ -28,6 +29,12 @@ _APLICATIVOS = {
         "com.heroicgameslauncher.hgl",
         "heroic",
         "heroic-source-symbolic",
+    ),
+    "epic": (
+        "com.epicgames.eglv2",
+        "com.epicgames.EpicGamesLauncher",
+        "epic",
+        "epic-source-symbolic",
     ),
     "lutris": ("net.lutris.Lutris", "lutris", "lutris-source-symbolic"),
     "bottles": (
@@ -77,6 +84,7 @@ _ICONES_PLATAFORMA = {
 _ALIASES = {
     "heroicgameslauncher": "heroic",
     "heroic games launcher": "heroic",
+    "epic games launcher": "epic",
     "twintaillauncher": "twintail",
     "twintail launcher": "twintail",
     "cartridges": "jolven",
@@ -94,6 +102,8 @@ _NOMES = frozenset(
         "steam",
         "heroic",
         "heroic games launcher",
+        "epic games launcher",
+        "epic",
         "lutris",
         "bottles",
         "twintaillauncher",
@@ -112,12 +122,19 @@ _NOMES = frozenset(
 
 
 def detectar(game) -> bool:
-    if game.base_source not in ("flatpak", "desktop"):
+    if game.base_source not in ("flatpak", "desktop", "appimage"):
         return False
     resto = game.game_id[len(game.base_source) + 1 :].casefold()
     if resto in _CONHECIDOS:
         return True
-    return (game.name or "").casefold().strip() in _NOMES
+    nome = (game.name or "").casefold().strip()
+    if nome in _NOMES:
+        return True
+    # Um AppImage de launcher é reconhecido pelo nome do arquivo: o Jolven
+    # não tem fonte para todos eles, mas nenhum deles é um jogo.
+    if game.base_source == "appimage" and is_launcher_name(nome):
+        return True
+    return False
 
 
 def _tipo(game) -> str | None:

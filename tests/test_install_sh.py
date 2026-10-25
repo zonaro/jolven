@@ -11,16 +11,12 @@ REPO_ROOT = Path(__file__).parents[1]
 INSTALL_SH = REPO_ROOT / "install.sh"
 DATA_DIR = REPO_ROOT / "data"
 
-HELPERS = ("jolven-game-mode-setup", "jolven-xcloud-deps")
+HELPERS = ("jolven-game-mode-setup",)
 
 POLICIES = (
     (
         "io.github.zonaro.Jolven.GameMode.policy",
         "io.github.zonaro.Jolven.configure-game-mode",
-    ),
-    (
-        "io.github.zonaro.Jolven.XCloudDeps.policy",
-        "io.github.zonaro.Jolven.install-xcloud-deps",
     ),
     (
         "io.github.zonaro.Jolven.Preferences.policy",
@@ -41,12 +37,12 @@ def _promote_function(text):
 
 
 class InstallShContractTests(unittest.TestCase):
-    def test_promotes_exactly_the_two_helpers_with_mode_0755(self):
+    def test_promotes_exactly_the_helper_with_mode_0755(self):
         text = INSTALL_SH.read_text(encoding="utf-8")
         function = _promote_function(text)
-        self.assertIn("for helper in jolven-game-mode-setup jolven-xcloud-deps", function)
+        self.assertIn("for helper in jolven-game-mode-setup", function)
         self.assertIn("-m 0755", function)
-        # Only the two helpers are installed or removed; the search-provider
+        # Only the helper is installed or removed; the search-provider
         # is merely mentioned in a comment explaining it stays in place.
         for line in function.splitlines():
             stripped = line.strip()
@@ -56,12 +52,11 @@ class InstallShContractTests(unittest.TestCase):
                 self.assertNotIn("jolven-search-provider", line)
                 self.assertNotIn("jolven-session", line)
         self.assertIn(
-            'rm -f -- "$src_prefix/libexec/jolven-game-mode-setup"'
-            ' "$src_prefix/libexec/jolven-xcloud-deps"',
+            'rm -f -- "$src_prefix/libexec/jolven-game-mode-setup"',
             function,
         )
 
-    def test_installs_the_three_policies_with_mode_0644(self):
+    def test_installs_the_two_policies_with_mode_0644(self):
         text = INSTALL_SH.read_text(encoding="utf-8")
         function = _promote_function(text)
         for policy, action in POLICIES:
@@ -202,7 +197,7 @@ class InstallShFunctionalTests(unittest.TestCase):
             )
             self.assertIn("Integracao de sistema verificada.", result.stdout)
 
-            # Both helpers promoted with 0755 and nothing else besides backups.
+            # The helper is promoted with 0755 and nothing else besides backups.
             sys_names = {path.name for path in sys_dir.iterdir()}
             for helper in HELPERS:
                 self.assertIn(helper, sys_names)
@@ -228,7 +223,7 @@ class InstallShFunctionalTests(unittest.TestCase):
                 alien_helper,
             )
 
-            # All three policies installed with 0644; the alien one backed up.
+            # Both policies installed with 0644; the alien one backed up.
             polkit_names = {path.name for path in polkit_dir.iterdir()}
             for policy, _action in POLICIES:
                 self.assertIn(policy, polkit_names)

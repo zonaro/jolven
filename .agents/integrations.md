@@ -53,27 +53,36 @@ A consulta usa o site público, sem API oficial ou chave. O formato pode mudar s
 aviso; parsing deve falhar de forma silenciosa/explicável, sem impedir a edição do
 jogo. Não considere dados raspados estáveis para migrações ou identidade.
 
-## xCloud e Better xCloud
+## xCloud
 
 O catálogo xCloud usa feeds públicos de catálogo/Game Pass e cria variantes
-como gratuito, Game Pass e adquirido. O jogo abre em WebKit quando disponível;
-sem WebKit, a biblioteca local continua operacional. O catálogo JSON é
-persistido em cache versionado com TTL de 24 h (`xcloud_catalog.py`):
-boot e habilitação instalam do cache e só buscam rede quando obsoleto ou via
-botão Atualizar (forçado); sem rede e sem cache, o erro é reportado sem
-derrubar a biblioteca. Rede e escrita de capas/JSON rodam fora da thread GTK;
-a UI recebe resultados via `entregar_na_tela`.
+como gratuito, Game Pass e adquirido. O catálogo JSON é persistido em cache
+versionado com TTL de 24 h (`xcloud_catalog.py`): boot e habilitação instalam do
+cache e só buscam rede quando obsoleto ou via botão Atualizar (forçado); sem
+rede e sem cache, o erro é reportado sem derrubar a biblioteca. Rede e escrita
+de capas/JSON rodam fora da thread GTK; a UI recebe resultados via
+`entregar_na_tela`.
 
-Better xCloud é um userscript remoto obtido da versão mais recente no GitHub,
-armazenado em cache e injetado na página. Isso é execução de código remoto e deve
-ser tratado como uma fronteira de segurança:
+A reprodução não acontece dentro do Jolven. Cada título é aberto no navegador
+escolhido pelo usuário (`cartridges/utils/browser.py`) numa janela nova em modo
+quiosque, na URL `https://www.xbox.com/play/launch/<productId>`:
 
-- aceite apenas origens e domínios esperados;
-- valide status, conteúdo e tamanho antes de gravar/injetar;
-- mantenha cache conhecido para indisponibilidade;
-- torne a funcionalidade lazy e opcional;
-- não amplie a lista de URLs nem permissões WebKit por conveniência;
-- mantenha navegação fora do domínio permitido bloqueada ou externalizada.
+- a detecção combina as entradas desktop que registram `https` (Gio) com
+  binários conhecidos no `PATH`, sem GTK e sem subprocesso;
+- o argv depende da família: Chromium usa `--kiosk --user-data-dir=...` e Firefox
+  usa `-kiosk -profile ... -no-remote`;
+- cada navegador recebe um perfil dedicado em
+  `<data_dir>/jolven/browser-profiles/<id>` (dentro de `~/.var/app/<id>` no
+  Flatpak). O perfil força uma instância realmente nova, faz a flag de quiosque
+  valer mesmo com o navegador do usuário aberto e preserva o login do xbox.com
+  entre as sessões;
+- navegadores sem modo quiosque caem numa janela nova comum;
+- o processo é destacado (`start_new_session`), então fechar o Jolven não fecha
+  o jogo.
+
+Não há WebView, WebRTC/GStreamer, credenciais da Microsoft, armazenamento de
+segredos nem helper polkit nesse fluxo. A chave GSettings é `xcloud-browser`
+(vazio = navegador padrão do sistema).
 
 ## Tuya / Smart Life
 
@@ -123,8 +132,8 @@ políticas locais:
 
 ## GitHub
 
-GitHub Releases e conteúdo raw são usados na distribuição do aplicativo e na
-obtenção do Better xCloud. Fixe repositório/origem esperados, siga redirects com
+GitHub Releases e conteúdo raw são usados na distribuição do aplicativo. Fixe
+repositório/origem esperados, siga redirects com
 limite e diferencie “versão não encontrada” de falha de rede. Publicação de
 release é responsabilidade dos workflows e scripts do repositório, não de código
 executado durante a inicialização do aplicativo.
@@ -132,15 +141,102 @@ executado durante a inicialização do aplicativo.
 ## Launchers e protocolos
 
 Importadores e launchers integram Steam, Lutris, Heroic, Bottles, itch,
-Legendary, RetroArch, Dolphin, Cemu, Yuzu, Eden, UZDoom, TwinTail, Quiver,
-Waydroid, Flatpak e arquivos `.desktop`. Valores vindos dessas fontes são não
-confiáveis.
+Epic Games Launcher, Legendary, RetroArch, Dolphin, Cemu, Yuzu, Eden, UZDoom,
+TwinTail, Quiver, Waydroid, Flatpak, AppImage e arquivos `.desktop`. Valores
+vindos dessas fontes são não confiáveis.
 
 - Preserve argumentos como lista sempre que possível; evite `shell=True`.
 - Valide esquemas de URI e IDs antes de compor protocolos.
 - Não execute o campo genérico de um `.desktop` sem o parser/sanitização existente.
 - Resolva instalações nativas e Flatpak pelos helpers de `Locations`.
 - Ausência de launcher significa “fonte indisponível”, não biblioteca corrompida.
+
+### AppImage
+
+Fonte local, opt-in, sem rede e sem segredos. Um AppImage é um executável
+autocontido: não existe catálogo nem serviço para consultar, então os jogos são
+descobertos procurando os arquivos. O importador varre `~/.local/bin`,
+`~/Applications`, `~/bin`, `/opt` e a pasta extra que o usuário escolher nas
+Preferências (chave `appimage-location` do GSettings).
+
+A identificação do arquivo não depende do nome: o número mágico do formato
+(`AI\x01`/`AI\x02`) é conferido e o sufixo `.AppImage` também é aceito, desde
+que o arquivo seja um binário ELF. O parsing vive em
+`cartridges/utils/appimage_scan.py`, sem GTK, e é coberto por testes.
+
+O app roda com `--filesystem=host`, então `shared.home` é a home do usuário
+mesmo dentro do sandbox Flatpak: os AppImages do usuário estão no mesmo lugar
+de fora dele. As entradas de menu do host são lidas de
+`shared.host_data_dir/applications`, como na fonte de arquivos `.desktop`.
+
+O `.desktop` que pode existir para o AppImage é lido só para o nome e o ícone;
+ele não serve para dizer se o programa é um jogo, porque os launchers também
+reivindicam a categoria `Game`. A distinção entre jogo e launcher vem do nome
+(conhecidos como RetroArch, Lutris, Heroic, Bottles, itch, Steam, Dolphin,
+Cemu, Yuzu, Eden, UZDoom, Legendary, GameHub, PlayOnLinux, ProtonUp-Qt,
+TwinTail, Gamescope e AppImageLauncher) e é controlada pela preferência
+`appimage-import-launchers`, desligada por padrão, como no Flatpak.
+
+O id do jogo é `<fonte>_<id-nativo>`, tirado do nome do arquivo: sobrevive à
+mudança de pasta e não depende do título visível. O executável é o caminho
+absoluto do arquivo, com aspas, e o diretório de trabalho é a pasta onde o
+AppImage mora, porque o programa guarda os dados ao lado de si.
+
+### Epic Games Launcher
+
+Fonte local, opt-in, sem rede e sem segredos. Lê o launcher **nativo** da Epic
+para Linux (EGLv2, um app Tauri/Rust distribuído como AppImage), que é outro
+programa do launcher Electron antigo e não compartilha arquivos com Heroic nem
+com Legendary. O launcher precisa estar instalado, mas não precisa estar em
+execução: tudo é lido do disco.
+
+- `~/.local/share/com.epicgames.eglv2/installations.jsonl` — o que está
+  instalado, em JSON Lines: uma linha de cabeçalho (`version`, `writtenAt`,
+  `entries`) seguida de um registro por linha. O arquivo é **append-only**: a
+  mesma `installationId` aparece repetida e a linha mais nova é o estado atual
+  daquela instalação. Um registro removido vira uma lápide (`deleted`), e um
+  registro cujo diretório `dir` não existe mais é descartado — o próprio
+  launcher descarta esses registros.
+- `~/.local/share/com.epicgames.eglv2/cache/prod/catalog-cache.json` — títulos,
+  desenvolvedores, descrição e `keyImages`, ligados por `itemId`. Sem esse
+  cache o jogo ainda entra na biblioteca, só que com o nome do executável e sem
+  capa.
+- `~/.cache/com.epicgames.eglv2/images/<md5>.jpg` — capas que o próprio
+  launcher já baixou, nomeadas pelo `md5` do `keyImages`. É o que a fonte
+  entrega em `local_image_path`; só quando o bitmap local não existe é que a
+  URL da capa vira `online_cover_url`, e só se for `https`.
+
+O registro pode ser pego no meio de uma escrita, então o launcher mantém
+`installations.jsonl.prev`. A fonte aplica as mesmas três regras de precedência
+do launcher: um primário ilegível cai direto no backup; um primário incompleto
+com um backup mais novo (`writtenAt`) também; e um primário incompleto que
+ainda é a cópia mais nova não pode falar por si só, porque publicar uma lista
+parcial faria o importador podar os jogos que a escrita ainda não alcançou.
+Nesses dois últimos casos — e quando nenhuma cópia existe, que é uma corrida
+com o launcher e não uma biblioteca vazia — a fonte levanta `SourceScanError` e
+é retirada da poda em vez de encolher a biblioteca.
+
+O id do jogo é `epic_<itemId>`, tirado do item do catálogo e não da
+instalação: reinstalar o mesmo jogo mantém a identidade, então tempo de jogo,
+notas e capas sobrevivem. O executável é o deep link que o launcher registra
+como handler de `x-scheme-handler/com.epicgames.launcher`, aberto com
+`xdg-open`:
+
+```
+xdg-open "com.epicgames.launcher://apps/<artifactId>?action=launch"
+```
+
+O segmento é o `artifactId` da entrada (`Turtle`, `Fowl`, …). Passar o
+`itemId`, o título ou o caminho de instalação ali é rejeitado pelo launcher com
+`DeepLink.AppNameUnresolved`, comportamento verificado contra um launcher em
+execução. As aspas são obrigatórias: sem elas o `?` vira um glob para o shell.
+
+As preferências são as chaves `epic` (ligada por padrão), `epic-location` e
+`epic-cache-location`. A pasta de cache é opcional para a importação: sem ela
+os jogos continuam sendo importados e as capas caem para a URL. Os candidatos
+de detecção cobrem o XDG nativo, o host quando o Jolven roda em Flatpak e o
+próprio sandbox do launcher (`com.epicgames.EpicGamesLauncher` e
+`com.epicgames.eglv2`).
 
 ### Eden
 

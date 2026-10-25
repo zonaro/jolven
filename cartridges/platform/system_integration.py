@@ -20,8 +20,7 @@
 """Resolução dos helpers privilegiados a partir das policies polkit.
 
 Camada de baixo nível e **sem ``gi``**: só ``pathlib``, ``os`` e XML da
-stdlib. As actions polkit do Jolven (``configure-game-mode`` e
-``install-xcloud-deps``) usam ``auth_admin_keep`` e anotam
+stdlib. As actions polkit do Jolven seguem ``auth_admin_keep`` e anotam
 ``org.freedesktop.policykit.exec.path`` com o binário autorizado. O
 ``pkexec`` NÃO valida a propriedade desse binário: se o app executasse um
 helper num caminho gravável pelo usuário (``~/.local/libexec/...``),
@@ -45,7 +44,6 @@ from collections.abc import Iterator
 from pathlib import Path
 
 GAME_MODE_ACTION_ID = "io.github.zonaro.Jolven.configure-game-mode"
-XCLOUD_DEPS_ACTION_ID = "io.github.zonaro.Jolven.install-xcloud-deps"
 
 EXEC_PATH_ANNOTATION = "org.freedesktop.policykit.exec.path"
 
@@ -63,7 +61,6 @@ __all__ = [
     "EXEC_PATH_ANNOTATION",
     "GAME_MODE_ACTION_ID",
     "POLKIT_ACTION_DIRS",
-    "XCLOUD_DEPS_ACTION_ID",
     "exec_path",
     "find_policy",
     "helper_for",
@@ -117,7 +114,7 @@ def find_policy(action_id: str) -> Path | None:
     """Primeiro arquivo de policy que declara aquele ``action id``.
 
     Não confia no nome do arquivo: parseia o conteúdo (o arquivo pode se
-    chamar ``...Devel.XCloudDeps.policy`` enquanto a action id é a base).
+    chamar ``...Devel.ConfigureGameMode.policy`` enquanto a action id é a base).
     ``None`` quando ausente ou ilegível.
     """
     located = _locate(action_id)

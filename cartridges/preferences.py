@@ -35,11 +35,13 @@ from cartridges import shared
 from cartridges.errors.friendly_error import FriendlyError
 from cartridges.game import Game
 from cartridges.hardware import drm_connectors, pipewire_nodes, vrr_supported
+from cartridges.importer.appimage_source import AppimageSource
 from cartridges.importer.bottles_source import BottlesSource
 from cartridges.importer.cemu_source import CemuSource
 from cartridges.importer.desktop_source import DesktopSource
 from cartridges.importer.dolphin_source import DolphinSource
 from cartridges.importer.eden_source import EdenSource
+from cartridges.importer.epic_source import EpicSource
 from cartridges.importer.flatpak_source import FlatpakSource
 from cartridges.importer.heroic_source import HeroicSource
 from cartridges.importer.itch_source import ItchSource
@@ -331,9 +333,7 @@ class CartridgesPreferences(Adw.PreferencesDialog):
     high_quality_images_switch: Adw.SwitchRow = Gtk.Template.Child()
     app_icon_row: Adw.ComboRow = Gtk.Template.Child()
     xbox_cloud_gaming_switch: Adw.SwitchRow = Gtk.Template.Child()
-    xcloud_account_row: Adw.ActionRow = Gtk.Template.Child()
-    xcloud_login_button: Gtk.Button = Gtk.Template.Child()
-    xcloud_fullscreen_on_start_switch: Adw.SwitchRow = Gtk.Template.Child()
+    xcloud_browser_row: Adw.ComboRow = Gtk.Template.Child()
 
     sunshine_auto_sync_switch: Adw.SwitchRow = Gtk.Template.Child()
     sunshine_apps_path_row: Adw.EntryRow = Gtk.Template.Child()
@@ -357,6 +357,7 @@ class CartridgesPreferences(Adw.PreferencesDialog):
     sunshine_encoder_row: Adw.EntryRow = Gtk.Template.Child()
     sunshine_apply_button: Gtk.Button = Gtk.Template.Child()
     sunshine_pairings_group: Adw.PreferencesGroup = Gtk.Template.Child()
+    sunshine_clients_group: Adw.PreferencesGroup = Gtk.Template.Child()
     sunshine_unpair_all_button: Gtk.Button = Gtk.Template.Child()
 
     recorder_enabled_switch: Adw.SwitchRow = Gtk.Template.Child()
@@ -420,6 +421,12 @@ class CartridgesPreferences(Adw.PreferencesDialog):
     legendary_config_action_row: Adw.ActionRow = Gtk.Template.Child()
     legendary_config_file_chooser_button: Gtk.Button = Gtk.Template.Child()
 
+    epic_expander_row: Adw.ExpanderRow = Gtk.Template.Child()
+    epic_data_action_row: Adw.ActionRow = Gtk.Template.Child()
+    epic_data_file_chooser_button: Gtk.Button = Gtk.Template.Child()
+    epic_cache_action_row: Adw.ActionRow = Gtk.Template.Child()
+    epic_cache_file_chooser_button: Gtk.Button = Gtk.Template.Child()
+
     retroarch_expander_row: Adw.ExpanderRow = Gtk.Template.Child()
     retroarch_config_action_row: Adw.ActionRow = Gtk.Template.Child()
     retroarch_config_file_chooser_button: Gtk.Button = Gtk.Template.Child()
@@ -460,6 +467,11 @@ class CartridgesPreferences(Adw.PreferencesDialog):
     flatpak_user_data_action_row: Adw.ActionRow = Gtk.Template.Child()
     flatpak_user_data_file_chooser_button: Gtk.Button = Gtk.Template.Child()
     flatpak_import_launchers_switch: Adw.SwitchRow = Gtk.Template.Child()
+
+    appimage_expander_row: Adw.ExpanderRow = Gtk.Template.Child()
+    appimage_location_action_row: Adw.ActionRow = Gtk.Template.Child()
+    appimage_location_file_chooser_button: Gtk.Button = Gtk.Template.Child()
+    appimage_import_launchers_switch: Adw.SwitchRow = Gtk.Template.Child()
 
     desktop_switch: Adw.SwitchRow = Gtk.Template.Child()
 
@@ -627,10 +639,12 @@ class CartridgesPreferences(Adw.PreferencesDialog):
 
         # Sources settings
         for source_class in (
+            AppimageSource,
             BottlesSource,
             CemuSource,
             DolphinSource,
             EdenSource,
+            EpicSource,
             FlatpakSource,
             HeroicSource,
             ItchSource,
@@ -655,6 +669,8 @@ class CartridgesPreferences(Adw.PreferencesDialog):
         # Special case for the desktop source
         if not DesktopSource().is_available:
             self.desktop_switch.set_visible(False)
+
+        self.setup_appimage_location_row()
 
         # SteamGridDB
         def sgdb_key_changed(*_args: Any) -> None:
@@ -893,7 +909,6 @@ class CartridgesPreferences(Adw.PreferencesDialog):
                 "agrupar-duplicados",
                 "high-quality-images",
                 "xbox-cloud-gaming",
-                "xcloud-fullscreen-on-start",
                 "sunshine-auto-sync",
                 "auto-import",
                 "remove-missing",
@@ -905,6 +920,7 @@ class CartridgesPreferences(Adw.PreferencesDialog):
                 "heroic-import-sideload",
                 "quiver-enrich",
                 "flatpak-import-launchers",
+                "appimage-import-launchers",
                 "shortcuts-recursive",
                 "sgdb",
                 "sgdb-prefer",
@@ -928,8 +944,7 @@ class CartridgesPreferences(Adw.PreferencesDialog):
         self.agrupar_duplicados_switch.connect(
             "notify::active", lambda *_: self._reagrupar()
         )
-        self.xcloud_login_button.connect("clicked", self.alternar_xcloud_login)
-        self.reler_xcloud_login()
+        self.setup_xcloud_browser_row()
         self.atalho_global_button.connect("clicked", self.alternar_atalho_global)
         self._atalho_ativo = False
         self.atualizar_atalho_global()
@@ -1037,27 +1052,38 @@ class CartridgesPreferences(Adw.PreferencesDialog):
             except Exception:  # pylint: disable=broad-exception-caught
                 logging.debug("Não foi possível alargar a página", exc_info=True)
 
-    def alternar_xcloud_login(self, *_args: Any) -> None:
-        from cartridges import xcloud_login
+    def setup_xcloud_browser_row(self) -> None:
+        """Preenche o seletor com os navegadores instalados no sistema."""
+        from cartridges.utils import browser as browser_utils  # noqa: PLC0415
 
-        if xcloud_login.has_saved_login():
-            xcloud_login.clear_saved_login()
-            self.reler_xcloud_login()
-            return
+        browsers = browser_utils.detect_browsers()
+        self._xcloud_browsers = browsers
+        labels = [_("Automático (navegador padrão)")]
+        labels.extend(item.name for item in browsers)
+        self.xcloud_browser_row.set_model(Gtk.StringList.new(labels))
 
-        def finished(resultado: Any) -> None:
-            self.reler_xcloud_login()
-
-        xcloud_login.show_login_dialog(parent=self, on_finished=finished)
-
-    def reler_xcloud_login(self) -> None:
-        from cartridges import xcloud_login
-
-        conectado = xcloud_login.has_saved_login()
-        self.xcloud_account_row.set_subtitle(
-            _("Conectado") if conectado else _("Não conectado")
+        saved = shared.schema.get_string("xcloud-browser")
+        selected = 0
+        for index, item in enumerate(browsers, start=1):
+            if item.id == saved:
+                selected = index
+                break
+        self.xcloud_browser_row.set_selected(selected)
+        self.xcloud_browser_row.connect(
+            "notify::selected", self._on_xcloud_browser_selected
         )
-        self.xcloud_login_button.set_label(_("Sair") if conectado else _("Entrar"))
+        if not browsers:
+            self.xcloud_browser_row.set_subtitle(
+                _("Nenhum navegador detectado no sistema.")
+            )
+
+    def _on_xcloud_browser_selected(self, row: Adw.ComboRow, *_args: Any) -> None:
+        index = row.get_selected()
+        browsers = getattr(self, "_xcloud_browsers", [])
+        if 1 <= index <= len(browsers):
+            shared.schema.set_string("xcloud-browser", browsers[index - 1].id)
+        else:
+            shared.schema.set_string("xcloud-browser", "")
 
     def sincronizar_sunshine(self, *_args: Any) -> None:
         import threading
@@ -3685,6 +3711,40 @@ class CartridgesPreferences(Adw.PreferencesDialog):
 
                 action_row.add_prefix(menu_button)
                 self.warning_menu_buttons[source.source_id] = menu_button
+
+    def setup_appimage_location_row(self) -> None:
+        """Wire the extra folder of the AppImage source.
+
+        The source has no location to resolve: its folders are the ones the
+        platform agreed on. The extra folder is the only one the user picks,
+        and it is optional — an empty value means "no extra folder".
+        """
+
+        def set_dir(_widget: Any, result: Gio.Task, _data: Any = None) -> None:
+            """Callback called when a folder picker button is clicked"""
+            try:
+                path = Path(self.file_chooser.select_folder_finish(result).get_path())
+            except GLib.Error:
+                return
+
+            shared.schema.set_string("appimage-location", str(path))
+            self.update_appimage_location_subtitle()
+            logging.debug("User-set value for appimage-location is %s", path)
+
+        self.appimage_location_file_chooser_button.connect(
+            "clicked", lambda widget: self.choose_folder(widget, set_dir)
+        )
+        self.update_appimage_location_subtitle()
+
+    def update_appimage_location_subtitle(self) -> None:
+        """Show the extra folder of the AppImage source in its row."""
+        subtitle = shared.schema.get_string("appimage-location").strip()
+        if subtitle:
+            # Replace the home directory with "~"
+            subtitle = re.sub(f"^{str(shared.home)}", "~", subtitle)
+        else:
+            subtitle = _("None")
+        self.appimage_location_action_row.set_subtitle(subtitle)
 
     def init_source_row(self, source: Source) -> None:
         """Initialize a preference row for a source class"""

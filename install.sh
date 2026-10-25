@@ -85,7 +85,7 @@ promote_system_integration() {
     fi
 
     local helper src dest backup
-    for helper in jolven-game-mode-setup jolven-xcloud-deps; do
+    for helper in jolven-game-mode-setup; do
         src="$src_prefix/libexec/$helper"
         dest="$dest_libexec/$helper"
         if [[ ! -f $src ]]; then
@@ -104,7 +104,6 @@ promote_system_integration() {
     local spec policy action psrc pdest pbackup
     for spec in \
         "io.github.zonaro.Jolven.GameMode.policy:io.github.zonaro.Jolven.configure-game-mode" \
-        "io.github.zonaro.Jolven.XCloudDeps.policy:io.github.zonaro.Jolven.install-xcloud-deps" \
         "io.github.zonaro.Jolven.Preferences.policy:io.github.zonaro.Jolven.preferences"; do
         policy="${spec%%:*}"
         action="${spec##*:}"
@@ -125,13 +124,12 @@ promote_system_integration() {
 
     # Remove as copias inertes do prefixo do usuario. O search-provider e o
     # jolven-session ficam onde estao, por design (D-Bus e sessao de usuario).
-    rm -f -- "$src_prefix/libexec/jolven-game-mode-setup" "$src_prefix/libexec/jolven-xcloud-deps"
+    rm -f -- "$src_prefix/libexec/jolven-game-mode-setup"
     rm -rf -- "$src_prefix/share/polkit-1"
 
     local failures=0
     local installed exec_path
     for installed in "$dest_polkit"/io.github.zonaro.Jolven.GameMode.policy \
-        "$dest_polkit"/io.github.zonaro.Jolven.XCloudDeps.policy \
         "$dest_polkit"/io.github.zonaro.Jolven.Preferences.policy; do
         if [[ ! -f $installed ]]; then
             printf 'Verificacao falhou: policy ausente: %s\n' "$installed" >&2

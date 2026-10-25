@@ -13,7 +13,7 @@ from unittest import mock
 
 from cartridges.platform import system_integration
 
-ACTION = "io.github.zonaro.Jolven.install-xcloud-deps"
+ACTION = system_integration.GAME_MODE_ACTION_ID
 
 
 def write_policy(directory, filename, action_id=ACTION, exec_path=None):
@@ -40,7 +40,7 @@ def write_policy(directory, filename, action_id=ACTION, exec_path=None):
     return path
 
 
-def make_helper(directory, name="jolven-xcloud-deps", executable=True):
+def make_helper(directory, name="jolven-game-mode-setup", executable=True):
     helper = Path(directory) / name
     helper.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
     # 0555 = executável e NÃO gravável pelo dono: simula o helper
@@ -74,7 +74,7 @@ class SystemIntegrationTests(unittest.TestCase):
         # o que vale é o conteúdo parseado, não o nome.
         expected = write_policy(
             self.dir,
-            "io.github.zonaro.Jolven.Devel.XCloudDeps.policy",
+            "io.github.zonaro.Jolven.Devel.GameMode.policy",
             exec_path="/usr/bin/x",
         )
         self.assertEqual(system_integration.find_policy(ACTION), expected)
@@ -82,7 +82,7 @@ class SystemIntegrationTests(unittest.TestCase):
     def test_find_policy_filename_match_does_not_count(self):
         write_policy(
             self.dir,
-            "io.github.zonaro.Jolven.XCloudDeps.policy",
+            "io.github.zonaro.Jolven.GameMode.policy",
             action_id="org.example.Other",
             exec_path="/usr/bin/x",
         )

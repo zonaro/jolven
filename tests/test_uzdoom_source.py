@@ -5,8 +5,9 @@ The module under test lives behind Gtk/GSettings imports (`cartridges.game`,
 dependencies are stubbed in `sys.modules` before import — exactly the parts
 the exercised code only touches through `Game(values)` and
 `shared.import_time`/`shared.schema`. Everything asserted here (IWAD/PWAD
-filtering, game id stability, command quoting, launcher detection) runs with
-no display, no GTK, no GSettings database and no subprocess.
+filtering, IPK3 game archives, game id stability, command quoting, launcher
+detection) runs with no display, no GTK, no GSettings database and no
+subprocess.
 """
 
 import builtins
@@ -14,6 +15,7 @@ import os
 import sys
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 from shlex import quote as shell_quote
 from unittest.mock import patch
@@ -101,10 +103,31 @@ _shared_stub = uzdoom_source.shared
 IWAD = b"IWAD"
 PWAD = b"PWAD"
 
+# The IWADINFO lump of an installed game, with the name of the game.
+IWADINFO = """
+IWad
+{
+\tName = "DOOM Fusion"
+\tAutoname = "doom.id.fusion"
+\tConfig = "Doom"
+\tGame = "Doom"
+}
+"""
+
 
 def _make_wad(path: Path, magic: bytes = IWAD) -> Path:
     """Write a WAD-like file with the given magic header."""
     path.write_bytes(magic + b"\x00" * 8)
+    return path
+
+
+def _make_ipk3(path: Path, with_iwadinfo: bool = True) -> Path:
+    """Write a zip file that looks like an installed game."""
+    with zipfile.ZipFile(path, "w") as archive:
+        if with_iwadinfo:
+            archive.writestr("iwadinfo.txt", IWADINFO)
+        else:
+            archive.writestr("readme.txt", "no IWADINFO here")
     return path
 
 
@@ -181,7 +204,7 @@ class SourceMetadataTests(UzdoomSourceTestCase):
         self.assertEqual(UzdoomSource.name, "UZDoom")
         self.assertEqual(UzdoomSource.available_on, {"linux"})
         self.assertIs(UzdoomSource.iterable_class, UzdoomSourceIterable)
-        self.assertEqual(UzdoomSourceIterable.extensions, (".wad",))
+        self.assertEqual(UzdoomSourceIterable.extensions, (".wad", ".ipk3"))
 
     def test_game_id_format_is_stable(self):
         source = self._make_source()
@@ -207,6 +230,49 @@ class IterationTests(UzdoomSourceTestCase):
 
     def test_pwad_is_not_listed(self):
         _make_wad(self.wads / "mod.wad", PWAD)
+        source = self._make_source()
+        self.assertEqual(list(UzdoomSourceIterable(source)), [])
+
+    def test_an_installed_game_archive_is_listed(self):
+        archive = _make_ipk3(self.wads / "doom_fusion.ipk3")
+        source = self._make_source()
+
+        results = list(UzdoomSourceIterable(source))
+        self.assertEqual(len(results), 1)
+        game, additional = results[0]
+        self.assertEqual(game.values["game_id"], "uzdoom_doom_fusion")
+        self.assertEqual(game.values["source"], "uzdoom")
+        self.assertEqual(game.values["name"], "DOOM Fusion")
+        self.assertEqual(
+            game.values["executable"],
+            f"uzdoom -iwad {shell_quote(str(archive))}",
+        )
+        self.assertEqual(additional, {})
+
+    def test_an_archive_without_iwadinfo_is_not_listed(self):
+        _make_ipk3(self.wads / "broken.ipk3", with_iwadinfo=False)
+        source = self._make_source()
+        self.assertEqual(list(UzdoomSourceIterable(source)), [])
+
+    def test_a_pk3_is_not_listed_as_a_game(self):
+        _make_ipk3(self.wads / "mod.pk3")
+        source = self._make_source()
+        self.assertEqual(list(UzdoomSourceIterable(source)), [])
+
+    def test_an_archive_without_a_name_is_named_after_its_file(self):
+        archive = self.wads / "nameless.ipk3"
+        with zipfile.ZipFile(archive, "w") as zip_file:
+            zip_file.writestr("iwadinfo.txt", 'IWad { Game = "Doom" }')
+        source = self._make_source()
+
+        results = list(UzdoomSourceIterable(source))
+        self.assertEqual(len(results), 1)
+        game, _additional = results[0]
+        self.assertEqual(game.values["name"], "nameless")
+        self.assertEqual(game.values["game_id"], "uzdoom_nameless")
+
+    def test_a_corrupt_archive_is_not_listed(self):
+        (self.wads / "corrupt.ipk3").write_bytes(b"PK\x03\x04" + b"\x00" * 16)
         source = self._make_source()
         self.assertEqual(list(UzdoomSourceIterable(source)), [])
 

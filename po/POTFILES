@@ -23,8 +23,6 @@ cartridges/game_session.py
 cartridges/integrations_page.py
 cartridges/onscreen_keyboard.py
 cartridges/preferences.py
-cartridges/xcloud_deps.py
-cartridges/xcloud_login.py
 cartridges/botao_tarefas.py
 cartridges/fita_wizard.py
 cartridges/image_picker.py
@@ -39,6 +37,7 @@ cartridges/uzdoom_mods_dialog.py
 
 cartridges/platform/system_integration.py
 
+cartridges/utils/browser.py
 cartridges/utils/create_dialog.py
 cartridges/utils/relative_date.py
 cartridges/utils/format_playtime.py
@@ -53,11 +52,13 @@ cartridges/utils/updates_checker.py
 cartridges/importer/importer.py
 cartridges/importer/source.py
 cartridges/importer/location.py
+cartridges/importer/appimage_source.py
 cartridges/importer/bottles_source.py
 cartridges/importer/cemu_source.py
 cartridges/importer/desktop_source.py
 cartridges/importer/dolphin_source.py
 cartridges/importer/eden_source.py
+cartridges/importer/epic_source.py
 cartridges/importer/flatpak_source.py
 cartridges/importer/heroic_source.py
 cartridges/importer/itch_source.py

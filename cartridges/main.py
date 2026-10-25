@@ -59,11 +59,13 @@ from cartridges.controller import (
     trigger_for_button,
 )
 from cartridges.game import Game
+from cartridges.importer.appimage_source import AppimageSource
 from cartridges.importer.bottles_source import BottlesSource
 from cartridges.importer.cemu_source import CemuSource
 from cartridges.importer.desktop_source import DesktopSource
 from cartridges.importer.dolphin_source import DolphinSource
 from cartridges.importer.eden_source import EdenSource
+from cartridges.importer.epic_source import EpicSource
 from cartridges.importer.flatpak_source import FlatpakSource
 from cartridges.importer.heroic_source import HeroicSource
 from cartridges.importer.importer import Importer  # yo dawg
@@ -210,15 +212,10 @@ class CartridgesApplication(Adw.Application):
     def gamepad_button_pressed(self, _device, event) -> None:
         logging.debug("Gamepad: %s pressed", (button := event.get_button()[1]))
 
-        if shared.win.xcloud_input_active and action_for_button(button) == ControllerAction.GUIDE:
-            shared.win.show_xcloud_player_menu()
-            return
         if trigger := trigger_for_button(button):
             shared.win.update_gamepad_trigger(trigger, True)
             return
         shared.win.update_gamepad_button(button, True)
-        if shared.win.xcloud_input_active:
-            return
         if shared.win.gamepad_test_active:
             self._tester_chord.add(button)
             if is_tester_exit_chord(self._tester_chord):
@@ -341,9 +338,6 @@ class CartridgesApplication(Adw.Application):
 
         shared.win.update_gamepad_hat(hat[1], hat[2])
 
-        if shared.win.xcloud_input_active:
-            return
-
         if hat_direction(hat[1], hat[2]) is not None:
             self.navigate(hat[1] + hat[2])
 
@@ -354,8 +348,6 @@ class CartridgesApplication(Adw.Application):
             return
         axis, value = absolute[1], absolute[2]
         shared.win.update_gamepad_axis(axis, value)
-        if shared.win.xcloud_input_active:
-            return
         if axis not in (0, 1):
             return
         previous = getattr(self, "_gamepad_axis", {}).get(axis, 0)
@@ -676,10 +668,6 @@ class CartridgesApplication(Adw.Application):
                 ("show_hidden", ("<primary>h",), shared.win),
                 ("show_zerados", (), shared.win),
                 ("show_news", (), shared.win),
-                ("close_xcloud", (), shared.win),
-                ("toggle_xcloud_fullscreen", ("F11",), shared.win),
-                ("xcloud_escape", (), shared.win),
-                ("xcloud_player_menu", (), shared.win),
                 ("go_to_parent", ("<alt>Up",), shared.win),
                 ("go_home", ("<alt>Home",), shared.win),
                 ("toggle_search", ("<primary>f",), shared.win),
@@ -1032,6 +1020,9 @@ class CartridgesApplication(Adw.Application):
         if shared.schema.get_boolean("heroic"):
             shared.importer.add_source(HeroicSource())
 
+        if shared.schema.get_boolean("epic"):
+            shared.importer.add_source(EpicSource())
+
         if shared.schema.get_boolean("bottles"):
             shared.importer.add_source(BottlesSource())
 
@@ -1043,6 +1034,9 @@ class CartridgesApplication(Adw.Application):
 
         if shared.schema.get_boolean("flatpak"):
             shared.importer.add_source(FlatpakSource())
+
+        if shared.schema.get_boolean("appimage"):
+            shared.importer.add_source(AppimageSource())
 
         if shared.schema.get_boolean("desktop"):
             shared.importer.add_source(DesktopSource())

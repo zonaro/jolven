@@ -15,7 +15,7 @@ jolven.in
        │    │    └─ DisplayManager ── widgets, grupos e filtros
        │    └─ importers/* ── descoberta por launcher/plataforma
        ├─ ProcessSession ── processo, retorno e tempo jogado
-       ├─ xCloud ── catálogo remoto e WebView opcional
+       ├─ xCloud ── catálogo remoto e navegador externo em quiosque
        └─ integrações de sistema ── gamepad, logind, áudio, luzes
 ```
 
@@ -126,10 +126,11 @@ para fontes habilitadas que concluíram uma varredura inteira e foram incluídas
 `scanned_source_ids`.
 
 Fontes cobertas hoje incluem Steam, Lutris, Heroic (Epic, GOG, Amazon e sideload),
-Bottles, Dolphin, Cemu, itch, Legendary, RetroArch, Yuzu, Eden, UZDoom, TwinTail,
-Quiver Launcher (biblioteca local com enriquecimento opcional pelo catálogo
-público), Flatpak, arquivos `.desktop` e Waydroid. xCloud segue um fluxo próprio
-de catálogo remoto.
+Epic Games Launcher (EGLv2 nativo), Bottles, Dolphin, Cemu, itch, Legendary,
+RetroArch, Yuzu, Eden, UZDoom, TwinTail, Quiver Launcher (biblioteca local com
+enriquecimento opcional pelo catálogo público), Flatpak, arquivos `.desktop` e
+Waydroid. xCloud segue um fluxo próprio de catálogo remoto e delega o lançamento
+ao navegador externo em modo quiosque.
 
 O UZDoom tem duas localizações: a pasta de WADs (os IWADs, que são os jogos) e
 a pasta de mods (PWAD e PK3). As duas são detectadas na configuração do próprio
@@ -179,7 +180,8 @@ O perfil por jogo pode definir GameMode, MangoHud, diretório de trabalho,
 variáveis de ambiente, resolução/FPS/escalonamento do Gamescope e rastreamento
 explícito do processo.
 
-`Game.launch` trata xCloud separadamente e delega executáveis locais ao launcher.
+`Game.launch` trata xCloud separadamente: abre o navegador configurado em modo
+quiosque e delega executáveis locais ao launcher.
 `ProcessSession` acompanha grupo de processos e descendentes, incluindo padrões
 de Steam, Flatpak e instaladores, registra tempo jogado e devolve foco à interface
 de sessão após o encerramento.

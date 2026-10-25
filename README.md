@@ -18,7 +18,7 @@ Explore the multilingual product page in [docs/](https://zonaro.github.io/jolven
 
 # The Project
 
-Jolven gathers your games from Steam, Heroic, Lutris, Bottles, emulators, native Linux games and manually added titles into one console-style library. It runs two ways:
+Jolven gathers your games from Steam, Heroic, Epic Games Launcher, Lutris, Bottles, emulators, native Linux games and manually added titles into one console-style library. It runs two ways:
 
 - **Desktop mode** — Jolven as a regular app inside GNOME, KDE or another graphical environment.
 - **Jolven Session** — a dedicated graphical session started straight from the display manager, fullscreen and gamepad-driven, before GNOME or KDE even load. Leaving the session returns you to the login screen.
@@ -40,6 +40,7 @@ Manually add and edit games, or let Jolven pull them in automatically from:
 - Steam
 - Lutris
 - Heroic (Epic, GOG, Amazon, sideloaded)
+- Epic Games Launcher (native)
 - Bottles
 - itch
 - Legendary
@@ -53,6 +54,7 @@ Manually add and edit games, or let Jolven pull them in automatically from:
 - TwinTail
 - UZDoom
 - Flatpak
+- AppImage
 - Desktop Entries
 - Xbox Cloud Gaming (experimental)
 
@@ -87,7 +89,7 @@ One-time setup with a friendly wizard, credentials stored encrypted, and from th
 - **Playtime and session tracking** — see how long you've actually played each game, automatically.
 - **Per-game launch profiles** — set resolution, FPS limit, scaling, working folder and extra options once per title, then just press play.
 - **GameMode + MangoHud + Gamescope, without the terminal** — toggle performance boosts and overlays per game or globally, from a normal settings screen.
-- **Xbox Cloud Gaming (experimental)** — native player (no browser): sign in with your Microsoft account and stream from the cloud alongside your installed games.
+- **Xbox Cloud Gaming (experimental)** — browse the cloud catalog and press play: the title opens in your own browser, in a fullscreen window, with no embedded player.
 - **Sunshine streaming** — export games to Sunshine with one click or automatically, then play them over Moonlight on any screen.
 - **Settings behind authentication** — system installs ask for your password before opening Preferences (polkit on Linux, Windows Hello on Windows).
 - **Waydroid apps** — import installed Android games with their package ids and local icons, while filtering system utilities.
@@ -96,14 +98,14 @@ One-time setup with a friendly wizard, credentials stored encrypted, and from th
 
 ### Xbox Cloud Gaming (experimental)
 
-Jolven plays Xbox Cloud Gaming with a **native player** — no browser involved:
+Jolven lists the public Xbox Cloud Gaming catalog and hands the title to your own browser — there is no embedded player and no Microsoft sign-in inside Jolven:
 
-- Sign in with your Microsoft account using a **device code** (`microsoft.com/devicelogin` on your phone or PC — your password is never typed into the app). An embedded-browser login is also available.
+- Pick the browser in **Preferences → Cloud Gaming**. Jolven detects the browsers installed on the system, including Flatpak ones, and can simply use the default browser.
+- Pressing play opens a new **fullscreen kiosk window** directly on the game. Jolven uses a dedicated browser profile, so the kiosk window is really new and your xbox.com login persists between sessions. Browsers without kiosk support fall back to a normal new window.
 - Cloud streaming needs **Game Pass Ultimate**; streaming from your own console at home (xHome) works too.
-- Missing GStreamer streaming plugins (ICE/libnice) are **installed by the app itself** with a system password prompt, followed by an automatic restart. System installs (`/usr`) also register the required polkit policy; fresh installs via `install.sh` already include the plugins.
-- Troubleshooting: launch a game and watch the log under `~/.cache/jolven/logs/` — every page load prints an `xCloud:` diagnostics line (browser signals, WebRTC/MediaSource/codec support, script status).
+- The catalog comes from public feeds and is cached for 24 hours. The refresh button updates it without blocking the library; without network, the last cache keeps working.
 
-> Streaming uses an unofficial client implementation inspired by [Greenlight](https://github.com/unknownskl/greenlight) (GPL-3.0). Microsoft may change the service and break it; reports with logs are welcome.
+> The catalog format is unofficial. Microsoft may change the service and break it; reports are welcome.
 
 ### Streaming via Sunshine (Moonlight)
 

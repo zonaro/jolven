@@ -31,6 +31,7 @@
   <file alias="desktop-source-symbolic.svg">icons/sources/desktop-source-symbolic.svg</file>
   <file alias="dolphin-source-symbolic.svg">icons/sources/dolphin-source-symbolic.svg</file>
   <file alias="flatpak-source-symbolic.svg">icons/sources/flatpak-source-symbolic.svg</file>
+  <file alias="appimage-source-symbolic.svg">icons/sources/appimage-source-symbolic.svg</file>
   <file alias="heroic-source-symbolic.svg">icons/sources/heroic-source-symbolic.svg</file>
   <file alias="itch-source-symbolic.svg">icons/sources/itch-source-symbolic.svg</file>
   <file alias="legendary-source-symbolic.svg">icons/sources/legendary-source-symbolic.svg</file>
@@ -41,6 +42,7 @@
   <file alias="waydroid-source-symbolic.svg">icons/sources/waydroid-source-symbolic.svg</file>
   <file alias="yuzu-source-symbolic.svg">icons/sources/yuzu-source-symbolic.svg</file>
   <file alias="eden-source-symbolic.svg">icons/sources/eden-source-symbolic.svg</file>
+  <file alias="epic-source-symbolic.svg">icons/sources/epic-source-symbolic.svg</file>
   <file alias="uzdoom-source-symbolic.svg">icons/sources/uzdoom-source-symbolic.svg</file>
   <file alias="quiver-source-symbolic.svg">icons/sources/quiver-source-symbolic.svg</file>
   <file alias="xbox-cloud-symbolic.svg">icons/sources/xbox-cloud-symbolic.svg</file>

@@ -6,13 +6,22 @@
 """UZDoom source: lists the base games (IWADs) of the WADs folder.
 
 UZDoom is a source port for the Doom engine. Its content is made of WAD
-files: an IWAD holds a base game (Doom, Doom II, ...) and a PWAD holds a
-mod that needs another IWAD to run. Only the IWADs are listed as games.
+files and of zip archives:
+
+- an IWAD holds a base game (Doom, Doom II, ...);
+- a PWAD holds a mod that needs another IWAD to run;
+- an ``.ipk3`` archive holds a whole game, and the engine only accepts it
+  as the game when the archive carries an ``IWADINFO`` lump at its root;
+- a ``.pk3`` archive holds a mod, loaded on top of an IWAD.
+
+Only the games are listed here: the IWADs and the ``.ipk3`` archives that
+hold one.
 
 The WADs folder and the mods folder are read from the configuration of
 UZDoom itself, and the user can still pick them in the preferences.
 """
 
+import logging
 from pathlib import Path
 from shlex import quote as shell_quote
 from shutil import which
@@ -28,6 +37,7 @@ from cartridges.importer.source import (
     SourceIterationResult,
 )
 from cartridges.launchers import flatpak_installed
+from cartridges.utils import zdoom_archives
 
 
 UZDOOM_BINARY = "uzdoom"
@@ -36,6 +46,9 @@ UZDOOM_FLATPAK_ID = "org.zdoom.UZDoom"
 # Magic headers written at the beginning of a WAD file.
 IWAD_MAGIC = b"IWAD"
 PWAD_MAGIC = b"PWAD"
+
+# Extension of the zip archive that holds a whole game.
+GAME_ARCHIVE_SUFFIX = ".ipk3"
 
 
 def resolve_uzdoom_base(
@@ -61,10 +74,14 @@ def resolve_uzdoom_base(
 class UzdoomSourceIterable(SourceIterable):
     source: "UzdoomSource"
 
-    extensions = (".wad",)
+    extensions = (".wad", GAME_ARCHIVE_SUFFIX)
 
     def iter_wad_files(self, root: Path) -> Generator[Path, None, None]:
-        """Yield the WAD files directly inside *root*, without recursion."""
+        """Yield the WAD files and the game archives inside *root*.
+
+        The scan is not recursive: only the files directly inside the folder
+        are listed.
+        """
 
         try:
             for path in root.iterdir():
@@ -86,6 +103,15 @@ class UzdoomSourceIterable(SourceIterable):
         except OSError:
             return None
 
+    def read_game_name(self, path: Path) -> Optional[str]:
+        """Return the name of the game held by the archive at *path*.
+
+        The name comes from the ``IWADINFO`` lump of the archive. The file
+        name is the fallback when the archive has no usable name.
+        """
+
+        return zdoom_archives.read_game_name(path) or path.stem
+
     def __iter__(self) -> Generator[SourceIterationResult, None, None]:
         """Generator method producing games"""
 
@@ -94,19 +120,31 @@ class UzdoomSourceIterable(SourceIterable):
             return
 
         for path in self.iter_wad_files(root):
-            magic = self.read_magic(path)
-            if magic == PWAD_MAGIC:
-                # A PWAD is a mod: it needs another IWAD to run, so it is
-                # never listed as a game.
-                continue
-            if magic != IWAD_MAGIC:
-                # Not a WAD file, or a truncated one.
-                continue
+            if path.suffix.lower() == GAME_ARCHIVE_SUFFIX:
+                if not zdoom_archives.is_game_archive(path):
+                    # The engine refuses an archive without an IWADINFO
+                    # lump as the game, so it is not listed.
+                    logging.debug(
+                        "Skipping the UZDoom archive %s: it has no IWADINFO lump",
+                        path,
+                    )
+                    continue
+                name = self.read_game_name(path)
+            else:
+                magic = self.read_magic(path)
+                if magic == PWAD_MAGIC:
+                    # A PWAD is a mod: it needs another IWAD to run, so it
+                    # is never listed as a game.
+                    continue
+                if magic != IWAD_MAGIC:
+                    # Not a WAD file, or a truncated one.
+                    continue
+                name = path.stem
 
             values = {
                 "added": shared.import_time,
                 "source": self.source.source_id,
-                "name": path.stem,
+                "name": name,
                 "game_id": self.source.game_id_format.format(game_id=path.stem),
                 "executable": self.source.make_executable(iwad_path=path),
             }

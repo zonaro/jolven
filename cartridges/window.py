@@ -171,68 +171,6 @@ def can_edit_notes(game: Game) -> bool:
 # Gamepad home helpers (should_confine_gamepad, confirm_hold_exceeded,
 # focus_class e constantes) vivem em ``cartridges.controller`` — módulo sem
 # GTK, testável sem display — e são reexportados aqui para o `main.py`.
-_XCLOUD_VKEY = {
-    Gdk.KEY_Return: 0x0D,
-    Gdk.KEY_KP_Enter: 0x0D,
-    Gdk.KEY_Tab: 0x09,
-    Gdk.KEY_ISO_Left_Tab: 0x09,
-    Gdk.KEY_Escape: 0x1B,
-    Gdk.KEY_space: 0x20,
-    Gdk.KEY_BackSpace: 0x08,
-    Gdk.KEY_Left: 0x25,
-    Gdk.KEY_Up: 0x26,
-    Gdk.KEY_Right: 0x27,
-    Gdk.KEY_Down: 0x28,
-    Gdk.KEY_Home: 0x24,
-    Gdk.KEY_End: 0x23,
-    Gdk.KEY_Page_Up: 0x21,
-    Gdk.KEY_Page_Down: 0x22,
-    Gdk.KEY_Delete: 0x2E,
-    Gdk.KEY_Insert: 0x2D,
-    Gdk.KEY_Shift_L: 0x10,
-    Gdk.KEY_Shift_R: 0x10,
-    Gdk.KEY_Control_L: 0x11,
-    Gdk.KEY_Control_R: 0x11,
-    Gdk.KEY_Alt_L: 0x12,
-    Gdk.KEY_Alt_R: 0x12,
-    Gdk.KEY_Super_L: 0x5B,
-    Gdk.KEY_Super_R: 0x5B,
-    Gdk.KEY_semicolon: 0xBA,
-    Gdk.KEY_equal: 0xBB,
-    Gdk.KEY_comma: 0xBC,
-    Gdk.KEY_minus: 0xBD,
-    Gdk.KEY_period: 0xBE,
-    Gdk.KEY_slash: 0xBF,
-    Gdk.KEY_grave: 0xC0,
-    Gdk.KEY_bracketleft: 0xDB,
-    Gdk.KEY_backslash: 0xDC,
-    Gdk.KEY_bracketright: 0xDD,
-    Gdk.KEY_apostrophe: 0xDE,
-}
-
-for _i in range(12):
-    _XCLOUD_VKEY[getattr(Gdk, f"KEY_F{_i + 1}")] = 0x70 + _i
-
-
-def _xcloud_keyval_to_vkey(keyval: int) -> Optional[int]:
-    if 0x30 <= keyval <= 0x39:
-        return keyval
-    if 0x41 <= keyval <= 0x5A:
-        return keyval
-    if 0x61 <= keyval <= 0x7A:
-        return keyval - 0x20
-    return _XCLOUD_VKEY.get(keyval)
-
-
-_XCLOUD_MOUSE_BUTTONS = {
-    1: 0x01,
-    3: 0x02,
-    2: 0x04,
-    8: 0x08,
-    9: 0x10,
-}
-
-
 @Gtk.Template(resource_path=shared.PREFIX + "/gtk/window.ui")
 class CartridgesWindow(Adw.ApplicationWindow):
     __gtype_name__ = "CartridgesWindow"
@@ -362,17 +300,6 @@ class CartridgesWindow(Adw.ApplicationWindow):
     xcloud_refresh_button: Gtk.Button = Gtk.Template.Child()
     xcloud_refresh_spinner: Adw.Spinner = Gtk.Template.Child()
 
-    xcloud_player_page: Adw.NavigationPage = Gtk.Template.Child()
-    xcloud_header_bar: Adw.HeaderBar = Gtk.Template.Child()
-    xcloud_close_button: Gtk.Button = Gtk.Template.Child()
-    xcloud_menu_button: Gtk.Button = Gtk.Template.Child()
-    xcloud_fullscreen_button: Gtk.Button = Gtk.Template.Child()
-    xcloud_box: Gtk.Overlay = Gtk.Template.Child()
-    xcloud_spinner: Adw.Spinner = Gtk.Template.Child()
-    xcloud_container: Gtk.Box = Gtk.Template.Child()
-    xcloud_error: Adw.StatusPage = Gtk.Template.Child()
-    xcloud_retry_button: Gtk.Button = Gtk.Template.Child()
-
     game_covers: dict = {}
     toasts: dict = {}
     toast_queue: ToastQueue
@@ -391,18 +318,6 @@ class CartridgesWindow(Adw.ApplicationWindow):
     _recorder_busy = False
     _recorder_recording = False
     botao_tarefas: BotaoTarefas
-    _xcloud_controller: Optional[Any] = None
-    _xcloud_retry_game: Optional[Any] = None
-    _xcloud_pending_game: Optional[Any] = None
-    _xcloud_deps_pending_game: Optional[Any] = None
-    _xcloud_deps_waiting: bool = False
-    _xcloud_deps_dialog: Optional[Any] = None
-    _xcloud_deps_status: Optional[Any] = None
-    _xcloud_was_fullscreen: bool = False
-    _xcloud_axis_state: dict[int, float] = {}
-    _xcloud_trigger_state: dict[str, float] = {}
-    _xcloud_widget: Optional[Any] = None
-    _xcloud_mouse_buttons: int = 0
     _playtime_clickable = False
     details_view_game_cover: Optional[GameCover] = None
     _details_images_generation: int = 0
@@ -773,10 +688,8 @@ class CartridgesWindow(Adw.ApplicationWindow):
         shared.schema.connect(
             "changed::xbox-cloud-gaming", self._xcloud_enabled_changed
         )
-        self.connect("notify::fullscreened", self._update_xcloud_fullscreen_button)
         self.news_refresh_button.connect("clicked", self.on_news_refresh_clicked)
         self.news_retry_button.connect("clicked", self.on_news_refresh_clicked)
-        self.xcloud_retry_button.connect("clicked", self.on_xcloud_retry_action)
         self.xcloud_refresh_button.connect(
             "clicked", self._on_xcloud_refresh_clicked
         )
@@ -968,8 +881,6 @@ class CartridgesWindow(Adw.ApplicationWindow):
                 logging.exception("Could not apply the gamepad layout")
 
     def update_gamepad_button(self, button: int, pressed: bool) -> None:
-        if self.xcloud_input_active:
-            self._xcloud_feed_button(button, pressed)
         name = name_for_button(button)
         self.gamepad_test_event_label.set_label(
             _("{} pressionado").format(name)
@@ -997,8 +908,6 @@ class CartridgesWindow(Adw.ApplicationWindow):
                 logging.exception("Could not update the gamepad visual")
 
     def update_gamepad_axis(self, axis: int, value: float) -> None:
-        if self.xcloud_input_active:
-            self._xcloud_feed_axis(axis, value)
         self.gamepad_test_event_label.set_label(
             _("Eixo {}: {:.2f}").format(axis, value)
         )
@@ -1013,8 +922,6 @@ class CartridgesWindow(Adw.ApplicationWindow):
 
     def update_gamepad_trigger(self, trigger: str, pressed: bool) -> None:
         """Reflect digital trigger events in the trigger axis rows."""
-        if self.xcloud_input_active:
-            self._xcloud_feed_trigger(trigger, pressed)
         value = 1.0 if pressed else 0.0
         axis = 2 if trigger == "LT" else 5
         getattr(self, f"gamepad_test_axis_{axis}").set_label(f"{value:.2f}")
@@ -1028,8 +935,6 @@ class CartridgesWindow(Adw.ApplicationWindow):
                 logging.exception("Could not update the gamepad visual")
 
     def update_gamepad_hat(self, axis: int, value: int) -> None:
-        if self.xcloud_input_active:
-            self._xcloud_feed_hat(axis, value)
         directions = {
             15: _("esquerda"),
             16: _("cima"),
@@ -1230,7 +1135,7 @@ class CartridgesWindow(Adw.ApplicationWindow):
         try:
             if self.get_visible_dialog() is not None:
                 return
-            if self.gamepad_test_active or self.xcloud_input_active:
+            if self.gamepad_test_active:
                 return
         except Exception:  # pylint: disable=broad-exception-caught
             return
@@ -1265,7 +1170,7 @@ class CartridgesWindow(Adw.ApplicationWindow):
             self._gamepad_track_focus()
             return
         try:
-            busy = self.gamepad_test_active or self.xcloud_input_active
+            busy = self.gamepad_test_active
         except Exception:  # pylint: disable=broad-exception-caught
             busy = False
         if busy:
@@ -1339,7 +1244,7 @@ class CartridgesWindow(Adw.ApplicationWindow):
         other focus keeps the immediate tap behaviour.
         """
         try:
-            if self.gamepad_test_active or self.xcloud_input_active:
+            if self.gamepad_test_active:
                 return False
             if self._game_overlay_open and self.session_game is not None:
                 return False
@@ -1355,7 +1260,7 @@ class CartridgesWindow(Adw.ApplicationWindow):
     def gamepad_confirm_hold(self) -> None:
         """Hold threshold reached: launch the focused game directly."""
         try:
-            if self.gamepad_test_active or self.xcloud_input_active:
+            if self.gamepad_test_active:
                 return
             if self._game_overlay_open and self.session_game is not None:
                 return
@@ -2856,37 +2761,12 @@ class CartridgesWindow(Adw.ApplicationWindow):
             "application-x-executable-symbolic",
         )
 
-    def _is_fullscreened(self) -> bool:
-        try:
-            return bool(self.is_fullscreen())
-        except Exception:
-            try:
-                return bool(self.get_property("fullscreened"))
-            except Exception:
-                return False
-
     def launch_xcloud_game(self, game: Game) -> bool:
-        from cartridges import xcloud_login
-        from cartridges.xcloud_player import XCloudPlayerController, webrtc_available
-
+        """Abre o título do Xbox Cloud no navegador configurado, em quiosque."""
         if not shared.schema.get_boolean("xbox-cloud-gaming"):
             logging.warning("Jogo xCloud ignorado porque a integração está desativada")
             self.toast_queue.add(
                 Adw.Toast.new(_("Ative o Xbox Cloud Gaming nas preferências"))
-            )
-            return False
-
-        available, reason = webrtc_available()
-        if not available:
-            if self._xcloud_offer_deps_install(game):
-                return False
-            self.toast_queue.add(Adw.Toast.new(reason))
-            return False
-
-        if not xcloud_login.has_saved_login():
-            self._xcloud_pending_game = game
-            xcloud_login.show_login_dialog(
-                parent=self, on_finished=self._xcloud_login_finished
             )
             return False
 
@@ -2898,169 +2778,17 @@ class CartridgesWindow(Adw.ApplicationWindow):
             )
             return False
 
-        self._xcloud_stop_player()
-        self._xcloud_retry_game = game
-        controller = XCloudPlayerController(
-            product_id,
-            on_ready=self._xcloud_on_ready,
-            on_error=self._xcloud_on_error,
+        from cartridges.utils import browser  # noqa: PLC0415
+
+        url = f"https://www.xbox.com/play/launch/{product_id}"
+        ok, message = browser.launch_kiosk(
+            shared.schema.get_string("xcloud-browser"), url
         )
-        self._xcloud_controller = controller
-        controller.start()
-
-        if self.navigation_view.get_visible_page() != self.xcloud_player_page:
-            self._xcloud_was_fullscreen = self._is_fullscreened()
-            self.navigation_view.push(self.xcloud_player_page)
-        self.xcloud_spinner.set_visible(True)
-        self.xcloud_error.set_visible(False)
-        self._update_xcloud_fullscreen_button()
-        self.xcloud_close_button.grab_focus()
-        return True
-
-    def _xcloud_offer_deps_install(self, game: Game) -> bool:
-        """Diálogo de auto-instalação quando faltam plugins GStreamer do sistema.
-
-        Retorna True quando assumiu o fluxo (o chamador não deve seguir).
-        """
-        from cartridges import xcloud_deps  # noqa: PLC0415
-
-        missing = xcloud_deps.missing_elements()
-        if not missing:
-            return False
-        if self.get_visible_dialog() is not None:
-            return True
-        self._xcloud_deps_pending_game = game
-        dialog = Adw.AlertDialog.new(
-            _("Dependências do Xbox Cloud Gaming"),
-            _(
-                "Faltam plugins de streaming do sistema (%s). "
-                "O Jolven pode instalar sozinho — o sistema vai pedir sua senha."
-            )
-            % ", ".join(missing),
-        )
-        dialog.add_response("later", _("Agora não"))
-        dialog.add_response("install", _("Instalar dependências"))
-        dialog.set_response_appearance("install", Adw.ResponseAppearance.SUGGESTED)
-        dialog.set_default_response("install")
-        dialog.set_close_response("later")
-        dialog.connect("response", self._on_xcloud_deps_response)
-        dialog.present(self)
-        return True
-
-    def _on_xcloud_deps_response(
-        self, _dialog: Adw.AlertDialog, response: str
-    ) -> None:
-        if response != "install":
-            self._xcloud_deps_pending_game = None
-            return
-        from cartridges import xcloud_deps  # noqa: PLC0415
-        from cartridges.utils.na_tela import entregar_na_tela  # noqa: PLC0415
-
-        spinner = Gtk.Spinner(spinning=True)
-        spinner.set_size_request(32, 32)
-        self._xcloud_deps_status = Gtk.Label(label=_("Preparando instalação…"))
-        self._xcloud_deps_status.set_wrap(True)
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        box.append(spinner)
-        box.append(self._xcloud_deps_status)
-        progress = Adw.AlertDialog.new(
-            _("Instalando dependências"),
-            _("Aguarde — o Jolven vai reiniciar sozinho ao concluir."),
-        )
-        progress.set_extra_child(box)
-        self._xcloud_deps_waiting = True
-        self._xcloud_deps_dialog = progress
-        progress.connect("closed", self._on_xcloud_deps_closed)
-        progress.present(self)
-
-        def _line(line: str) -> None:
-            entregar_na_tela(self._xcloud_deps_progress, self, line)
-
-        def _done(ok: bool, message: str) -> None:
-            entregar_na_tela(self._xcloud_deps_finished, self, ok, message)
-
-        started = xcloud_deps.install_async(_done, on_output=_line)
-        if not started:
-            self._xcloud_deps_waiting = False
-            self._xcloud_deps_dialog = None
-            try:
-                progress.close()
-            except Exception:
-                pass
-            self._xcloud_deps_pending_game = None
-            reason = xcloud_deps.unavailable_reason()
-            if reason is None:
-                # Não deve acontecer: `install_async` só devolve False com
-                # o helper ausente. Segurança de tipo, mesma fonte única.
-                from cartridges.platform import system_integration  # noqa: PLC0415
-
-                reason = system_integration.unavailable_message()
-            self.toast_queue.add(Adw.Toast.new(reason))
-
-    def _on_xcloud_deps_closed(self, _dialog: Adw.AlertDialog) -> None:
-        self._xcloud_deps_waiting = False
-        self._xcloud_deps_dialog = None
-
-    def _xcloud_deps_progress(self, line: str) -> None:
-        status = getattr(self, "_xcloud_deps_status", None)
-        if status is not None:
-            status.set_label(line[-160:])
-
-    def _xcloud_deps_finished(self, ok: bool, message: str) -> None:
-        if not self._xcloud_deps_waiting:
-            self.toast_queue.add(Adw.Toast.new(message))
-            return
-        self._xcloud_deps_waiting = False
-        dialog = self._xcloud_deps_dialog
-        self._xcloud_deps_dialog = None
-        if ok:
-            status = getattr(self, "_xcloud_deps_status", None)
-            if status is not None:
-                status.set_label(_("Concluído! Reiniciando o Jolven…"))
-            GLib.timeout_add_seconds(2, self._xcloud_deps_restart)
-        else:
-            try:
-                if dialog is not None:
-                    dialog.close()
-            except Exception:
-                pass
-            self._xcloud_deps_pending_game = None
-            self.toast_queue.add(Adw.Toast.new(message))
-
-    def _xcloud_deps_restart(self) -> bool:
-        from cartridges import xcloud_deps  # noqa: PLC0415
-
-        dialog = self._xcloud_deps_dialog
-        self._xcloud_deps_dialog = None
-        try:
-            if dialog is not None:
-                dialog.close()
-        except Exception:
-            pass
-        try:
-            subprocess.Popen(
-                xcloud_deps.build_restart_command(sys.argv),
-                stdin=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                start_new_session=True,
-            )
-        except Exception as error:
-            logging.warning("Não foi possível reiniciar o Jolven: %s", error)
+        if not ok:
             self.toast_queue.add(
-                Adw.Toast.new(_("Reinicie o Jolven para concluir."))
+                Adw.Toast.new(message or _("Não foi possível abrir o navegador"))
             )
-            return False
-        app = self.get_application()
-        if app is not None:
-            app.quit()
-        return False
-
-    def _xcloud_login_finished(self, resultado: Any) -> None:
-        game = self._xcloud_pending_game
-        self._xcloud_pending_game = None
-        if resultado is not None and game is not None:
-            game.launch()
+        return ok
 
     @staticmethod
     def _xcloud_product_id(game: Game) -> Optional[str]:
@@ -3076,297 +2804,6 @@ class CartridgesWindow(Adw.ApplicationWindow):
         if game_id.startswith("xcloud_"):
             return game_id.removeprefix("xcloud_")
         return None
-
-    @property
-    def xcloud_input_active(self) -> bool:
-        controller = self._xcloud_controller
-        return (
-            controller is not None
-            and controller.streaming
-            and self.navigation_view.get_visible_page() == self.xcloud_player_page
-        )
-
-    def _xcloud_stop_player(self) -> None:
-        controller = self._xcloud_controller
-        self._xcloud_controller = None
-        self._xcloud_widget = None
-        self._xcloud_mouse_buttons = 0
-        if controller is not None:
-            controller.stop()
-        while (child := self.xcloud_container.get_first_child()) is not None:
-            self.xcloud_container.remove(child)
-        self.xcloud_container.set_visible(False)
-        self.xcloud_spinner.set_visible(False)
-        self.xcloud_error.set_visible(False)
-
-    def _xcloud_on_ready(self, controller: Any) -> None:
-        if controller is not self._xcloud_controller:
-            return
-        widget = controller.build_widget()
-        if widget is None:
-            self._xcloud_on_error(controller, _("Vídeo indisponível"))
-            return
-        widget.set_hexpand(True)
-        widget.set_vexpand(True)
-        widget.set_halign(Gtk.Align.FILL)
-        widget.set_valign(Gtk.Align.FILL)
-        self.xcloud_container.append(widget)
-        self._xcloud_widget = widget
-        widget.set_focusable(True)
-        self._xcloud_wire_input(widget)
-        self.xcloud_container.set_visible(True)
-        self.xcloud_error.set_visible(False)
-        self.xcloud_spinner.set_visible(False)
-        self._update_xcloud_fullscreen_button()
-        GLib.idle_add(widget.grab_focus)
-        if (
-            shared.schema.get_boolean("xcloud-fullscreen-on-start")
-            and not self._is_fullscreened()
-        ):
-            self.fullscreen()
-
-    def _xcloud_on_error(self, controller: Any, message: str) -> None:
-        if controller is not self._xcloud_controller:
-            return
-        self._xcloud_controller = None
-        self.xcloud_spinner.set_visible(False)
-        self.xcloud_container.set_visible(False)
-        self.xcloud_error.set_visible(True)
-        if message:
-            self.toast_queue.add(Adw.Toast.new(message))
-        self.xcloud_retry_button.grab_focus()
-
-    def on_xcloud_retry_action(self, *_args: Any) -> None:
-        game = self._xcloud_retry_game
-        if game is not None:
-            self.launch_xcloud_game(game)
-
-    def show_xcloud_player_menu(self) -> None:
-        if self.navigation_view.get_visible_page() != self.xcloud_player_page:
-            return
-        if self.get_visible_dialog() is not None:
-            return
-        fullscreened = self._is_fullscreened()
-        dialog = Adw.AlertDialog.new(
-            _("Xbox Cloud Gaming"),
-            _("Opções da transmissão."),
-        )
-        dialog.add_response(
-            "fullscreen",
-            _("Sair da tela cheia") if fullscreened else _("Tela cheia"),
-        )
-        dialog.add_response("close", _("Encerrar transmissão"))
-        dialog.set_response_appearance("close", Adw.ResponseAppearance.DESTRUCTIVE)
-        dialog.set_default_response("fullscreen")
-        dialog.set_close_response("fullscreen")
-        dialog.connect("response", self._on_xcloud_menu_response)
-        dialog.present(self)
-
-    def _on_xcloud_menu_response(
-        self, dialog: Adw.AlertDialog, response: str
-    ) -> None:
-        if response == "fullscreen":
-            self.on_toggle_xcloud_fullscreen_action()
-        elif response == "close":
-            self.on_close_xcloud_action()
-
-    def on_xcloud_player_menu_action(self, *_args: Any) -> None:
-        self.show_xcloud_player_menu()
-
-    def _xcloud_feed_button(self, button: int, pressed: bool) -> None:
-        from cartridges.xcloud_native import input as xinput
-
-        mapping = {
-            304: xinput.BTN_A,
-            305: xinput.BTN_B,
-            307: xinput.BTN_Y,
-            308: xinput.BTN_X,
-            310: xinput.BTN_LEFT_SHOULDER,
-            311: xinput.BTN_RIGHT_SHOULDER,
-            314: xinput.BTN_VIEW,
-            315: xinput.BTN_MENU,
-            316: xinput.BTN_NEXUS,
-            172: xinput.BTN_NEXUS,
-            317: xinput.BTN_LEFT_THUMB,
-            318: xinput.BTN_RIGHT_THUMB,
-        }
-        bit = mapping.get(button)
-        controller = self._xcloud_controller
-        if bit is not None and controller is not None:
-            controller.feed_button(bit, pressed)
-
-    def _xcloud_feed_axis(self, axis: int, value: float) -> None:
-        if axis not in (0, 1, 2, 3):
-            return
-        controller = self._xcloud_controller
-        if controller is None:
-            return
-        self._xcloud_axis_state[axis] = value
-        state = self._xcloud_axis_state
-        controller.feed_axis(
-            state.get(0, 0.0),
-            state.get(1, 0.0),
-            state.get(2, 0.0),
-            state.get(3, 0.0),
-        )
-
-    def _xcloud_feed_trigger(self, trigger: str, pressed: bool) -> None:
-        controller = self._xcloud_controller
-        if controller is None:
-            return
-        self._xcloud_trigger_state[trigger] = 1.0 if pressed else 0.0
-        controller.feed_trigger(
-            self._xcloud_trigger_state.get("LT", 0.0),
-            self._xcloud_trigger_state.get("RT", 0.0),
-        )
-
-    def _xcloud_feed_hat(self, axis: int, value: int) -> None:
-        controller = self._xcloud_controller
-        if controller is None:
-            return
-        if value == 0:
-            controller.feed_hat(0, 0)
-            return
-        code = axis + value
-        dx = dy = 0
-        if code == 15:
-            dx = -1
-        elif code == 16:
-            dy = 1
-        elif code == 17:
-            dx = 1
-        elif code == 18:
-            dy = -1
-        controller.feed_hat(dx, dy)
-
-    def _xcloud_wire_input(self, widget: Any) -> None:
-        key_controller = Gtk.EventControllerKey()
-        key_controller.connect("key-pressed", self._xcloud_key_pressed)
-        key_controller.connect("key-released", self._xcloud_key_released)
-        widget.add_controller(key_controller)
-
-        motion_controller = Gtk.EventControllerMotion()
-        motion_controller.connect("motion", self._xcloud_mouse_motion)
-        widget.add_controller(motion_controller)
-
-        click_gesture = Gtk.GestureClick()
-        click_gesture.connect("pressed", self._xcloud_mouse_pressed)
-        click_gesture.connect("released", self._xcloud_mouse_released)
-        widget.add_controller(click_gesture)
-
-        scroll_controller = Gtk.EventControllerScroll.new(
-            Gtk.EventControllerScrollFlags.HORIZONTAL | Gtk.EventControllerScrollFlags.VERTICAL
-        )
-        scroll_controller.connect("scroll", self._xcloud_mouse_scroll)
-        widget.add_controller(scroll_controller)
-
-    def _xcloud_key_pressed(
-        self, _controller: Gtk.EventControllerKey, keyval: int, _keycode: int, _state: Gdk.ModifierType
-    ) -> bool:
-        if not self.xcloud_input_active:
-            return False
-        vkey = _xcloud_keyval_to_vkey(keyval)
-        if vkey is None:
-            return False
-        self._xcloud_controller.feed_keyboard(vkey, True)
-        return keyval not in (Gdk.KEY_Escape, Gdk.KEY_F11)
-
-    def _xcloud_key_released(
-        self, _controller: Gtk.EventControllerKey, keyval: int, _keycode: int, _state: Gdk.ModifierType
-    ) -> bool:
-        if not self.xcloud_input_active:
-            return False
-        vkey = _xcloud_keyval_to_vkey(keyval)
-        if vkey is None:
-            return False
-        self._xcloud_controller.feed_keyboard(vkey, False)
-        return keyval not in (Gdk.KEY_Escape, Gdk.KEY_F11)
-
-    def _xcloud_mouse_motion(
-        self, _controller: Gtk.EventControllerMotion, x: float, y: float
-    ) -> None:
-        if not self.xcloud_input_active:
-            return
-        widget = self._xcloud_widget
-        if widget is None:
-            return
-        width = max(widget.get_width(), 1)
-        height = max(widget.get_height(), 1)
-        self._xcloud_controller.feed_mouse(
-            x_fraction=min(max(x / width, 0.0), 1.0),
-            y_fraction=min(max(y / height, 0.0), 1.0),
-            buttons=self._xcloud_mouse_buttons,
-        )
-
-    def _xcloud_mouse_pressed(
-        self, gesture: Gtk.GestureClick, _n_press: int, x: float, y: float
-    ) -> None:
-        if not self.xcloud_input_active:
-            return
-        bit = _XCLOUD_MOUSE_BUTTONS.get(gesture.get_current_button(), 0)
-        self._xcloud_mouse_buttons |= bit
-        self._xcloud_mouse_motion(None, x, y)
-
-    def _xcloud_mouse_released(
-        self, gesture: Gtk.GestureClick, _n_press: int, x: float, y: float
-    ) -> None:
-        if not self.xcloud_input_active:
-            return
-        bit = _XCLOUD_MOUSE_BUTTONS.get(gesture.get_current_button(), 0)
-        self._xcloud_mouse_buttons &= ~bit
-        self._xcloud_mouse_motion(None, x, y)
-
-    def _xcloud_mouse_scroll(
-        self, _controller: Gtk.EventControllerScroll, dx: float, dy: float
-    ) -> None:
-        if not self.xcloud_input_active:
-            return
-        self._xcloud_controller.feed_mouse(
-            buttons=self._xcloud_mouse_buttons,
-            wheel_x=int(dx) & 0xFFFFFFFF,
-            wheel_y=int(dy) & 0xFFFFFFFF,
-        )
-
-    def _update_xcloud_fullscreen_button(self, *_args: Any) -> None:
-        fullscreened = self._is_fullscreened()
-        self.xcloud_header_bar.set_visible(not fullscreened)
-        self.xcloud_fullscreen_button.set_icon_name(
-            "view-restore-symbolic" if fullscreened else "view-fullscreen-symbolic"
-        )
-        self.xcloud_fullscreen_button.set_tooltip_text(
-            _("Sair da tela cheia") if fullscreened else _("Tela cheia")
-        )
-
-    def on_toggle_xcloud_fullscreen_action(self, *_args: Any) -> None:
-        if self.navigation_view.get_visible_page() != self.xcloud_player_page:
-            return
-        if self._is_fullscreened():
-            self.unfullscreen()
-        else:
-            self.fullscreen()
-
-    def on_xcloud_escape_action(self, *_args: Any) -> None:
-        if self.navigation_view.get_visible_page() != self.xcloud_player_page:
-            return
-        if self._is_fullscreened():
-            self.unfullscreen()
-            self.xcloud_fullscreen_button.grab_focus()
-        else:
-            self.show_xcloud_player_menu()
-
-    def on_close_xcloud_action(self, *_args: Any) -> None:
-        if self.navigation_view.get_visible_page() != self.xcloud_player_page:
-            return
-        self._xcloud_stop_player()
-        self.navigation_view.pop()
-        if not self._xcloud_was_fullscreen and self._is_fullscreened():
-            self.unfullscreen()
-        if shared.runtime.is_game_mode and (
-            self.navigation_view.get_visible_page() == self.game_mode_home_page
-        ):
-            self.focus_game_mode_home()
-        else:
-            GLib.idle_add(self.focus_first_library_tile)
 
     def on_delete_game_action(self, *_args: Any) -> None:
         game = getattr(self, "active_game", None)

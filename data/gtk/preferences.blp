@@ -75,22 +75,9 @@ template $CartridgesPreferences: Adw.PreferencesDialog {
         subtitle: _("Mostra o card do Xbox Cloud Gaming junto aos launchers");
       }
 
-      Adw.ActionRow xcloud_account_row {
-        title: _("Conta Xbox");
-        subtitle: _("Não conectado");
-        sensitive: bind xbox_cloud_gaming_switch.active;
-        activatable-widget: xcloud_login_button;
-
-        [suffix]
-        Button xcloud_login_button {
-          valign: center;
-          label: _("Entrar");
-        }
-      }
-
-      Adw.SwitchRow xcloud_fullscreen_on_start_switch {
-        title: _("Tela cheia");
-        subtitle: _("Abre a transmissão em tela cheia");
+      Adw.ComboRow xcloud_browser_row {
+        title: _("Navegador do Xbox Cloud Gaming");
+        subtitle: _("Abre o jogo numa janela nova em tela cheia (modo quiosque)");
         sensitive: bind xbox_cloud_gaming_switch.active;
       }
     }
@@ -1121,6 +1108,50 @@ template $CartridgesPreferences: Adw.PreferencesDialog {
         }
       }
 
+      Adw.ExpanderRow epic_expander_row {
+        title: _("Epic Games Launcher");
+        show-enable-switch: true;
+
+        [prefix]
+        Image {
+          icon-name: "epic-source-symbolic";
+        }
+
+        Adw.ActionRow epic_data_action_row {
+          title: _("Data Folder");
+
+          Button epic_data_file_chooser_button {
+            icon-name: "folder-symbolic";
+            valign: center;
+
+            styles [
+              "flat"
+            ]
+          }
+
+          styles [
+            "property"
+          ]
+        }
+
+        Adw.ActionRow epic_cache_action_row {
+          title: _("Cache Folder");
+
+          Button epic_cache_file_chooser_button {
+            icon-name: "folder-symbolic";
+            valign: center;
+
+            styles [
+              "flat"
+            ]
+          }
+
+          styles [
+            "property"
+          ]
+        }
+      }
+
       Adw.ExpanderRow retroarch_expander_row {
         title: _("RetroArch");
         show-enable-switch: true;
@@ -1394,6 +1425,40 @@ template $CartridgesPreferences: Adw.PreferencesDialog {
         }
 
         Adw.SwitchRow flatpak_import_launchers_switch {
+          title: _("Import Game Launchers");
+        }
+      }
+
+      Adw.ExpanderRow appimage_expander_row {
+        title: _("AppImage");
+        show-enable-switch: true;
+
+        [prefix]
+        Image {
+          icon-name: "appimage-source-symbolic";
+        }
+
+        Adw.ActionRow appimage_location_action_row {
+          // An extra folder with AppImage files, for the games that are
+          // not installed in one of the usual places.
+          title: _("Extra Location");
+          subtitle: _("Another folder with AppImage files");
+
+          Button appimage_location_file_chooser_button {
+            icon-name: "folder-symbolic";
+            valign: center;
+
+            styles [
+              "flat"
+            ]
+          }
+
+          styles [
+            "property"
+          ]
+        }
+
+        Adw.SwitchRow appimage_import_launchers_switch {
           title: _("Import Game Launchers");
         }
       }

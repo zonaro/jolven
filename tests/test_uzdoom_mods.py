@@ -361,11 +361,14 @@ class ScanModsTests(unittest.TestCase):
 
     def test_archives_are_mods_without_reading_them(self) -> None:
         self._write("pack.pk3", b"PK\x03\x04")
-        self._write("pack.ipk3", b"PK\x03\x04")
         self.assertEqual(
             [Path(path).name for path in self.scan_mods(self.folder)],
-            ["pack.ipk3", "pack.pk3"],
+            ["pack.pk3"],
         )
+
+    def test_an_installed_game_archive_is_not_a_mod(self) -> None:
+        self._write("pack.ipk3", b"PK\x03\x04")
+        self.assertEqual(self.scan_mods(self.folder), [])
 
     def test_missing_folder_has_no_mods(self) -> None:
         self.assertEqual(self.scan_mods(self.folder / "nope"), [])
