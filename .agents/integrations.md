@@ -107,8 +107,11 @@ então fica em `_PT_BR_FEEDS` (fora de `NEWS_FEEDS`) e só é consultado quando
 GSettings igual a `pt_BR` ou `auto` com locale do sistema pt-BR, seguindo a
 precedência do gettext (LANGUAGE, LC_ALL, LC_MESSAGES, LANG) e o mesmo padrão
 de `jolven.in`. Em qualquer outro idioma a fonte não é consultada nem exibida.
-`news_checker.py:_ui_language` lê o idioma na thread principal e o repassa ao
-worker. Por ser conteúdo remoto não confiável e potencialmente sensível a
+`news_checker.py:ui_language` lê o idioma na thread principal e o repassa ao
+worker. O mesmo vale para as fontes desligadas pelo usuário: `ui_language` e
+`disabled_sources` leem o GSettings na thread principal, e a lista de fontes
+desligadas (`disabled-news-sources`) vai junto para o worker — uma fonte
+desligada não é consultada e as suas notícias nem entram no cache. Por ser conteúdo remoto não confiável e potencialmente sensível a
 políticas locais:
 
 - mantenha o acompanhamento opt-in por jogo;

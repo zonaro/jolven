@@ -456,3 +456,103 @@ button.gamepad-tile-focus-rgb {
    AdwPreferencesPage embute um AdwClamp com maximum_size = 600 e o GTK não
    expõe esse teto ao CSS (e não suporta media query por largura). Ver
    CartridgesPreferences._alargar_paginas. */
+
+/* ── Novidades: cards da página de notícias (tiers Destaques / Mais recentes) ──
+   Ambos os roots são Gtk.Button com classe "flat" + a respectiva classe news-*.
+   A largura dos cards é definida no Python (width_request na caixa de conteúdo,
+   por cima do padding de cá); o CSS só cuida de fundo, raio, borda, hover e
+   anel de foco (nunca removido). Não use aqui propriedades de widget, como
+   max-width, overflow, xalign ou ellipsize: o CSS do GTK as rejeita e o
+   arquivo inteiro passa a gerar erro de parsing. Cores derivadas do tema
+   (currentColor / @accent_color) para respeitar claro, escuro e alto
+   contraste. */
+
+/* ── Novidades: card herói do carrossel (1 destaque por slide, largura total) ──
+   O herói é o destaque principal da tela de Novidades. Ocupa a faixa inteira
+   do carrossel (definido em código: hexpand + altura fixa). Diferencia-se
+   visualmente do card pequeno (.news-card): mais respiro, título maior,
+   imagem com destaque e hover mais pronunciado. */
+
+.news-hero-card {
+  border-radius: 14px;
+  border: 1px solid alpha(currentColor, 0.16);
+  background-color: alpha(currentColor, 0.05);
+  padding: 14px;
+  transition: background-color 120ms linear, border-color 120ms linear,
+    box-shadow 120ms linear;
+}
+
+.news-hero-card:hover {
+  background-color: alpha(currentColor, 0.10);
+  box-shadow: 0 6px 16px alpha(currentColor, 0.14);
+}
+
+.news-hero-card:focus-visible {
+  box-shadow: 0 0 0 3px @accent_color;
+  border-radius: 14px;
+}
+
+/* Imagem do herói: arredondamento um pouco menor que o card, criando uma
+   "margem" visual interna; fundo um pouco mais presente para imagens
+   ausentes ou de baixo contraste. */
+.news-hero-card .news-card-image {
+  border-radius: 12px;
+  background-color: alpha(currentColor, 0.10);
+}
+
+/* Título do herói: um passo acima do card pequeno para hierarquia clara. */
+.news-hero-card .news-card-title {
+  font-size: 1.15em;
+}
+
+/* Meta do herói: um pouco maior e com mais respiro do título. */
+.news-hero-card .news-card-meta {
+  font-size: 0.95em;
+  margin-top: 6px;
+}
+
+.news-card {
+  border-radius: 12px;
+  border: 1px solid alpha(currentColor, 0.12);
+  background-color: alpha(currentColor, 0.04);
+  padding: 8px;
+  transition: background-color 120ms linear, border-color 120ms linear;
+}
+
+.news-card:hover {
+  background-color: alpha(currentColor, 0.08);
+}
+
+.news-card:focus-visible {
+  box-shadow: 0 0 0 3px @accent_color;
+  border-radius: 12px;
+}
+
+/* Caixa de mídia: fundo atrás da foto e o arredondamento que o recorte do
+   overlay (Gtk.Overflow.HIDDEN, definido no Python) respeita. */
+.news-card-image {
+  border-radius: 10px;
+  background-color: alpha(currentColor, 0.06);
+}
+
+/* Rodapé "fonte · data" (classe caption aplicada no código). */
+.news-card-meta {
+  color: alpha(currentColor, 0.65);
+}
+
+@media (prefers-contrast: more) {
+  .news-hero-card,
+  .news-card {
+    border: 2px solid currentColor;
+    background-color: transparent;
+  }
+
+  .news-hero-card:focus-visible,
+  .news-card:focus-visible {
+    box-shadow: 0 0 0 3px currentColor;
+  }
+
+  .news-card-meta {
+    color: currentColor;
+  }
+}

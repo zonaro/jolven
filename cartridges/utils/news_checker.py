@@ -38,15 +38,19 @@ feed is technically unseen, and lighting the badge for a back-catalogue nobody
 missed would make it mean nothing. That poll stores the timestamp silently, and
 the badge from then on only ever marks posts that landed while the user was
 watching.
+
+Sources can be turned off one by one. A disabled source is never polled, and
+its posts never enter the cache, so the page and the badge only ever talk about
+the sources the user still wants.
 """
 
 import logging
 import os
 import threading
-from typing import Optional
+from typing import Iterable, Optional
 
 import requests
-from gi.repository import GLib, GObject
+from gi.repository import GLib, GObject, Gio
 
 from cartridges import shared
 from cartridges.utils.news_feed import NewsPost, fetch_all_news
@@ -59,8 +63,67 @@ _INTERVAL_KEY = "news-check-interval"
 # window state, not a preference.
 _LAST_SEEN_KEY = "news-last-seen-ts"
 
+# The news sources the user turned off. The key stores the *disabled* labels
+# so that a source added by a later version starts enabled: an empty list means
+# "every source is on", which is what a fresh installation wants.
+_DISABLED_SOURCES_KEY = "disabled-news-sources"
 
-def _ui_language() -> str:
+
+def _schema_has_key(key: str) -> bool:
+    """True when the installed schema knows the key.
+
+    Reading a key the schema does not have is fatal inside GLib — a
+    ``g_error``, not a catchable exception — so the schema is asked before
+    the value is read. An installed schema older than this build simply does
+    not know the key, and then nothing is disabled.
+    """
+    try:
+        source = Gio.SettingsSchemaSource.get_default()
+        schema = source.lookup(shared.APP_ID, True) if source else None
+        if schema is None:
+            return True
+        return schema.has_key(key)
+    except Exception:  # pylint: disable=broad-exception-caught
+        return True
+
+
+def disabled_sources() -> tuple[str, ...]:
+    """The source labels the user turned off, read from GSettings.
+
+    Read on the main thread: GSettings is not meant to be touched from the
+    poll worker. An older installed schema without the key reads as "nothing
+    disabled" — every source stays on, which is the safe default.
+    """
+    if not _schema_has_key(_DISABLED_SOURCES_KEY):
+        return ()
+    try:
+        return tuple(shared.schema.get_strv(_DISABLED_SOURCES_KEY))
+    except Exception:  # pylint: disable=broad-exception-caught
+        return ()
+
+
+def set_source_enabled(source: str, enabled: bool) -> None:
+    """Persist a source's enabled state in GSettings.
+
+    Enabling removes the label from the disabled list; disabling adds it.
+    The rest of the list is left alone, so switching one source off never
+    touches the others.
+    """
+    if not source or not _schema_has_key(_DISABLED_SOURCES_KEY):
+        return
+    try:
+        current = list(disabled_sources())
+        if enabled:
+            if source in current:
+                current.remove(source)
+        elif source not in current:
+            current.append(source)
+        shared.schema.set_strv(_DISABLED_SOURCES_KEY, current)
+    except Exception:  # pylint: disable=broad-exception-caught
+        logging.warning("Could not persist the state of news source %s", source)
+
+
+def ui_language() -> str:
     """The language the interface actually renders in.
 
     Mirrors ``cartridges/jolven.in``: an explicit ``language`` preference wins;
@@ -178,17 +241,18 @@ class NewsChecker(GObject.Object):
             if self._running:
                 return
             self._running = True
-        # Read the language here, on the main thread: the poll worker must not
-        # touch GSettings (see _ui_language).
-        language = _ui_language()
+        # Read the language and the disabled sources here, on the main thread:
+        # the poll worker must not touch GSettings (see ui_language).
+        language = ui_language()
+        disabled = disabled_sources()
         threading.Thread(
-            target=self._poll_thread, args=(language,), daemon=True
+            target=self._poll_thread, args=(language, disabled), daemon=True
         ).start()
 
-    def _poll_thread(self, language: str) -> None:
+    def _poll_thread(self, language: str, disabled: tuple[str, ...]) -> None:
         posts: Optional[list[NewsPost]] = None
         try:
-            posts = fetch_all_news(language=language)
+            posts = fetch_all_news(language=language, disabled=disabled)
         except requests.RequestException as error:
             # A failed poll is a non-event: the cached posts (if any) stay up
             # and the badge does not change. Info level because a flaky network
@@ -218,7 +282,10 @@ class NewsChecker(GObject.Object):
             self.emit("poll-finished", False)
             return False
 
-        fetched = tuple(posts)
+        # A source switched off while this poll was on the wire must not land
+        # in the cache, so the fresh posts are filtered against the *current*
+        # disabled set rather than the one the poll started with.
+        fetched = tuple(self._keep_enabled(posts))
         # `posts-changed` makes the window throw away every row and rebuild the
         # list, which also resets the scroll position to the top. Emitting it on
         # every poll meant the six-hourly tick yanked the page out from under
@@ -231,6 +298,25 @@ class NewsChecker(GObject.Object):
         self._refresh_unseen()
         self.emit("poll-finished", True)
         return False
+
+    def _keep_enabled(self, posts: Iterable[NewsPost]) -> list[NewsPost]:
+        """The posts whose source is still enabled, in the order given."""
+        off = set(disabled_sources())
+        return [post for post in posts if post.source not in off]
+
+    def refilter(self) -> None:
+        """Drop cached posts whose source was just turned off.
+
+        Filters the cache against the current disabled set, emits
+        "posts-changed" when the cached list actually changed, and recomputes
+        the unseen flag either way.
+        """
+        off = set(disabled_sources())
+        kept = tuple(post for post in self._posts if post.source not in off)
+        if kept != self._posts:
+            self._posts = kept
+            self.emit("posts-changed")
+        self._refresh_unseen()
 
     def _newest_timestamp(self) -> int:
         """pubDate of the newest cached post, 0 when there are none."""

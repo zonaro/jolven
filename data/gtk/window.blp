@@ -827,6 +827,11 @@ Adw.NavigationPage news_page {
     [top]
     Adw.HeaderBar {
       [end]
+      MenuButton news_sources_button {
+        tooltip-text: _("Fontes");
+        icon-name: "open-menu-symbolic";
+      }
+
       Button news_refresh_button {
         tooltip-text: _("Atualizar");
         icon-name: "view-refresh-symbolic";
@@ -857,21 +862,91 @@ Adw.NavigationPage news_page {
           vexpand: true;
 
           Adw.Clamp {
-            maximum-size: 800;
-            tightening-threshold: 600;
+            maximum-size: 900;
+            tightening-threshold: 700;
             margin-top: 18;
             margin-bottom: 18;
             margin-start: 12;
             margin-end: 12;
 
-            ListBox news_list {
-              selection-mode: none;
-              valign: start;
+            Box {
+              orientation: vertical;
+              hexpand: true;
+              spacing: 24;
 
-              styles [
-                "boxed-list",
-                "news-list",
-              ]
+              Box news_highlights_section {
+                orientation: vertical;
+                hexpand: true;
+                spacing: 12;
+
+                Label news_highlights_title {
+                  label: _("Destaques");
+                  xalign: 0.0;
+                  styles [
+                    "title-2",
+                  ]
+                }
+
+                Adw.Carousel news_highlights_carousel {
+                  spacing: 12;
+                  allow-mouse-drag: true;
+                  allow-scroll-wheel: true;
+                  hexpand: true;
+                }
+
+                Adw.CarouselIndicatorDots news_highlights_indicator {
+                  carousel: news_highlights_carousel;
+                  halign: center;
+                }
+              }
+
+              Box news_recent_section {
+                orientation: vertical;
+                hexpand: true;
+                spacing: 12;
+
+                Label news_recent_title {
+                  label: _("Mais recentes");
+                  xalign: 0.0;
+                  styles [
+                    "title-2",
+                  ]
+                }
+
+                FlowBox news_recent_flowbox {
+                  selection-mode: none;
+                  homogeneous: false;
+                  column-spacing: 12;
+                  row-spacing: 12;
+                  valign: start;
+                  hexpand: true;
+                }
+              }
+
+              Box news_list_section {
+                orientation: vertical;
+                hexpand: true;
+                spacing: 12;
+
+                Label news_list_title {
+                  label: _("Todas as novidades");
+                  xalign: 0.0;
+                  styles [
+                    "title-2",
+                  ]
+                }
+
+                ListBox news_list {
+                  selection-mode: none;
+                  valign: start;
+                  hexpand: true;
+
+                  styles [
+                    "boxed-list",
+                    "news-list",
+                  ]
+                }
+              }
             }
           }
         };

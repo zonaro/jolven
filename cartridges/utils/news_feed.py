@@ -46,12 +46,20 @@ than shown and ignored.
 
 Only the parts of an ``<item>`` that a list row can show are kept: title, link,
 publication date, source and a short plain-text excerpt cut out of the HTML summary.
+
+The user can turn individual sources off. A disabled source is dropped before
+the request goes out, so it is never polled at all — not merely hidden — and
+its posts never reach the page. This module stays pure data: it only knows
+*which* sources are disabled, never where that answer comes from. The enabled
+state lives in GSettings and reaches this module as a list of labels; see
+:mod:`cartridges.utils.news_checker`.
 """
 
 import logging
 import re
 from dataclasses import dataclass
 from html.parser import HTMLParser
+from typing import Iterable
 
 import requests
 
@@ -318,32 +326,59 @@ def is_brazilian_portuguese(language: str) -> bool:
     return False
 
 
-def feeds_for_language(language: str = "") -> tuple[tuple[str, str], ...]:
-    """The feeds to poll for a UI language: the base list plus gated sources.
+def feeds_for_language(
+    language: str = "", disabled: Iterable[str] = ()
+) -> tuple[tuple[str, str], ...]:
+    """The feeds to poll for a UI language, minus the disabled sources.
 
     A single-language source is appended only when its locale matches, so a
     plain call with an empty language gets exactly ``NEWS_FEEDS`` and callers
     that never care about language stay unaffected.
+
+    ``disabled`` holds the source labels the user turned off. They are dropped
+    from the poll list, so a disabled feed is never even requested. The match
+    is an exact, case-sensitive label comparison — the same labels
+    :func:`all_sources` hands to the interface.
     """
+    feeds = NEWS_FEEDS
     if is_brazilian_portuguese(language):
-        return NEWS_FEEDS + _PT_BR_FEEDS
-    return NEWS_FEEDS
+        feeds = feeds + _PT_BR_FEEDS
+    if not disabled:
+        return feeds
+    off = set(disabled)
+    return tuple((source, url) for source, url in feeds if source not in off)
+
+
+def all_sources(language: str = "") -> tuple[str, ...]:
+    """Every source label available for a UI language, in poll order.
+
+    Base sources plus the language-gated ones. For a pt-BR locale this
+    includes TrinityWeb; otherwise it does not. Disabled sources are still
+    listed: the interface shows them switched off, not hidden.
+    """
+    return tuple(source for source, _url in feeds_for_language(language))
 
 
 def fetch_all_news(
-    timeout: float = 15, max_bytes: int = _MAX_FEED_BYTES, language: str = ""
+    timeout: float = 15,
+    max_bytes: int = _MAX_FEED_BYTES,
+    language: str = "",
+    disabled: Iterable[str] = (),
 ) -> list[NewsPost]:
-    """Download the feeds for ``language`` and merge the posts, newest first.
+    """Download the enabled feeds for ``language`` and merge the posts, newest first.
 
     ``language`` selects the source set through :func:`feeds_for_language`; the
-    pt-BR-only sources are polled only for a Brazilian Portuguese interface. A
-    feed that fails (network, HTTP, oversized) is skipped with a log line; it
+    pt-BR-only sources are polled only for a Brazilian Portuguese interface.
+    ``disabled`` holds source labels (as in ``NEWS_FEEDS``) that must not be
+    polled at all — not even attempted. Sources are matched by label.
+
+    A feed that fails (network, HTTP, oversized) is skipped with a log line; it
     never sinks the other feeds. Identifiers repeated across feeds resolve to
     the newest post. The merged list is capped at _MAX_POSTS.
     """
     merged: dict[str, NewsPost] = {}
     failures = 0
-    for source, url in feeds_for_language(language):
+    for source, url in feeds_for_language(language, disabled):
         try:
             posts = fetch_news(url, timeout, max_bytes)
         except requests.RequestException as error:

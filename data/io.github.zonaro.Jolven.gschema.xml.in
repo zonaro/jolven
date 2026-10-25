@@ -333,6 +333,9 @@
     <key name="disabled-source-filters" type="as">
       <default>[]</default>
     </key>
+    <key name="disabled-news-sources" type="as">
+      <default>[]</default>
+    </key>
     <key name="app-icon" type="s">
       <choices>
         <choice value="jolven-dpad" />

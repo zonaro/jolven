@@ -53,7 +53,12 @@ from cartridges.utils.install_size import format_size
 from cartridges.utils.download import download_bytes
 from cartridges.utils.library_background import resolver_fundo
 from cartridges.utils.na_tela import entregar_na_tela
-from cartridges.utils.news_feed import NewsPost
+from cartridges.utils.news_checker import (
+    disabled_sources,
+    set_source_enabled,
+    ui_language,
+)
+from cartridges.utils.news_feed import NewsPost, all_sources
 from cartridges.utils.open_uri import open_uri
 from cartridges.utils.relative_date import relative_date
 from cartridges.utils.spring_scroll import attach as attach_spring_scroll
@@ -66,6 +71,35 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango
 _NEWS_THUMB_SIZE = 64
 _NEWS_THUMB_BYTES = 2 * 1024 * 1024
 _NEWS_THUMB_CACHE_MAX = 200
+
+# A tela de Novidades é um portal com três degraus: o carrossel de destaques,
+# a grade de cards menores e, no fim, a lista com tudo. A grade começa onde o
+# carrossel termina, então a mesma notícia nunca aparece duas vezes na mesma
+# tela.
+_NEWS_HIGHLIGHTS = 5
+_NEWS_RECENT = 10
+
+# A página do herói ocupa a faixa inteira do carrossel (hexpand): o
+# Adw.Carousel centraliza página mais estreita que ele — sem expandir, a
+# folga (largura - página)/2 vira espaço morto nas pontas e o card seguinte
+# aparece cortado na borda. O card preenche a página por dentro, e a
+# largura natural do título fica com folga para o card em largura total.
+# A altura continua fixa (22 px de borda+padding + 170 de imagem + 10 de
+# espaçamento + 84 de texto: 2 linhas de título + metadados); a imagem
+# absorve o que sobrar quando o título sai em uma linha só.
+_NEWS_HERO_IMAGE = 170
+_NEWS_HERO_TITLE_CHARS = 60
+_NEWS_HERO_HEIGHT = 286
+
+# Idem para os cards da grade. A grade só encaixa mais de um card por linha
+# quando a largura *natural* do card é pequena: FlowBox quebra linha pelo
+# tamanho natural do filho, e um Gtk.Picture devolve a largura da foto (às
+# vezes 800 px). Por isso a moldura da imagem tem tamanho fixo (Gtk.Overlay
+# mede pelo filho de trás) e o título tem teto de caracteres (max-width-chars)
+# — sem esses dois, o card nunca encolhe e a grade vira coluna única.
+_NEWS_CARD_WIDTH = 264
+_NEWS_CARD_IMAGE = 120
+_NEWS_CARD_TITLE_CHARS = 18
 
 _RECORDER_SOURCES = {
     "portal": "portal",
@@ -314,6 +348,17 @@ class CartridgesWindow(Adw.ApplicationWindow):
     news_scrolledwindow: Gtk.ScrolledWindow = Gtk.Template.Child()
     news_refresh_button: Gtk.Button = Gtk.Template.Child()
     news_retry_button: Gtk.Button = Gtk.Template.Child()
+    news_status: Adw.StatusPage = Gtk.Template.Child()
+    news_sources_button: Gtk.MenuButton = Gtk.Template.Child()
+    news_highlights_section: Gtk.Box = Gtk.Template.Child()
+    news_highlights_title: Gtk.Label = Gtk.Template.Child()
+    news_highlights_carousel: Adw.Carousel = Gtk.Template.Child()
+    news_highlights_indicator: Adw.CarouselIndicatorDots = Gtk.Template.Child()
+    news_recent_section: Gtk.Box = Gtk.Template.Child()
+    news_recent_title: Gtk.Label = Gtk.Template.Child()
+    news_recent_flowbox: Gtk.FlowBox = Gtk.Template.Child()
+    news_list_section: Gtk.Box = Gtk.Template.Child()
+    news_list_title: Gtk.Label = Gtk.Template.Child()
     xcloud_refresh_button: Gtk.Button = Gtk.Template.Child()
     xcloud_refresh_spinner: Adw.Spinner = Gtk.Template.Child()
 
@@ -336,6 +381,7 @@ class CartridgesWindow(Adw.ApplicationWindow):
     _news_handler_ids: list = []
     _news_refresh_toast: Optional[Adw.Toast] = None
     _news_refresh_requested = False
+    _news_source_actions: list = []
     _xcloud_refreshing = False
     _xcloud_refresh_toast: Optional[Adw.Toast] = None
     session_game: Optional[Game] = None
@@ -636,6 +682,12 @@ class CartridgesWindow(Adw.ApplicationWindow):
 
         self._news_thumb_cache: dict[str, Gdk.Texture] = {}
         self._news_thumb_pending: dict[str, list[Gtk.Picture]] = {}
+        # Uma ação por fonte, recriadas a cada montagem do menu: as fontes
+        # dependem do idioma da interface.
+        self._news_source_actions: list[Gio.SimpleAction] = []
+        # Os cards do carrossel, guardados para poder removê-los do carrossel
+        # quando a página é reconstruída.
+        self._news_hero_pages: list[Gtk.Widget] = []
 
         self.game_mode_home_page.set_visible(shared.runtime.is_game_mode)
         if not shared.runtime.is_game_mode:
@@ -1877,7 +1929,8 @@ class CartridgesWindow(Adw.ApplicationWindow):
             checker.connect("unseen-changed", self.on_news_unseen_changed),
         ]
         self.news_badge.set_visible(checker.has_unseen)
-        self.rebuild_news_list()
+        self.rebuild_news_sources_menu()
+        self.rebuild_news_view()
         self.update_news_view()
 
     def detach_news_checker(self) -> None:
@@ -1892,7 +1945,7 @@ class CartridgesWindow(Adw.ApplicationWindow):
         self.news_badge.set_visible(unseen)
 
     def on_news_posts_changed(self, *_args: Any) -> None:
-        self.rebuild_news_list()
+        self.rebuild_news_view()
         self.update_news_view()
         if (
             self.navigation_view.get_visible_page() == self.news_page
@@ -1934,6 +1987,9 @@ class CartridgesWindow(Adw.ApplicationWindow):
     def on_show_news_action(self, *_args: Any) -> None:
         if self.navigation_view.get_visible_page() == self.news_page:
             return
+        # As fontes dependem do idioma da interface, e o idioma pode mudar
+        # com o app aberto: o menu é refeito a cada entrada na página.
+        self.rebuild_news_sources_menu()
         if (checker := self.news_checker) is not None:
             checker.mark_seen()
             if not checker.posts:
@@ -1950,6 +2006,63 @@ class CartridgesWindow(Adw.ApplicationWindow):
         else:
             name = "empty"
         self.news_stack.set_visible_child_name(name)
+        if name == "empty":
+            self.update_news_empty_state()
+
+    def update_news_empty_state(self) -> None:
+        """Distingue "não há nada" de "não deu para carregar".
+
+        Sem fonte nenhuma ligada a página está vazia por escolha do usuário,
+        não por falha de rede — e a mensagem precisa dizer isso.
+        """
+        sources = set(all_sources(ui_language()))
+        if sources and sources <= set(disabled_sources()):
+            self.news_status.set_title(_("Nenhuma fonte selecionada"))
+            self.news_status.set_description(
+                _("Ative uma fonte no menu de fontes para ver as novidades.")
+            )
+            self.news_retry_button.set_visible(False)
+        else:
+            self.news_status.set_title(_("Sem novidades"))
+            self.news_status.set_description(
+                _("Não foi possível carregar as novidades.")
+            )
+            self.news_retry_button.set_visible(True)
+
+    def rebuild_news_view(self) -> None:
+        """Reconstrói os três degraus da página de Novidades.
+
+        O carrossel fica com as novidades mais recentes, a grade com as que
+        vêm logo depois, e a lista do fim continua guardando todas — a mesma
+        lista de sempre.
+        """
+        posts = self.news_checker.posts if self.news_checker is not None else ()
+        self.rebuild_news_highlights(posts[:_NEWS_HIGHLIGHTS])
+        self.rebuild_news_cards(
+            posts[_NEWS_HIGHLIGHTS : _NEWS_HIGHLIGHTS + _NEWS_RECENT]
+        )
+        self.rebuild_news_list()
+
+    def rebuild_news_highlights(self, posts: tuple[NewsPost, ...]) -> None:
+        """Enche o carrossel de destaques com as novidades mais recentes."""
+        carousel = self.news_highlights_carousel
+        for page in self._news_hero_pages:
+            carousel.remove(page)
+        self._news_hero_pages.clear()
+        for post in posts:
+            page = self.build_news_hero_card(post)
+            self._news_hero_pages.append(page)
+            carousel.append(page)
+        self.news_highlights_section.set_visible(bool(posts))
+
+    def rebuild_news_cards(self, posts: tuple[NewsPost, ...]) -> None:
+        """Enche a grade de cards menores com as novidades seguintes."""
+        flowbox = self.news_recent_flowbox
+        while child := flowbox.get_first_child():
+            flowbox.remove(child)
+        for post in posts:
+            flowbox.append(self.build_news_card(post))
+        self.news_recent_section.set_visible(bool(posts))
 
     def rebuild_news_list(self) -> None:
         while child := self.news_list.get_first_child():
@@ -1959,6 +2072,223 @@ class CartridgesWindow(Adw.ApplicationWindow):
         for post in self.news_checker.posts:
             self.news_list.append(self.build_news_row(post))
         self.news_scrolledwindow.get_vadjustment().set_value(0)
+
+    def build_news_hero_card(self, post: NewsPost) -> Gtk.Widget:
+        """Um destaque: a imagem em cima, o título e a assinatura embaixo.
+
+        O retorno é a *página* do carrossel, com hexpand para ocupar a
+        faixa inteira — ver `_NEWS_HERO_HEIGHT` para o porquê da altura fixa.
+        """
+        content = Gtk.Box(
+            orientation=Gtk.Orientation.VERTICAL,
+            spacing=10,
+        )
+        media = self.build_news_media(post, height=_NEWS_HERO_IMAGE)
+        # O título ocupa 1 ou 2 linhas; a imagem absorve a diferença para o
+        # card preencher a altura fixa da página sem sobrar buraco embaixo.
+        media.set_vexpand(True)
+        content.append(media)
+        content.append(
+            self.build_news_card_text(
+                post,
+                max_title_lines=2,
+                max_title_chars=_NEWS_HERO_TITLE_CHARS,
+            )
+        )
+        card = self.build_news_card_root(post, content, "news-hero-card")
+        card.set_hexpand(True)
+        card.set_vexpand(True)
+        page = Gtk.Box(hexpand=True, height_request=_NEWS_HERO_HEIGHT)
+        page.append(card)
+        return page
+
+    def build_news_card(self, post: NewsPost) -> Gtk.Widget:
+        """Um card pequeno: miniatura à esquerda, título e assinatura à direita."""
+        content = Gtk.Box(
+            orientation=Gtk.Orientation.HORIZONTAL,
+            spacing=10,
+            width_request=_NEWS_CARD_WIDTH,
+        )
+        content.append(
+            self.build_news_media(
+                post, height=_NEWS_CARD_IMAGE, width=_NEWS_CARD_IMAGE
+            )
+        )
+        content.append(
+            self.build_news_card_text(
+                post,
+                max_title_lines=2,
+                max_title_chars=_NEWS_CARD_TITLE_CHARS,
+            )
+        )
+        return self.build_news_card_root(post, content, "news-card")
+
+    def build_news_card_text(
+        self, post: NewsPost, max_title_lines: int, max_title_chars: int
+    ) -> Gtk.Box:
+        """O bloco de texto de um card: o título e a linha de metadados.
+
+        `max_title_chars` limita a *largura natural* do bloco. Sem esse teto o
+        Gtk.Label devolve a largura do texto inteiro, o card não encolhe e a
+        grade FlowBox passa a colocar um card por linha — ver as constantes
+        `_NEWS_CARD_*` e `_NEWS_HERO_*`.
+        """
+        text = Gtk.Box(
+            orientation=Gtk.Orientation.VERTICAL,
+            spacing=4,
+            hexpand=True,
+        )
+        text.append(
+            Gtk.Label(
+                label=post.title,
+                wrap=True,
+                # Quebra só em espaços: o padrão (WORD_CHAR) parte a palavra
+                # ao meio quando ela não cabe na linha, o que deixa o título
+                # cortado no meio de uma palavra.
+                wrap_mode=Pango.WrapMode.WORD,
+                xalign=0,
+                ellipsize=Pango.EllipsizeMode.END,
+                lines=max_title_lines,
+                max_width_chars=max_title_chars,
+                css_classes=["news-card-title", "title-4"],
+            )
+        )
+        text.append(
+            Gtk.Label(
+                label=self.build_news_meta(post),
+                xalign=0,
+                ellipsize=Pango.EllipsizeMode.END,
+                lines=1,
+                max_width_chars=max_title_chars,
+                css_classes=["news-card-meta", "caption"],
+            )
+        )
+        return text
+
+    def build_news_media(
+        self, post: NewsPost, height: int, width: int = 0
+    ) -> Gtk.Widget:
+        """A área de imagem de um card, com um marcador quando não há imagem.
+
+        A moldura tem tamanho fixo e a foto entra como camada por cima. O
+        Gtk.Overlay mede pelo filho de trás, então a foto — cuja largura
+        natural é a da imagem baixada, por vezes enorme — nunca infla o card.
+        """
+        frame = Gtk.Box(
+            width_request=width or height,
+            height_request=height,
+        )
+        overlay = Gtk.Overlay(child=frame)
+        # A classe pinta o fundo e o arredondamento; o recorte é programático
+        # porque o CSS do GTK não aceita "overflow".
+        overlay.add_css_class("news-card-image")
+        overlay.set_overflow(Gtk.Overflow.HIDDEN)
+        if post.image:
+            picture = Gtk.Picture(content_fit=Gtk.ContentFit.COVER)
+            overlay.add_overlay(picture)
+            self._queue_news_thumbnail(picture, post.image)
+        else:
+            overlay.add_overlay(
+                Gtk.Image(
+                    icon_name="image-missing-symbolic",
+                    pixel_size=48 if height > 100 else 32,
+                    css_classes=["dim-label"],
+                    halign=Gtk.Align.CENTER,
+                    valign=Gtk.Align.CENTER,
+                )
+            )
+        return overlay
+
+    def build_news_card_root(
+        self, post: NewsPost, content: Gtk.Widget, style_class: str
+    ) -> Gtk.Widget:
+        """Envolve o conteúdo de um card num botão que abre a notícia."""
+        if not post.url:
+            # Sem link não há o que abrir: o card fica só como texto.
+            root = Gtk.Box(css_classes=[style_class])
+            root.append(content)
+            return root
+        button = Gtk.Button(
+            child=content,
+            css_classes=["flat", style_class],
+        )
+        button.connect("clicked", self.on_news_row_activated, post.url)
+        return button
+
+    @staticmethod
+    def build_news_meta(post: NewsPost) -> str:
+        """A linha de metadados de uma notícia: fonte, data e categoria."""
+        return " · ".join(
+            part
+            for part in (
+                post.source,
+                relative_date(post.timestamp) if post.timestamp else "",
+                post.category,
+            )
+            if part
+        )
+
+    def rebuild_news_sources_menu(self) -> None:
+        """Refaz o menu que liga e desliga as fontes de novidades.
+
+        As fontes dependem do idioma da interface — a TrinityWeb só existe em
+        pt-BR —, então o menu é refeito a cada entrada na página em vez de
+        ficar congelado desde a construção da janela.
+        """
+        for action in self._news_source_actions:
+            self.remove_action(action.get_name())
+        self._news_source_actions.clear()
+
+        disabled = set(disabled_sources())
+        section = Gio.Menu()
+        for source in all_sources(ui_language()):
+            name = f"news-source-{self._news_source_slug(source)}"
+            action = Gio.SimpleAction.new_stateful(
+                name,
+                None,
+                GLib.Variant.new_boolean(source not in disabled),
+            )
+            action.connect("change-state", self.on_news_source_changed, source)
+            self.add_action(action)
+            self._news_source_actions.append(action)
+            # O rótulo da fonte é nome próprio, mostrado como veio.
+            section.append(source, name)
+
+        menu = Gio.Menu()
+        menu.append_section(_("Fontes"), section)
+        self.news_sources_button.set_menu_model(menu)
+
+    @staticmethod
+    def _news_source_slug(source: str) -> str:
+        """Um nome de ação seguro para o rótulo de uma fonte."""
+        slug = "".join(
+            char
+            if char.isascii() and char.isalnum()
+            else "-"
+            for char in source.lower()
+        )
+        return slug.strip("-") or "fonte"
+
+    def on_news_source_changed(
+        self, action: Gio.SimpleAction, state: GLib.Variant, source: str
+    ) -> None:
+        """Uma fonte foi ligada ou desligada: guarda a escolha e refresca a página."""
+        enabled = state.get_boolean()
+        # Aceitar o novo estado é o que mantém a marca do menu em dia.
+        action.set_state(state)
+        set_source_enabled(source, enabled)
+
+        checker = self.news_checker
+        if checker is None:
+            self.rebuild_news_view()
+            self.update_news_view()
+            return
+        # Refiltrar joga fora as notícias da fonte que acabou de ser desligada
+        # e reconstrói a página pelo sinal.
+        checker.refilter()
+        if enabled:
+            # Uma fonte que acabou de ser ligada nunca foi consultada.
+            checker.check_async()
 
     def build_news_row(self, post: NewsPost) -> Gtk.ListBoxRow:
         children: list[Gtk.Widget] = []
@@ -1981,15 +2311,7 @@ class CartridgesWindow(Adw.ApplicationWindow):
         row.set_use_markup(False)
         row.set_title(post.title)
         row.set_title_lines(0)
-        if subtitle := " · ".join(
-            part
-            for part in (
-                post.source,
-                relative_date(post.timestamp) if post.timestamp else "",
-                post.category,
-            )
-            if part
-        ):
+        if subtitle := self.build_news_meta(post):
             row.set_subtitle(subtitle)
             row.set_subtitle_lines(0)
         if post.image:
@@ -2061,7 +2383,7 @@ class CartridgesWindow(Adw.ApplicationWindow):
         )
         return row
 
-    def on_news_row_activated(self, _row: Adw.ActionRow, url: str) -> None:
+    def on_news_row_activated(self, _row: Gtk.Widget, url: str) -> None:
         open_uri(url, self)
 
     def on_sort_action(self, action: Gio.SimpleAction, state: GLib.Variant) -> None:

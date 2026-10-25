@@ -1,3 +1,4 @@
+import re
 import unittest
 from pathlib import Path
 
@@ -37,6 +38,113 @@ class WindowRecorderToggleTests(unittest.TestCase):
         self.assertNotIn("shell=True", py)
         self.assertIn("gpu_screen_recorder_button", blp)
         self.assertNotIn("Abrir o GPU Screen Recorder", blp)
+
+
+class WindowNewsPortalTests(unittest.TestCase):
+    """A página de Novidades é um portal: carrossel, grade de cards e lista."""
+
+    PORTAL_WIDGETS = (
+        "news_sources_button",
+        "news_highlights_section",
+        "news_highlights_title",
+        "news_highlights_carousel",
+        "news_highlights_indicator",
+        "news_recent_section",
+        "news_recent_title",
+        "news_recent_flowbox",
+        "news_list_section",
+        "news_list_title",
+    )
+
+    def test_portal_widgets_declared_and_in_blueprint(self) -> None:
+        py = (ROOT / "cartridges" / "window.py").read_text(encoding="utf-8")
+        blp = (ROOT / "data" / "gtk" / "window.blp").read_text(encoding="utf-8")
+        for widget in self.PORTAL_WIDGETS:
+            self.assertIn(widget, py)
+            self.assertIn(widget, blp)
+
+    def test_blueprint_uses_a_carousel_with_indicator(self) -> None:
+        blp = (ROOT / "data" / "gtk" / "window.blp").read_text(encoding="utf-8")
+        self.assertIn("Adw.Carousel news_highlights_carousel", blp)
+        self.assertIn("Adw.CarouselIndicatorDots", blp)
+        self.assertIn("carousel: news_highlights_carousel", blp)
+
+    def test_three_tiers_are_built_from_the_cached_posts(self) -> None:
+        py = (ROOT / "cartridges" / "window.py").read_text(encoding="utf-8")
+        for method in (
+            "rebuild_news_highlights",
+            "rebuild_news_cards",
+            "rebuild_news_list",
+        ):
+            self.assertIn(method, py)
+        self.assertIn("_NEWS_HIGHLIGHTS", py)
+        self.assertIn("_NEWS_RECENT", py)
+
+    def test_source_filter_uses_stateful_actions(self) -> None:
+        py = (ROOT / "cartridges" / "window.py").read_text(encoding="utf-8")
+        # Um item de menu só vira caixinha de seleção se a ação tiver estado.
+        self.assertIn("Gio.SimpleAction.new_stateful", py)
+        self.assertIn("set_source_enabled", py)
+        self.assertIn("rebuild_news_sources_menu", py)
+
+    def test_news_css_avoids_properties_gtk_css_rejects(self) -> None:
+        """O CSS do GTK recusa propriedades de widget e quebra o arquivo.
+
+        max-width, overflow, xalign e ellipsize não existem no CSS do GTK: se
+        aparecerem, o provedor loga erro de parsing e descarta a regra inteira
+        (os cards perdem raio, borda e hover sem que nada quebre em código).
+        """
+        css = (ROOT / "data" / "gtk" / "style.css").read_text(encoding="utf-8")
+        marker = "── Novidades: cards"
+        self.assertIn(marker, css)
+        # Só as declarações valem: o próprio comentário do bloco avisa contra
+        # essas propriedades e citaria os nomes. O marcador fica dentro do
+        # comentário, então a referência é a primeira regra real do bloco.
+        declaracoes = re.sub(r"/\*.*?\*/", "", css, flags=re.S)
+        news_css = declaracoes[declaracoes.index(".news-hero-card {") :]
+        for rejected in ("max-width", "overflow:", "xalign", "ellipsize"):
+            self.assertNotIn(rejected, news_css)
+
+    def test_news_sections_are_vertical_boxes(self) -> None:
+        """Gtk.Box é horizontal por padrão: sem orientation as seções ficam lado a lado."""
+        blp = (ROOT / "data" / "gtk" / "window.blp").read_text(encoding="utf-8")
+        for section in (
+            "news_highlights_section",
+            "news_recent_section",
+            "news_list_section",
+        ):
+            start = blp.index(f"Box {section} {{")
+            bloco = blp[start : blp.index("}", start)]
+            self.assertIn("orientation: vertical", bloco, section)
+
+    def test_hero_page_fills_the_carousel(self) -> None:
+        """O Adw.Carousel centraliza página mais estreita que ele.
+
+        Com largura fixa, a folga (largura - página)/2 vira espaço morto nas
+        pontas e o card seguinte aparece cortado na borda do carrossel: a
+        página precisa expandir para ocupar a faixa inteira. A altura fica
+        fixa para a altura da foto mais alta não crescer o carrossel.
+        """
+        py = (ROOT / "cartridges" / "window.py").read_text(encoding="utf-8")
+        self.assertIn(
+            "Gtk.Box(hexpand=True, height_request=_NEWS_HERO_HEIGHT)", py
+        )
+        self.assertNotIn("width_request=_NEWS_HERO_WIDTH", py)
+        self.assertNotIn("_NEWS_HERO_WIDTH =", py)
+
+    def test_cards_cap_their_natural_size(self) -> None:
+        """Sem teto de largura natural a grade FlowBox vira coluna única.
+
+        O Gtk.Picture devolve a largura da foto baixada (por vezes 800 px) e o
+        Gtk.Label a largura do texto inteiro; os dois inflam o card e o FlowBox
+        deixa de caber mais de um card por linha.
+        """
+        py = (ROOT / "cartridges" / "window.py").read_text(encoding="utf-8")
+        # A moldura da imagem mede pelo filho de trás, não pela foto.
+        self.assertIn("Gtk.Overlay", py)
+        self.assertIn("max_width_chars=max_title_chars", py)
+        # Quebra só em espaços: o padrão parte a palavra no meio da linha.
+        self.assertIn("wrap_mode=Pango.WrapMode.WORD", py)
 
 
 if __name__ == "__main__":
