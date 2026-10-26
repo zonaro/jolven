@@ -855,6 +855,89 @@ template $CartridgesPreferences: Adw.PreferencesDialog {
         }
       }
     }
+
+    Adw.PreferencesGroup openrgb_group {
+      title: _("Iluminação por jogo (OpenRGB)");
+      description: _("Deixa a iluminação de memórias, placa-mãe, coolers, gabinete e periféricos acompanhar o perfil de cada jogo. A configuração permanente desses dispositivos não é alterada: o Jolven só empresta a cor durante a sessão.");
+
+      Adw.SwitchRow openrgb_switch {
+        title: _("Ativar perfis de iluminação por jogo");
+      }
+
+      Adw.ActionRow openrgb_estado_row {
+        title: _("Servidor do OpenRGB");
+        subtitle: _("Verificando…");
+        activatable-widget: openrgb_atualizar_button;
+
+        [suffix]
+        Button openrgb_atualizar_button {
+          valign: center;
+          icon-name: "view-refresh-symbolic";
+          tooltip-text: _("Verificar novamente");
+
+          styles [
+            "flat"
+          ]
+        }
+      }
+
+      Adw.ActionRow openrgb_endereco_row {
+        title: _("Endereço");
+        subtitle: _("Do servidor do SDK, normalmente 127.0.0.1:6742");
+        visible: false;
+      }
+
+      Adw.ActionRow openrgb_instalar_row {
+        title: _("Instalar o OpenRGB");
+        subtitle: _("Disponível na Flathub");
+        activatable-widget: openrgb_instalar_button;
+
+        [suffix]
+        Button openrgb_instalar_button {
+          valign: center;
+          icon-name: "software-update-available-symbolic";
+          tooltip-text: _("Instalar pelo Flatpak");
+
+          styles [
+            "flat"
+          ]
+        }
+      }
+
+      Adw.ActionRow openrgb_iniciar_row {
+        title: _("Iniciar o servidor");
+        subtitle: _("Abre o servidor em segundo plano, sem a janela do OpenRGB");
+        activatable-widget: openrgb_iniciar_button;
+
+        [suffix]
+        Button openrgb_iniciar_button {
+          valign: center;
+          icon-name: "media-playback-start-symbolic";
+          tooltip-text: _("Iniciar o servidor do OpenRGB");
+
+          styles [
+            "flat"
+          ]
+        }
+      }
+
+      Adw.ActionRow openrgb_perfis_row {
+        title: _("Perfis de iluminação");
+        subtitle: _("Crie os perfis que cada jogo vai vestir");
+        activatable-widget: openrgb_perfis_button;
+
+        [suffix]
+        Button openrgb_perfis_button {
+          valign: center;
+          icon-name: "go-next-symbolic";
+          tooltip-text: _("Abrir os perfis de iluminação");
+
+          styles [
+            "flat"
+          ]
+        }
+      }
+    }
   }
 
   Adw.PreferencesPage import_page {

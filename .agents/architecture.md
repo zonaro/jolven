@@ -15,6 +15,7 @@ jolven.in
        │    │    └─ DisplayManager ── widgets, grupos e filtros
        │    └─ importers/* ── descoberta por launcher/plataforma
        ├─ ProcessSession ── processo, retorno e tempo jogado
+       ├─ iluminacao.Coordenador ── perfis RGB por jogo (OpenRGB + fitas Tuya)
        ├─ xCloud ── catálogo remoto e navegador externo em quiosque
        └─ integrações de sistema ── gamepad, logind, áudio, luzes
 ```
@@ -151,8 +152,8 @@ fonte, sem podar os jogos já importados.
 ## Persistência, migração e backup
 
 O `FileManager` persiste a biblioteca em JSON na área de dados XDG do Jolven.
-Capas, logos, wallpapers, fitas e outros artefatos ficam em subdiretórios da
-mesma área. Configurações ficam em GSettings e segredos elegíveis ficam no Secret
+Capas, logos, wallpapers, fitas, perfis de iluminação e outros artefatos ficam
+em subdiretórios da mesma área. Configurações ficam em GSettings e segredos elegíveis ficam no Secret
 Service.
 
 Há migrações de nomes antigos do Cartridges para Jolven. A regra é copiar sem

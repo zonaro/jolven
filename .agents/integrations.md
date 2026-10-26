@@ -96,6 +96,35 @@ autenticação, chaves ou identificadores desnecessários. Ao aplicar iluminaç�
 sessão, registre estado suficiente para restaurar a condição anterior mesmo após
 erro parcial.
 
+## OpenRGB
+
+Os perfis de iluminação por jogo falam com o servidor do OpenRGB pela porta do
+SDK (`127.0.0.1:6742` por padrão), em bytes sobre TCP local: não há internet,
+conta, telemetria nem dependência nova de biblioteca
+(`cartridges/integrations/openrgb/`).
+
+- o cliente é headless e nunca abre a janela do OpenRGB;
+- o servidor é opcional e o Jolven pode instalá-lo pelo Flatpak
+  (`org.open.OpenRGB`) e iniciá-lo pela página Preferências;
+- ausência, porta ocupada por outro programa e versão incompatível são estados
+  normais da UI, não erros de inicialização;
+- toda leitura e escrita acontece fora da thread GTK, com prazo; um servidor que
+  não responde não pode prender a janela;
+- **nunca** mande `SaveMode`/`SAVEMODE`: gravar no EEPROM do hardware é efeito
+  permanente, e o contrato do Jolven é emprestar a cor e devolver a anterior;
+- a chave de um dispositivo usa número de série quando existe, e nunca índice de
+  controlador — o índice muda a cada reinício do servidor.
+
+Os perfis, os estados anteriores e o diário da sessão ficam em
+`iluminacao/perfis.json` e `iluminacao/sessao.json`, dentro da pasta de dados
+do Jolven. São dados locais, entram no backup (o diário da sessão, que é
+transitório, fica de fora) e não contêm credencial nenhuma.
+
+A regra que vale para os dois provedores (OpenRGB e Tuya) é a mesma descrita
+na seção da Tuya: aplicar exige ter guardado o estado anterior primeiro, e a
+devolução tem de ser possível mesmo depois de erro parcial ou de o app morrer
+no meio.
+
 ## Feed de atualizações e notícias
 
 Há consumo opcional de RSS do FitGirl para avisos de atualização por jogo e

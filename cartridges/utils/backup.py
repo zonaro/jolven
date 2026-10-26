@@ -38,6 +38,12 @@ _AGENDADO = "restaurar.zip"
 # Arquivos soltos na raiz da pasta do app que vão no backup. Sem a conta da
 # Tuya: ela mora no cofre do usuário, fora da pasta, e não há arquivo para levar.
 _SOLTOS = ("fitas.json", "sessions.jsonl")
+# Estado de uma sessão de iluminação em andamento nesta máquina: o que o
+# Jolven emprestou dos dispositivos e a cor de antes. É o mesmo tipo de coisa
+# que ``_CHAVES_DE_SESSAO`` deixa fora do GSettings — trocar isso por conta de
+# um backup desfaria uma sessão que nunca aconteceu neste aparelho. Os perfis,
+# que é o que a pessoa quer preservar, continuam dentro de ``iluminacao/``.
+_TRANSITORIOS = frozenset({"iluminacao/sessao.json"})
 # O que fica na pasta do app durante a troca: os logs são desta máquina e desta
 # execução, e o .zip agendado é a própria fonte da troca.
 _FICAM = frozenset({"logs", _AGENDADO})
@@ -71,6 +77,7 @@ def _extensoes() -> dict[str, tuple[str, ...]]:
         "logos": (".json", *game_logo.IMAGE_SUFFIXES),
         "wallpapers": (".json", *session_wallpaper.IMAGE_SUFFIXES),
         "fitas": (".json",),
+        "iluminacao": (".json",),
     }
 
 
@@ -165,8 +172,11 @@ def _entradas() -> list[tuple[Path, str]]:
         if not diretorio.is_dir():
             continue
         for caminho in sorted(diretorio.iterdir()):
+            nome = f"{pasta}/{caminho.name}"
+            if nome in _TRANSITORIOS:
+                continue
             if caminho.is_file() and caminho.suffix.lower() in extensoes:
-                entradas.append((caminho, f"{pasta}/{caminho.name}"))
+                entradas.append((caminho, nome))
     return entradas
 
 
@@ -221,6 +231,8 @@ def _nome_valido(nome: str, extensoes_por_pasta: dict[str, tuple[str, ...]]) -> 
     """Só o que `exportar` grava: o manifesto, um arquivo solto conhecido, ou
     ``<pasta conhecida>/<arquivo com extensão conhecida>``. Nada absoluto,
     nada com ``..``, nada em subpasta."""
+    if nome in _TRANSITORIOS:
+        return False
     if nome in (_CONFIGURACOES, *_SOLTOS):
         return True
     if "\\" in nome or ":" in nome:

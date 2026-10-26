@@ -5,6 +5,7 @@ foreach name : [
   'fita-wizard',
   'game',
   'integrations',
+  'lighting-profiles',
   'logo-picker',
   'preferences',
   'image-picker',

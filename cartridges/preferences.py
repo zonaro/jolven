@@ -22,11 +22,13 @@
 import logging
 import math
 import re
+import subprocess
 import threading
 from shutil import which
 from datetime import date
 from pathlib import Path
 from shutil import rmtree
+from time import sleep
 from typing import Any, Callable, Optional
 
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk
@@ -64,6 +66,9 @@ from cartridges.utils import global_shortcut
 from cartridges.utils import session_fita
 from cartridges.utils.create_dialog import create_dialog
 from cartridges.utils.na_tela import entregar_na_tela
+
+#: Tamanho máximo de um erro de instalação mostrado numa linha de Preferências.
+_MAXIMO_AVISO = 200
 
 
 # ── Aparência: tema do aplicativo ─────────────────────────────────────────
@@ -533,6 +538,16 @@ class CartridgesPreferences(Adw.PreferencesDialog):
     fita_configurar_button: Gtk.Button = Gtk.Template.Child()
     fita_testar_row: Adw.ActionRow = Gtk.Template.Child()
     fita_testar_button: Gtk.Button = Gtk.Template.Child()
+    openrgb_switch: Adw.SwitchRow = Gtk.Template.Child()
+    openrgb_estado_row: Adw.ActionRow = Gtk.Template.Child()
+    openrgb_atualizar_button: Gtk.Button = Gtk.Template.Child()
+    openrgb_endereco_row: Adw.ActionRow = Gtk.Template.Child()
+    openrgb_instalar_row: Adw.ActionRow = Gtk.Template.Child()
+    openrgb_instalar_button: Gtk.Button = Gtk.Template.Child()
+    openrgb_iniciar_row: Adw.ActionRow = Gtk.Template.Child()
+    openrgb_iniciar_button: Gtk.Button = Gtk.Template.Child()
+    openrgb_perfis_row: Adw.ActionRow = Gtk.Template.Child()
+    openrgb_perfis_button: Gtk.Button = Gtk.Template.Child()
 
     appearance_page: Adw.PreferencesPage = Gtk.Template.Child()
     appearance_group: Adw.PreferencesGroup = Gtk.Template.Child()
@@ -1014,6 +1029,7 @@ class CartridgesPreferences(Adw.PreferencesDialog):
         self.setup_recorder_page()
         self.setup_fita_rows()
         self.reler_fitas()
+        self.setup_openrgb_rows()
         self.setup_appearance_page()
         self.setup_steam_group()
         # As páginas internas do AdwPreferencesDialog só entram na árvore quando
@@ -1883,6 +1899,165 @@ class CartridgesPreferences(Adw.PreferencesDialog):
         )
         self.fita_cor_app_reset.connect("clicked", self.voltar_ao_roxo)
         self.session_fita_switch.connect("notify::active", self.arrancar_fitas)
+
+    # -- OpenRGB ------------------------------------------------------
+
+    def setup_openrgb_rows(self) -> None:
+        """Interruptor, teste de conexão e as ações do OpenRGB."""
+        self.openrgb_switch.set_active(shared.schema.get_boolean("openrgb"))
+        self.openrgb_switch.connect("notify::active", self.ligar_openrgb)
+        self.openrgb_atualizar_button.connect("clicked", self.verificar_openrgb)
+        self.openrgb_instalar_button.connect("clicked", self.instalar_openrgb)
+        self.openrgb_iniciar_button.connect("clicked", self.iniciar_servidor_openrgb)
+        self.openrgb_perfis_button.connect("clicked", self.abrir_perfis_iluminacao)
+        # A sondagem abre soquete e pode esperar segundos por um servidor que
+        # não responde: nunca na thread da janela.
+        self.verificar_openrgb()
+
+    def ligar_openrgb(self, linha: Adw.SwitchRow, *_args: Any) -> None:
+        shared.schema.set_boolean("openrgb", bool(linha.get_active()))
+
+    def verificar_openrgb(self, *_args: Any) -> None:
+        self.openrgb_estado_row.set_subtitle(_("Verificando…"))
+        host = (shared.schema.get_string("openrgb-host") or "").strip()
+        porta = shared.schema.get_int("openrgb-port")
+        threading.Thread(
+            target=self._sondar_openrgb,
+            args=(host, porta),
+            daemon=True,
+            name="sondar-openrgb",
+        ).start()
+
+    def _sondar_openrgb(self, host: str, porta: int) -> None:
+        from cartridges.integrations.openrgb import protocol  # noqa: PLC0415
+        from cartridges.integrations.openrgb import detection  # noqa: PLC0415
+
+        try:
+            estado = detection.sondar(
+                host or protocol.DEFAULT_HOST, porta or protocol.DEFAULT_PORT
+            )
+        except Exception:  # pylint: disable=broad-except
+            logging.exception("Falha ao sondar o servidor do OpenRGB")
+            estado = None
+        entregar_na_tela(self.mostrar_estado_openrgb, estado, host, porta)
+
+    def mostrar_estado_openrgb(self, estado: Any, host: str, porta: int) -> None:
+        from cartridges.integrations.openrgb import detection  # noqa: PLC0415
+        from cartridges.integrations.openrgb import protocol  # noqa: PLC0415
+
+        rotulo = f"{host or protocol.DEFAULT_HOST}:{porta or protocol.DEFAULT_PORT}"
+        self.openrgb_endereco_row.set_visible(True)
+        self.openrgb_endereco_row.set_subtitle(rotulo)
+        self.openrgb_instalar_row.set_visible(estado is None or not estado.instalado)
+        # O servidor só vale a pena iniciar quando ele é quem não respondeu.
+        self.openrgb_iniciar_row.set_visible(
+            estado is not None
+            and estado.instalado
+            and estado.status
+            in (detection.STATUS_PARADO, detection.STATUS_INCOMPATIVEL)
+        )
+        self.openrgb_estado_row.set_subtitle(self._rotulo_openrgb(estado))
+
+    @staticmethod
+    def _rotulo_openrgb(estado: Any) -> str:
+        from cartridges.integrations.openrgb import detection  # noqa: PLC0415
+
+        if estado is None:
+            return _("Não foi possível verificar o servidor")
+        if not estado.instalado:
+            return _("OpenRGB não está instalado")
+        if estado.status == detection.STATUS_OK:
+            return _("Servidor no ar, {} dispositivos").format(estado.quantidade)
+        if estado.status == detection.STATUS_VAZIO:
+            return _("Servidor no ar, nenhum dispositivo detectado")
+        if estado.status == detection.STATUS_PARADO:
+            return _("Instalado, mas o servidor não está respondendo")
+        if estado.status == detection.STATUS_INCOMPATIVEL:
+            return _("Há algo na porta, mas não fala o protocolo do OpenRGB")
+        if estado.status == detection.STATUS_SEM_PERMISSAO:
+            return _("Sem permissão para acessar os dispositivos")
+        if estado.status == detection.STATUS_AUSENTE:
+            return _("OpenRGB não está instalado")
+        return _("Falha ao falar com o servidor")
+
+    def instalar_openrgb(self, *_args: Any) -> None:
+        from cartridges.integrations.openrgb import detection  # noqa: PLC0415
+        from cartridges.utils.integrations import instalar_flatpak  # noqa: PLC0415
+
+        self.openrgb_instalar_button.set_sensitive(False)
+        self.openrgb_instalar_row.set_subtitle(_("Instalando…"))
+
+        def trabalhar() -> None:
+            try:
+                instalar_flatpak(detection.FLATPAK_ID)
+                ok, erro = True, ""
+            except Exception as exception:  # pylint: disable=broad-except
+                ok, erro = False, str(exception)
+            entregar_na_tela(self._terminou_instalacao, ok, erro)
+
+        threading.Thread(target=trabalhar, daemon=True, name="instalar-openrgb").start()
+
+    def _terminou_instalacao(self, ok: bool, erro: str) -> None:
+        self.openrgb_instalar_button.set_sensitive(True)
+        if not ok:
+            self.openrgb_instalar_row.set_subtitle(
+                erro.strip()[:_MAXIMO_AVISO] or _("Não foi possível instalar")
+            )
+            return
+        self.openrgb_instalar_row.set_subtitle(_("Instalado"))
+        self.verificar_openrgb()
+
+    def iniciar_servidor_openrgb(self, *_args: Any) -> None:
+        from cartridges.integrations.openrgb import detection  # noqa: PLC0415
+        from cartridges.integrations.openrgb import protocol  # noqa: PLC0415
+
+        self.openrgb_iniciar_button.set_sensitive(False)
+        host = (shared.schema.get_string("openrgb-host") or "").strip()
+        porta = shared.schema.get_int("openrgb-port")
+        comando = detection.comando_servidor(
+            host=host or protocol.DEFAULT_HOST,
+            porta=porta or protocol.DEFAULT_PORT,
+        )
+        if not comando:
+            self.openrgb_iniciar_button.set_sensitive(True)
+            self.openrgb_iniciar_row.set_subtitle(_("OpenRGB não está instalado"))
+            return
+
+        def trabalhar() -> None:
+            try:
+                subprocess.Popen(
+                    comando,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    stdin=subprocess.DEVNULL,
+                    start_new_session=True,
+                )
+                # O servidor demora para abrir o porto; sem esta espera a
+                # sondagem imediata diria "parado" e a pessoa tentaria de novo.
+                sleep(3)
+                ok = True
+            except OSError as exception:
+                logging.warning("Não foi possível iniciar o OpenRGB: %s", exception)
+                ok = False
+            entregar_na_tela(self._servidor_iniciado, ok)
+
+        threading.Thread(target=trabalhar, daemon=True, name="iniciar-openrgb").start()
+
+    def _servidor_iniciado(self, ok: bool) -> None:
+        self.openrgb_iniciar_button.set_sensitive(True)
+        if not ok:
+            self.openrgb_iniciar_row.set_subtitle(
+                _("Não foi possível iniciar o servidor")
+            )
+            return
+        self.openrgb_iniciar_row.set_subtitle(_("Servidor solicitado; verificando…"))
+        self.verificar_openrgb()
+
+    def abrir_perfis_iluminacao(self, *_args: Any) -> None:
+        """Fecha as Preferências e abre a página de perfis."""
+        self.close()
+        if shared.win is not None:
+            shared.win.open_lighting()
 
     def reler_fitas(self) -> None:
         self.fita_brilho_row.handler_block(self._fita_brilho_changed_id)

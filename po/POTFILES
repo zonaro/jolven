@@ -7,6 +7,7 @@ data/gtk/fita-wizard.blp
 data/gtk/game.blp
 data/gtk/image-picker.blp
 data/gtk/integrations.blp
+data/gtk/lighting-profiles.blp
 data/gtk/logo-picker.blp
 data/gtk/preferences.blp
 data/gtk/shortcuts-dialog.blp
@@ -21,6 +22,7 @@ cartridges/details_dialog.py
 cartridges/game.py
 cartridges/game_session.py
 cartridges/integrations_page.py
+cartridges/lighting_page.py
 cartridges/onscreen_keyboard.py
 cartridges/preferences.py
 cartridges/botao_tarefas.py
@@ -77,3 +79,4 @@ cartridges/store/managers/sgdb_manager.py
 cartridges/store/managers/thegamesdb_manager.py
 
 cartridges/integrations/steam_skin/recovery.py
+cartridges/iluminacao/modelo.py

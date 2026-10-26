@@ -7,8 +7,8 @@ compila Blueprint para `.ui`, empacota esses arquivos no GResource e as classes
 Python os carregam por `Gtk.Template`.
 
 As telas principais incluem janela/biblioteca, cartão de jogo, preferências,
-detalhes, seletores de capa/logo/wallpaper, assistente de fitas, histórico de
-sessão e visualização de tarefas. Antes de criar um novo padrão, procure um
+detalhes, seletores de capa/logo/wallpaper, assistente de fitas, perfis de
+iluminação, histórico de sessão e visualização de tarefas. Antes de criar um novo padrão, procure um
 componente com o mesmo papel nessas telas.
 
 ## Navegação

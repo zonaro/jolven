@@ -200,6 +200,10 @@ class Game(Gtk.Box):
     # Ordered absolute paths of PWAD/PK3 mods loaded after the IWAD via
     # `-file` at launch. Empty means vanilla.
     uzdoom_mods: list[str] = []
+    # Perfil de iluminação (RGB) aplicado enquanto este jogo roda. "" é
+    # nenhum: a iluminação não é tocada. Guarda o id do perfil, nunca o
+    # conteúdo dele — mudar o perfil muda todos os jogos que o usam.
+    rgb_profile_id: str = ""
 
     @property
     def has_update(self) -> bool:
@@ -379,17 +383,23 @@ class Game(Gtk.Box):
 
         GLib.timeout_add_seconds(2, check_launcher)
 
-        # Automatic playtime tracking. Skipped when disabled, when another
-        # session is already running it is ended first, and when the game
-        # is not followable (launcher URI with no path) the launch
-        # behaves exactly as before.
+        # Playtime tracking and the per-game lighting profile both need to know
+        # when the process starts and stops, so either one is enough to open a
+        # session. Skipped when neither applies, when another session is
+        # already running (it is ended first), and when the game is not
+        # followable (launcher URI with no path) the launch behaves exactly as
+        # before.
+        sessao_pedida = shared.schema.get_boolean("playtime-tracking")
+        luz_pedida = bool(str(getattr(self, "rgb_profile_id", "") or "").strip())
         session = None
-        if shared.schema.get_boolean("playtime-tracking"):
+        if sessao_pedida or luz_pedida:
             from cartridges.process_session import ProcessSession
 
             if ProcessSession.active is not None:
                 ProcessSession.active.stop(record=True)
-            candidate = ProcessSession(self, launcher.pid)
+            candidate = ProcessSession(
+                self, launcher.pid, recordar_tempo=sessao_pedida
+            )
             if (
                 candidate.launcher_pid
                 or candidate.exe_name
@@ -401,10 +411,13 @@ class Game(Gtk.Box):
                 session = candidate
             else:
                 logging.debug(
-                    "%s is not followable, skipping playtime tracking", self.name
+                    "%s is not followable, skipping session tracking", self.name
                 )
 
-        if session is not None:
+        # Arming the recorder stays tied to playtime tracking: a session opened
+        # only for lighting must not start recording just because the game
+        # opted into auto-record under a previous configuration.
+        if session is not None and sessao_pedida:
             self._arm_auto_record(session)
 
         if (

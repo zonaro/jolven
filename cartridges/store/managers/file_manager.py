@@ -102,6 +102,7 @@ class FileManager(AsyncManager):
             "is_launcher",
             "fundo_biblioteca",
             "uzdoom_mods",
+            "rgb_profile_id",
         )
 
         json.dump(

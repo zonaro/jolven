@@ -197,6 +197,11 @@ _REGISTRO: tuple[Integracao, ...] = (
         _("Grava jogos direto da GPU, sem pesar no desempenho"),
         "com.dec05eba.gpu_screen_recorder", "gpu-screen-recorder",
     ),
+    Integracao(
+        "openrgb", _("OpenRGB"), "ferramentas",
+        _("Controla a iluminação RGB de memórias, placas, coolers e periféricos"),
+        "org.openrgb.OpenRGB", "openrgb",
+    ),
 )
 
 

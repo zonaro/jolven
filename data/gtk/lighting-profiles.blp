@@ -1,0 +1,146 @@
+using Gtk 4.0;
+using Adw 1;
+
+// Página de perfis de iluminação. A lista de perfis e o editor de cada
+// dispositivo são montados em Python (`cartridges/lighting_page.py`), porque
+// dependem do que a máquina tem conectado e do conteúdo do arquivo de perfis.
+// Só a estrutura, o pilha de estados e os botões de ação moram aqui.
+template $LightingPage: Adw.NavigationPage {
+  title: _("Perfis de iluminação");
+  tag: "lighting";
+
+  Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {
+      [end]
+      Button lighting_novo_button {
+        icon-name: "list-add-symbolic";
+        tooltip-text: _("Criar um perfil");
+      }
+
+      Button lighting_testar_button {
+        icon-name: "media-playback-start-symbolic";
+        tooltip-text: _("Ver o perfil nos dispositivos");
+        visible: false;
+      }
+
+      Button lighting_atualizar_button {
+        icon-name: "view-refresh-symbolic";
+        tooltip-text: _("Atualizar");
+      }
+    }
+
+    Stack lighting_stack {
+      transition-type: crossfade;
+
+      StackPage {
+        name: "loading";
+
+        child: Box {
+          orientation: vertical;
+          spacing: 12;
+          halign: center;
+          valign: center;
+          hexpand: true;
+          vexpand: true;
+
+          Spinner {
+            spinning: true;
+            halign: center;
+          }
+
+          Label {
+            label: _("Procurando dispositivos de iluminação…");
+            justify: center;
+            styles ["dim-label"]
+          }
+        };
+      }
+
+      StackPage {
+        name: "empty";
+
+        child: Box {
+          orientation: vertical;
+          spacing: 12;
+          halign: center;
+          valign: center;
+          hexpand: true;
+          vexpand: true;
+
+          Image {
+            icon-name: "preferences-desktop-animations-symbolic";
+            icon-size: large;
+          }
+
+          Label {
+            label: _("Nenhum perfil de iluminação ainda");
+            styles ["title-3"]
+          }
+
+          Label {
+            label: _("Crie um perfil, escolha os dispositivos e diga a qual jogo ele pertence.");
+            justify: center;
+            wrap: true;
+            styles ["dim-label"]
+          }
+        };
+      }
+
+      StackPage {
+        name: "edit";
+
+        child: ScrolledWindow {
+          hexpand: true;
+          vexpand: true;
+          hscrollbar-policy: never;
+
+          Adw.Clamp {
+            maximum-size: 760;
+            tightening-threshold: 560;
+
+            Box {
+              orientation: vertical;
+              spacing: 24;
+              margin-top: 18;
+              margin-bottom: 18;
+              margin-start: 12;
+              margin-end: 12;
+
+              Box {
+                orientation: vertical;
+                spacing: 6;
+
+                Label {
+                  label: _("Perfis");
+                  xalign: 0;
+                  styles ["heading"]
+                }
+
+                Label {
+                  label: _("Um perfil é o conjunto de cores que vários dispositivos vestem durante a sessão do jogo.");
+                  xalign: 0;
+                  wrap: true;
+                  styles ["dim-label"]
+                }
+
+                ListBox lighting_perfis_list {
+                  selection-mode: single;
+
+                  styles [
+                    "boxed-list"
+                  ]
+                }
+              }
+
+              Adw.PreferencesGroup lighting_dispositivos_group {
+                title: _("Dispositivos do perfil");
+                description: _("Só os dispositivos incluídos mudam; os demais continuam como estão.");
+              }
+            }
+          }
+        };
+      }
+    }
+  }
+}

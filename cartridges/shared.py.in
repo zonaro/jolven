@@ -183,6 +183,7 @@ logos_dir = data_dir / "jolven" / "logos"
 wallpapers_dir = data_dir / "jolven" / "wallpapers"
 fitas_dir = data_dir / "jolven" / "fitas"
 fitas_arquivo = data_dir / "jolven" / "fitas.json"
+iluminacao_dir = data_dir / "jolven" / "iluminacao"
 
 # Caminhos legados (leitura/compatibilidade apenas).
 legacy_app_dir = data_dir / "cartridges"

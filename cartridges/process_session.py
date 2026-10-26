@@ -52,7 +52,7 @@ from gi.repository import Adw, GLib
 
 from cartridges import shared
 from cartridges.game import Game
-from cartridges.utils import session_log
+from cartridges.utils import session_fita, session_log
 from cartridges.utils.format_playtime import format_playtime
 from cartridges.utils.process_monitor import (
     exe_name_from_command,
@@ -92,9 +92,23 @@ class ProcessSession:
     # poll after waking. Such a gap is credited as a single poll interval.
     MAX_GAP = POLL_INTERVAL + 30
 
-    def __init__(self, game: Game, launcher_pid: int = 0) -> None:
+    def __init__(
+        self, game: Game, launcher_pid: int = 0, recordar_tempo: bool = True
+    ) -> None:
         self.game = game
         self.launcher_pid = launcher_pid
+        #: ``False`` quando a sessão existe só pela iluminação: o processo é
+        #: observado do mesmo jeito, mas nada é somado ao tempo de jogo,
+        #: gravado em disco nem mostrado como "jogando agora". Sem isso, ligar
+        #: um perfil RGB inventaria horas que o usuário jogou mas não pediu
+        #: para registrar.
+        self.recordar_tempo = recordar_tempo
+        #: O perfil deste jogo tomou as fitas Tuya para si? Decide se o ciclo
+        #: antigo das fitas (cor da capa) ainda deve rodar no fim da sessão.
+        self.fitas_do_perfil = False
+        #: A tela de sessão foi aberta por esta sessão? Guardar o fato evita
+        #: esconder uma tela que nunca apareceu.
+        self.tela_de_sessao = False
         # A user-configured process name wins when present (getattr: the
         # details-dialog fields land in a later commit); otherwise fall back
         # to the executable named by the launch command itself.
@@ -227,6 +241,8 @@ class ProcessSession:
             GLib.source_remove(self.poll_id)
             self.poll_id = 0
         if self.started:
+            self._terminar_iluminacao()
+        if self.started and self.recordar_tempo:
             self._accumulate()
             session_log.record(self.game.game_id, self.session_seconds)
             self.game.save()
@@ -254,7 +270,9 @@ class ProcessSession:
                     self.game.name,
                     self.waited,
                 )
-                if shared.win is not None:
+                self._comecar_iluminacao()
+                if self.recordar_tempo and shared.win is not None:
+                    self.tela_de_sessao = True
                     shared.win.show_session_blocker(self.game)
             else:
                 self.waited += self.POLL_INTERVAL
@@ -297,6 +315,46 @@ class ProcessSession:
 
         return GLib.SOURCE_CONTINUE
 
+    # -- iluminação ---------------------------------------------------
+
+    def _comecar_iluminacao(self) -> None:
+        """Veste o perfil RGB do jogo e decide quem manda nas fitas Tuya.
+
+        A iluminação acompanha o **processo**, não o rastreio de tempo: quem
+        ligou um perfil quer a cor do jogo mesmo sem registrar horas. Por isso
+        este caminho mora aqui e não em ``show_session_blocker``, que só existe
+        quando o rastreio está ligado.
+
+        Quando o perfil cita fita Tuya, o ciclo antigo (cor tirada da capa)
+        fica de fora desta sessão: os dois caminhos escreveriam no mesmo
+        módulo e a cor final dependeria de quem respondesse por último.
+        """
+        from cartridges.iluminacao import coordenador  # noqa: PLC0415
+
+        try:
+            self.fitas_do_perfil = bool(coordenador.comecar(self.game))
+        except Exception:  # pylint: disable=broad-except
+            logging.exception(
+                "Could not start the lighting profile for %s", self.game.name
+            )
+            self.fitas_do_perfil = False
+        if not self.fitas_do_perfil:
+            session_fita.comecar(self.game)
+
+    def _terminar_iluminacao(self) -> None:
+        """Devolve a iluminação ao que era antes, ou ao próximo jogo da pilha."""
+        from cartridges.iluminacao import coordenador  # noqa: PLC0415
+
+        try:
+            fitas = bool(coordenador.terminar(self.game))
+        except Exception:  # pylint: disable=broad-except
+            logging.exception(
+                "Could not end the lighting profile for %s", self.game.name
+            )
+            fitas = self.fitas_do_perfil
+        if not fitas:
+            session_fita.voltar()
+
     def _accumulate(self) -> None:
         """Add the time since the last tick to the running totals.
 
@@ -304,6 +362,11 @@ class ProcessSession:
         jump (NTP, manual changes, sleep/wake drift) and a forward jump would
         be credited as playtime the game never had.
         """
+        if not self.recordar_tempo:
+            # Sessão que existe só pela iluminação. Somar aqui inventaria
+            # minutos num jogo que o usuário não pediu para cronometrar.
+            self.last_tick = monotonic()
+            return
         now = monotonic()
         if self.counting and self.last_tick is not None:
             elapsed = int(now - self.last_tick)
@@ -326,6 +389,8 @@ class ProcessSession:
 
     def _maybe_persist(self) -> None:
         """Save accumulated time at most once per PERSIST_INTERVAL."""
+        if not self.recordar_tempo:
+            return
         now = monotonic()
         if now - self.last_persist >= self.PERSIST_INTERVAL:
             self.game.save()
@@ -337,7 +402,7 @@ class ProcessSession:
         Used on application shutdown, when widgets may already be gone but
         the session's last stretch of playtime still has to reach the disk.
         """
-        if self.started:
+        if self.started and self.recordar_tempo:
             self._accumulate()
             self.game.save()
 
@@ -351,7 +416,14 @@ class ProcessSession:
         if ProcessSession.active is self:
             ProcessSession.active = None
 
-        if shared.win is not None:
+        # A iluminação termina independentemente de a tela de sessão ter
+        # aparecido: quem ligou um perfil sem rastrear tempo também espera que
+        # o hardware volte ao que era.
+        if self.started:
+            self._terminar_iluminacao()
+
+        if self.tela_de_sessao and shared.win is not None:
+            self.tela_de_sessao = False
             shared.win.hide_session_blocker()
             if shared.runtime.is_game_mode:
                 # Present is the compositor-supported focus request. It also
@@ -359,7 +431,7 @@ class ProcessSession:
                 # original launcher PID has long since exited.
                 shared.win.present()
 
-        if record and self.started:
+        if record and self.started and self.recordar_tempo:
             # Capture the final running stretch (a no-op if already paused).
             self._accumulate()
             # Recorded after the accumulate and before the save, so the

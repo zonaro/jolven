@@ -94,6 +94,7 @@ from cartridges.store.managers.sunshine_manager import SunshineManager
 from cartridges.store.managers.thegamesdb_manager import TheGamesDBManager
 from cartridges.store.store import Store
 from cartridges.themes.manager import ThemeManager
+from cartridges.iluminacao import coordenador as iluminacao
 from cartridges.utils import backup, session_fita, session_wallpaper
 from cartridges.utils.install_size import InstallSizeSweep
 from cartridges.utils.na_tela import entregar_na_tela
@@ -556,6 +557,10 @@ class CartridgesApplication(Adw.Application):
         self.restauracao_falhou = backup.aplicar_pendente() is False
         session_wallpaper.restaurar_orfaos()
         session_fita.abrir()
+        # Devolve a iluminação que uma execução anterior deixou vestida de um
+        # jogo que já acabou. Roda na thread de trabalho do coordenador: o
+        # servidor do OpenRGB pode não estar de pé, e a janela não espera.
+        iluminacao.restaurar_orfaos()
         from cartridges.utils import app_icon
 
         app_icon.ensure()
@@ -1152,6 +1157,10 @@ class CartridgesApplication(Adw.Application):
         if self.updates_checker is not None:
             self.updates_checker.stop()
         session_wallpaper.restaurar()
+        # A iluminação termina antes das fitas: o coordenador devolve o estado
+        # de antes do jogo, e só depois o ciclo do app devolve o de antes do
+        # app. Na ordem inversa, a cor do app sobrescreveria a devolução.
+        iluminacao.fechar()
         session_fita.fechar()
         Gio.Application.do_shutdown(self)
 

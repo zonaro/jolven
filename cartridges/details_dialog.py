@@ -103,6 +103,7 @@ class DetailsDialog(Adw.Dialog):
     fita_amostra: Gtk.DrawingArea = Gtk.Template.Child()
     fita_color_button: Gtk.ColorChooserWidget = Gtk.Template.Child()
     fita_brilho_row: Adw.SpinRow = Gtk.Template.Child()
+    rgb_perfil_row: Adw.ComboRow = Gtk.Template.Child()
     executable_group: Adw.PreferencesGroup = Gtk.Template.Child()
     updates_group: Adw.PreferencesGroup = Gtk.Template.Child()
     profile_gamemode: Adw.ComboRow = Gtk.Template.Child()
@@ -137,6 +138,8 @@ class DetailsDialog(Adw.Dialog):
     _fita_mostrada: Optional[session_fita.Cor] = None
     _fita_redefinir: bool = False
     _fita_previa_usada: bool = False
+    _rgb_perfil_id: str = ""
+    _rgb_perfis_ids: list[str] = [""]
 
     def __init__(self, game: Optional[Game] = None, **kwargs: Any):
         super().__init__(**kwargs)
@@ -152,6 +155,10 @@ class DetailsDialog(Adw.Dialog):
         self.status.set_model(
             Gtk.StringList.new([_("Sem status"), *STATUS_LABELS.values()])
         )
+
+        # O seletor é montado antes do bloco ``if self.game:`` porque é lá que
+        # a escolha gravada no jogo é devolvida para a caixa.
+        self.montar_perfis_iluminacao()
 
         self.rating_buttons: list[Gtk.Button] = []
         for value in range(1, 6):
@@ -223,6 +230,7 @@ class DetailsDialog(Adw.Dialog):
             self.update_wallpaper_row()
             self.update_fundo_row()
             self.atualizar_fita()
+            self.selecionar_perfil_iluminacao(self.game.rgb_profile_id)
             if self.game.zerado:
                 for widget in (
                     self.wallpaper_row,
@@ -320,6 +328,7 @@ class DetailsDialog(Adw.Dialog):
         )
         self.fita_amostra.set_draw_func(self.desenhar_amostra)
         self.fita_brilho_row.connect("notify::value", self.previa_da_fita)
+        self.rgb_perfil_row.connect("notify::selected", self.mudar_perfil_iluminacao)
         self.connect("closed", lambda *_: self.encerrar_previa())
         self.file_chooser_button.connect("clicked", self.choose_executable)
         self.apply_button.connect("clicked", self.apply_preferences)
@@ -582,6 +591,55 @@ class DetailsDialog(Adw.Dialog):
             return session_fita.cor_do_app()
         return session_fita.cor_do_jogo(self.game, self._fita_redefinir)
 
+    # -- Perfil de iluminação por jogo --------------------------------
+
+    def montar_perfis_iluminacao(self) -> None:
+        """Enche o seletor com os perfis de iluminação que existem.
+
+        A leitura é um arquivo pequeno de configuração local — a mesma que a
+        página de perfis já faz — então não merece thread própria; um repositório
+        vazio devolve lista vazia e a caixa fica só com "Nenhum".
+        """
+        from cartridges.iluminacao.perfis import Repositorio  # noqa: PLC0415
+
+        try:
+            perfis = Repositorio().carregar()
+        except Exception:  # pylint: disable=broad-except
+            perfis = []
+        self._rgb_perfis_ids = ["", *(perfil.id for perfil in perfis)]
+        self.rgb_perfil_row.set_model(
+            Gtk.StringList.new(
+                [_("Nenhum"), *(perfil.nome for perfil in perfis)]
+            )
+        )
+        if len(perfis) == 0:
+            self.rgb_perfil_row.set_subtitle(
+                _("Nenhum perfil ainda — crie um em Preferências, Iluminação")
+            )
+        else:
+            self.rgb_perfil_row.set_subtitle(
+                _("Vestido na sessão deste jogo; ao fechar, tudo volta ao que era")
+            )
+
+    def selecionar_perfil_iluminacao(self, identificador: str) -> None:
+        """Devolve ao seletor a escolha gravada no jogo (ou "Nenhum")."""
+        if identificador not in self._rgb_perfis_ids:
+            # O perfil foi apagado depois: melhor mostrar "Nenhum" do que uma
+            # caixa apontando para nada.
+            self._rgb_perfil_id = ""
+            self.rgb_perfil_row.set_selected(0)
+            return
+        indice = self._rgb_perfis_ids.index(identificador)
+        self._rgb_perfil_id = identificador
+        self.rgb_perfil_row.set_selected(indice)
+
+    def mudar_perfil_iluminacao(
+        self, linha: Adw.ComboRow, *_args: Any
+    ) -> None:
+        indice = int(linha.get_selected())
+        if 0 <= indice < len(self._rgb_perfis_ids):
+            self._rgb_perfil_id = self._rgb_perfis_ids[indice]
+
     def atualizar_fita(self) -> None:
         if self.game is None or not session_fita.fitas():
             self._fita_mostrada = None
@@ -783,6 +841,7 @@ class DetailsDialog(Adw.Dialog):
             self.profile_process_executable.get_text().strip()
         )
         self.game.auto_record = self.profile_auto_record.get_active()
+        self.game.rgb_profile_id = self._rgb_perfil_id
 
         if self.game.game_id in shared.win.game_covers.keys():
             shared.win.game_covers[self.game.game_id].animation = None

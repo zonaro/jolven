@@ -275,6 +275,15 @@
     <key name="session-fita" type="b">
       <default>false</default>
     </key>
+    <key name="openrgb" type="b">
+      <default>false</default>
+    </key>
+    <key name="openrgb-host" type="s">
+      <default>""</default>
+    </key>
+    <key name="openrgb-port" type="i">
+      <default>0</default>
+    </key>
     <key name="game-mode-use-gamemode" type="b">
       <default>false</default>
     </key>

@@ -15,6 +15,7 @@ install_subdir('errors', install_dir: moduledir)
 install_subdir('recorder', install_dir: moduledir)
 install_subdir('themes', install_dir: moduledir)
 install_subdir('integrations', install_dir: moduledir)
+install_subdir('iluminacao', install_dir: moduledir)
 
 # Versão de compilação (Fixes #6): regenerada a cada `meson compile` com a
 # data atual (YY.DDD.HHMM via build-aux/write-version.py). Tem precedência
@@ -44,6 +45,7 @@ install_data(
     'game_cover.py',
     'game_session.py',
     'integrations_page.py',
+    'lighting_page.py',
     'onscreen_keyboard.py',
     'keyboard_emulator.py',
     'logo_picker.py',

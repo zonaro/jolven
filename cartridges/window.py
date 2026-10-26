@@ -44,9 +44,10 @@ from cartridges.gamepad_visual import GamepadVisual
 from cartridges.game import Game, STATUS_LABELS, status_label
 from cartridges.game_cover import GameCover
 from cartridges.integrations_page import IntegrationsPage
+from cartridges.lighting_page import LightingPage
 from cartridges.onscreen_keyboard import OnscreenKeyboardDialog
 from cartridges.session_history import SessionHistoryDialog
-from cartridges.utils import agrupamento, launcher, restauracao, session_fita, session_log, session_wallpaper, tarefas
+from cartridges.utils import agrupamento, launcher, restauracao, session_log, session_wallpaper, tarefas
 from cartridges.utils.animated_flow_box import AnimatedFlowBox
 from cartridges.utils.format_playtime import format_playtime, format_stopwatch
 from cartridges.utils.install_size import format_size
@@ -594,6 +595,9 @@ class CartridgesWindow(Adw.ApplicationWindow):
 
         # Página Integrações (`app.integrations`): criada na primeira abertura.
         self.integracoes_page: Optional[IntegrationsPage] = None
+
+        # Página de perfis de iluminação: criada na primeira abertura.
+        self.lighting_page: Optional[LightingPage] = None
 
         self._news_thumb_cache: dict[str, Gdk.Texture] = {}
         self._news_thumb_pending: dict[str, list[Gtk.Picture]] = {}
@@ -1826,6 +1830,15 @@ class CartridgesWindow(Adw.ApplicationWindow):
         self.integracoes_page.atualizar()
         self.navigation_view.push(self.integracoes_page)
 
+    def open_lighting(self, *_args: Any) -> None:
+        """Abre a página Perfis de iluminação, criando-a na primeira vez."""
+        if self.lighting_page is None:
+            self.lighting_page = LightingPage()
+        if self.navigation_view.get_visible_page() == self.lighting_page:
+            return
+        self.lighting_page.atualizar()
+        self.navigation_view.push(self.lighting_page)
+
     def attach_news_checker(self, checker: Any) -> None:
         self.news_checker = checker
         self._news_handler_ids = [
@@ -2931,7 +2944,9 @@ class CartridgesWindow(Adw.ApplicationWindow):
 
         if shared.schema.get_boolean("session-wallpaper"):
             session_wallpaper.comecar(game)
-        session_fita.comecar(game)
+        # A iluminação não é mais daqui: ela acompanha o processo em
+        # `ProcessSession`, que existe mesmo com o rastreio de tempo desligado.
+        # Manter as duas cópias aqui faria a fita trocar de cor duas vezes.
 
     def hide_session_blocker(self) -> None:
         self.session_blocker.set_visible(False)
@@ -2945,7 +2960,6 @@ class CartridgesWindow(Adw.ApplicationWindow):
             self.session_timer_id = 0
         self.session_blocker_timer.set_visible(False)
         session_wallpaper.restaurar()
-        session_fita.voltar()
 
     def on_session_blocker_clicked(self, *_args: Any) -> None:
         from cartridges.process_session import ProcessSession

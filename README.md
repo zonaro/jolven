@@ -84,6 +84,22 @@ Jolven talks to your **Tuya / Smart Life LED strips** over your local network:
 
 One-time setup with a friendly wizard, credentials stored encrypted, and from then on it's all local and automatic. Movie night energy, every game night.
 
+### One lighting profile for the whole battlestation 🌈
+
+The same per-game profiles drive **every OpenRGB device** — motherboard, RAM,
+GPU, coolers, fans, case strips, ARGB controllers, keyboards, mice, headsets —
+*and* the Tuya strips, together in a single profile:
+
+- Build a profile once in **Preferences → Per-game lighting**: pick each device,
+  its color, brightness and mode, zone by zone on multi-zone hardware.
+- Attach that profile to a game in its details dialog; it dresses every listed
+  device the moment you press play, on desktop and in Jolven Session alike.
+- Everything is restored byte-for-byte when you quit — the journal captures the
+  prior state *before* the first touch, so even a crash or a partial failure
+  leaves nothing behind. Your permanent OpenRGB settings are never written.
+- Fully local: the SDK client speaks TCP to `127.0.0.1:6742`, Jolven can
+  install and start OpenRGB for you, and no cloud account is involved.
+
 ### Fast where it matters, quiet where it doesn't
 
 - **Playtime and session tracking** — see how long you've actually played each game, automatically.
