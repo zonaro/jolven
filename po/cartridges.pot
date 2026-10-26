@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Cartridges\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-25 13:02-0300\n"
+"POT-Creation-Date: 2026-10-25 22:19-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -50,233 +50,233 @@ msgstr ""
 msgid "Scan Windows shortcuts subfolders recursively"
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:303
+#: data/io.github.zonaro.Jolven.gschema.xml.in:312
 msgid "Controller button used to open the in-game overlay"
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:325
+#: data/io.github.zonaro.Jolven.gschema.xml.in:337
 msgid "Browser used for Xbox Cloud Gaming"
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:326
+#: data/io.github.zonaro.Jolven.gschema.xml.in:338
 msgid ""
 "Desktop id of the browser that opens Xbox Cloud Gaming in a kiosk window. "
 "Empty means the system default browser."
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:330
+#: data/io.github.zonaro.Jolven.gschema.xml.in:342
 msgid "Automatically add games to Sunshine"
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:331
+#: data/io.github.zonaro.Jolven.gschema.xml.in:343
 msgid ""
 "When enabled, new and edited games are exported to the Sunshine apps.json "
 "file, except Xbox Cloud Gaming titles."
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:335
+#: data/io.github.zonaro.Jolven.gschema.xml.in:347
 msgid "Sunshine apps.json location"
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:336
+#: data/io.github.zonaro.Jolven.gschema.xml.in:348
 msgid ""
 "Custom path to the Sunshine apps.json file. Empty means the default "
 "~/.config/sunshine/apps.json."
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:340
+#: data/io.github.zonaro.Jolven.gschema.xml.in:352
 msgid "Sunshine Web UI host"
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:341
+#: data/io.github.zonaro.Jolven.gschema.xml.in:353
 msgid "Host of the local Sunshine Web UI used for status and app listing."
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:345
+#: data/io.github.zonaro.Jolven.gschema.xml.in:357
 msgid "Sunshine Web UI port"
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:346
+#: data/io.github.zonaro.Jolven.gschema.xml.in:358
 msgid "HTTPS port of the local Sunshine Web UI."
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:350
+#: data/io.github.zonaro.Jolven.gschema.xml.in:362
 msgid "Sunshine Web UI username"
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:351
+#: data/io.github.zonaro.Jolven.gschema.xml.in:363
 msgid ""
 "Username created in the Sunshine Web UI. The password is kept in the user's "
 "keyring (Secret Service)."
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:394
+#: data/io.github.zonaro.Jolven.gschema.xml.in:406
 msgid "Application theme selection"
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:403
+#: data/io.github.zonaro.Jolven.gschema.xml.in:415
 msgid "Colour scheme mode"
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:407
+#: data/io.github.zonaro.Jolven.gschema.xml.in:419
 msgid "Custom accent colour in #RRGGBB format (empty = theme default)"
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:411
+#: data/io.github.zonaro.Jolven.gschema.xml.in:423
 msgid "Enable the Jolven theme RGB glow"
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:412
+#: data/io.github.zonaro.Jolven.gschema.xml.in:424
 msgid ""
 "Glow effects are part of the jolven theme identity; the setting is kept but "
 "only has effect on that theme."
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:416
+#: data/io.github.zonaro.Jolven.gschema.xml.in:428
 msgid "Apply the selected theme as a skin to Steam"
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:420
+#: data/io.github.zonaro.Jolven.gschema.xml.in:432
 msgid "Custom Steam installation path (empty = auto-detect)"
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:424
+#: data/io.github.zonaro.Jolven.gschema.xml.in:436
 msgid "Enable the Jolven screen recorder"
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:425
+#: data/io.github.zonaro.Jolven.gschema.xml.in:437
 msgid ""
 "Enables the recorder controls backed by gpu-screen-recorder in the Jolven "
 "session."
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:429
+#: data/io.github.zonaro.Jolven.gschema.xml.in:441
 msgid "Video capture source"
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:430
+#: data/io.github.zonaro.Jolven.gschema.xml.in:442
 msgid ""
 "How the recorder captures the screen: the desktop portal, a monitor or a "
 "window."
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:434
+#: data/io.github.zonaro.Jolven.gschema.xml.in:446
 msgid "Output container format"
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:435
+#: data/io.github.zonaro.Jolven.gschema.xml.in:447
 msgid "Container used for the recorded video files."
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:439
+#: data/io.github.zonaro.Jolven.gschema.xml.in:451
 msgid "Video codec"
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:440
+#: data/io.github.zonaro.Jolven.gschema.xml.in:452
 msgid ""
 "Video encoder used for recording. Auto selects the best available hardware "
 "encoder."
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:444
+#: data/io.github.zonaro.Jolven.gschema.xml.in:456
 msgid "Recording quality preset"
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:445
+#: data/io.github.zonaro.Jolven.gschema.xml.in:457
 msgid "Quality preset applied when the bitrate mode is set to auto."
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:449
+#: data/io.github.zonaro.Jolven.gschema.xml.in:461
 msgid "Bitrate control mode"
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:450
+#: data/io.github.zonaro.Jolven.gschema.xml.in:462
 msgid ""
 "Whether the recorder picks the bitrate automatically or uses constant/"
 "variable bitrate."
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:454
+#: data/io.github.zonaro.Jolven.gschema.xml.in:466
 msgid "Recording frame rate"
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:455
+#: data/io.github.zonaro.Jolven.gschema.xml.in:467
 msgid "Frames per second captured by the recorder."
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:459
+#: data/io.github.zonaro.Jolven.gschema.xml.in:471
 msgid "Record the mouse cursor"
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:460
+#: data/io.github.zonaro.Jolven.gschema.xml.in:472
 msgid "Whether the mouse cursor is included in the recorded video."
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:464
+#: data/io.github.zonaro.Jolven.gschema.xml.in:476
 msgid "Output resolution"
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:465
+#: data/io.github.zonaro.Jolven.gschema.xml.in:477
 msgid ""
 "Optional output resolution such as 1920x1080. Empty keeps the source "
 "resolution."
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:469
+#: data/io.github.zonaro.Jolven.gschema.xml.in:481
 msgid "Audio source"
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:470
+#: data/io.github.zonaro.Jolven.gschema.xml.in:482
 msgid ""
 "Audio captured by the recorder: default output, output and microphone or "
 "none."
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:474
+#: data/io.github.zonaro.Jolven.gschema.xml.in:486
 msgid "Audio codec"
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:475
+#: data/io.github.zonaro.Jolven.gschema.xml.in:487
 msgid "Audio encoder used for recording."
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:479
+#: data/io.github.zonaro.Jolven.gschema.xml.in:491
 msgid "Audio bitrate"
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:480
+#: data/io.github.zonaro.Jolven.gschema.xml.in:492
 msgid "Audio bitrate in kbps used for recording."
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:484
+#: data/io.github.zonaro.Jolven.gschema.xml.in:496
 msgid "Replay buffer length"
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:485
+#: data/io.github.zonaro.Jolven.gschema.xml.in:497
 msgid "Seconds kept in the replay buffer. Zero disables the replay buffer."
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:489
+#: data/io.github.zonaro.Jolven.gschema.xml.in:501
 msgid "Replay buffer storage"
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:490
+#: data/io.github.zonaro.Jolven.gschema.xml.in:502
 msgid "Whether the replay buffer is kept in RAM or on disk."
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:494
+#: data/io.github.zonaro.Jolven.gschema.xml.in:506
 msgid "Recording output directory"
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:495
+#: data/io.github.zonaro.Jolven.gschema.xml.in:507
 msgid "Directory where recordings and saved replays are written."
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:499
+#: data/io.github.zonaro.Jolven.gschema.xml.in:511
 msgid "Streaming URL"
 msgstr ""
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:500
+#: data/io.github.zonaro.Jolven.gschema.xml.in:512
 msgid ""
 "RTMP, SRT or WHIP destination used when streaming. The URL is never logged."
 msgstr ""
@@ -297,7 +297,7 @@ msgid "Jolven library"
 msgstr ""
 
 #: data/io.github.zonaro.Jolven.metainfo.xml.in:44 data/gtk/window.blp:981
-#: cartridges/details_dialog.py:170
+#: cartridges/details_dialog.py:177
 msgid "Game Details"
 msgstr ""
 
@@ -307,13 +307,13 @@ msgstr ""
 
 #: data/io.github.zonaro.Jolven.metainfo.xml.in:52
 #: data/gtk/shortcuts-dialog.blp:14 data/gtk/window.blp:1445
-#: cartridges/details_dialog.py:846 cartridges/details_dialog.py:885
+#: cartridges/details_dialog.py:905 cartridges/details_dialog.py:944
 #: cartridges/importer/importer.py:375 cartridges/importer/importer.py:425
 msgid "Preferences"
 msgstr ""
 
 #: data/gtk/details-dialog.blp:15 data/gtk/uzdoom-mods-dialog.blp:16
-#: cartridges/main.py:1133
+#: cartridges/main.py:1174
 msgid "Cancel"
 msgstr ""
 
@@ -385,7 +385,7 @@ msgstr ""
 msgid "Escolher fundo de um arquivo"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:233 data/gtk/preferences.blp:739
+#: data/gtk/details-dialog.blp:233 data/gtk/preferences.blp:749
 msgid "Iluminação inteligente"
 msgstr ""
 
@@ -393,184 +393,192 @@ msgstr ""
 msgid "Voltar a escolher a cor a partir da capa"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:251 data/gtk/preferences.blp:798
+#: data/gtk/details-dialog.blp:251 data/gtk/preferences.blp:808
 msgid "Escolher a cor da iluminação inteligente"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:267 data/gtk/preferences.blp:747
+#: data/gtk/details-dialog.blp:267 data/gtk/preferences.blp:757
 msgid "Brilho (%)"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:280 data/gtk/game.blp:96
+#: data/gtk/details-dialog.blp:278
+msgid "Perfil de iluminação por jogo"
+msgstr ""
+
+#: data/gtk/details-dialog.blp:279 cartridges/details_dialog.py:621
+msgid "Vestido na sessão deste jogo; ao fechar, tudo volta ao que era"
+msgstr ""
+
+#: data/gtk/details-dialog.blp:285 data/gtk/game.blp:96
 msgid "Title"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:284
+#: data/gtk/details-dialog.blp:289
 msgid "Developer (optional)"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:288
+#: data/gtk/details-dialog.blp:293
 msgid "Publicadora (opcional)"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:292
+#: data/gtk/details-dialog.blp:297
 msgid "Data de lançamento (opcional)"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:296
+#: data/gtk/details-dialog.blp:301
 msgid "Gênero (opcional)"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:300
+#: data/gtk/details-dialog.blp:305
 msgid "Tags"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:306
+#: data/gtk/details-dialog.blp:311
 msgid "Compatibilidade com controle"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:310
+#: data/gtk/details-dialog.blp:315
 msgid "Não informada"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:311
+#: data/gtk/details-dialog.blp:316
 msgid "Total"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:312
+#: data/gtk/details-dialog.blp:317
 msgid "Parcial"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:320
+#: data/gtk/details-dialog.blp:325
 msgid "Status"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:324
+#: data/gtk/details-dialog.blp:329
 msgid "Minha nota"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:325
+#: data/gtk/details-dialog.blp:330
 msgid "Clique na nota para removê-la"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:336
+#: data/gtk/details-dialog.blp:341
 msgid "Executable"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:342
+#: data/gtk/details-dialog.blp:347
 msgid "Select File"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:353
+#: data/gtk/details-dialog.blp:358
 msgid "More Info"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:379
+#: data/gtk/details-dialog.blp:384
 msgid "Game profile"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:380
+#: data/gtk/details-dialog.blp:385
 msgid "Overrides used only when launching this game."
 msgstr ""
 
-#: data/gtk/details-dialog.blp:383
+#: data/gtk/details-dialog.blp:388
 msgid "GameMode"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:385 data/gtk/details-dialog.blp:392
+#: data/gtk/details-dialog.blp:390 data/gtk/details-dialog.blp:397
 msgid "Use global setting"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:385 data/gtk/details-dialog.blp:392
+#: data/gtk/details-dialog.blp:390 data/gtk/details-dialog.blp:397
 msgid "Enabled"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:385 data/gtk/details-dialog.blp:392
+#: data/gtk/details-dialog.blp:390 data/gtk/details-dialog.blp:397
 msgid "Disabled"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:390
+#: data/gtk/details-dialog.blp:395
 msgid "MangoHud"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:397
+#: data/gtk/details-dialog.blp:402
 msgid "Working directory"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:401
+#: data/gtk/details-dialog.blp:406
 msgid "Track a specific process"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:402
+#: data/gtk/details-dialog.blp:407
 msgid "Useful for launchers that hand off to another executable"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:406
+#: data/gtk/details-dialog.blp:411
 msgid "Process executable name"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:411
+#: data/gtk/details-dialog.blp:416
 msgid "Gravar automaticamente ao iniciar"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:412
+#: data/gtk/details-dialog.blp:417
 msgid ""
 "Requer o gravador ativo nas preferências. Não se aplica ao Xbox Cloud Gaming."
 msgstr ""
 
-#: data/gtk/details-dialog.blp:416
+#: data/gtk/details-dialog.blp:421
 msgid "Environment (JSON)"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:420
+#: data/gtk/details-dialog.blp:425
 msgid "Gamescope options"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:424
+#: data/gtk/details-dialog.blp:429
 msgid "FPS limit (0 = disabled)"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:434
+#: data/gtk/details-dialog.blp:439
 msgid "Resolution (for example 1920x1080)"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:438
+#: data/gtk/details-dialog.blp:443
 msgid "Scaling mode"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:440
+#: data/gtk/details-dialog.blp:445
 msgid "Default"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:440
+#: data/gtk/details-dialog.blp:445
 msgid "Auto"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:440
+#: data/gtk/details-dialog.blp:445
 msgid "Integer"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:440
+#: data/gtk/details-dialog.blp:445
 msgid "Fit"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:440
+#: data/gtk/details-dialog.blp:445
 msgid "Fill"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:440
+#: data/gtk/details-dialog.blp:445
 msgid "Stretch"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:447
+#: data/gtk/details-dialog.blp:452
 msgid "Notificar sobre atualizações"
 msgstr ""
 
-#: data/gtk/details-dialog.blp:448
+#: data/gtk/details-dialog.blp:453
 msgid "Avisa quando houver atualização disponível"
 msgstr ""
 
-#: data/gtk/fita-wizard.blp:5 data/gtk/preferences.blp:814
+#: data/gtk/fita-wizard.blp:5 data/gtk/preferences.blp:824
 msgid "Configurar a iluminação inteligente"
 msgstr ""
 
@@ -637,7 +645,7 @@ msgid ""
 msgstr ""
 
 #: data/gtk/fita-wizard.blp:94 data/gtk/preferences.blp:222
-#: data/gtk/preferences.blp:442 cartridges/preferences.py:1468
+#: data/gtk/preferences.blp:442 cartridges/preferences.py:1491
 msgid "Aplicar"
 msgstr ""
 
@@ -650,24 +658,24 @@ msgid "A busca é feita primeiro na nuvem e depois na rede local."
 msgstr ""
 
 #: data/gtk/game.blp:117 data/gtk/game.blp:126 data/gtk/window.blp:1298
-#: cartridges/window.py:2482
+#: cartridges/window.py:2497
 msgid "Edit"
 msgstr ""
 
-#: data/gtk/game.blp:118 cartridges/window.py:1577 cartridges/window.py:2483
+#: data/gtk/game.blp:118 cartridges/window.py:1581 cartridges/window.py:2498
 msgid "Hide"
 msgstr ""
 
 #: data/gtk/game.blp:119 data/gtk/game.blp:128 data/gtk/window.blp:1318
-#: cartridges/window.py:2484
+#: cartridges/window.py:2499
 msgid "Remove"
 msgstr ""
 
-#: data/gtk/game.blp:120 data/gtk/game.blp:129 cartridges/window.py:2485
+#: data/gtk/game.blp:120 data/gtk/game.blp:129 cartridges/window.py:2500
 msgid "Add to Sunshine"
 msgstr ""
 
-#: data/gtk/game.blp:127 cartridges/window.py:1579 cartridges/window.py:2483
+#: data/gtk/game.blp:127 cartridges/window.py:1583 cartridges/window.py:2498
 msgid "Unhide"
 msgstr ""
 
@@ -712,8 +720,8 @@ msgstr ""
 msgid "Integrações"
 msgstr ""
 
-#: data/gtk/integrations.blp:17 data/gtk/preferences.blp:1557
-#: data/gtk/window.blp:836
+#: data/gtk/integrations.blp:17 data/gtk/lighting-profiles.blp:29
+#: data/gtk/preferences.blp:1650 data/gtk/window.blp:836
 msgid "Atualizar"
 msgstr ""
 
@@ -723,6 +731,49 @@ msgstr ""
 
 #: data/gtk/integrations.blp:87
 msgid "Não foi possível carregar"
+msgstr ""
+
+#: data/gtk/lighting-profiles.blp:9 data/gtk/preferences.blp:925
+msgid "Perfis de iluminação"
+msgstr ""
+
+#: data/gtk/lighting-profiles.blp:18
+msgid "Criar um perfil"
+msgstr ""
+
+#: data/gtk/lighting-profiles.blp:23 cartridges/lighting_page.py:348
+msgid "Ver o perfil nos dispositivos"
+msgstr ""
+
+#: data/gtk/lighting-profiles.blp:53
+msgid "Procurando dispositivos de iluminação…"
+msgstr ""
+
+#: data/gtk/lighting-profiles.blp:77
+msgid "Nenhum perfil de iluminação ainda"
+msgstr ""
+
+#: data/gtk/lighting-profiles.blp:82
+msgid ""
+"Crie um perfil, escolha os dispositivos e diga a qual jogo ele pertence."
+msgstr ""
+
+#: data/gtk/lighting-profiles.blp:115
+msgid "Perfis"
+msgstr ""
+
+#: data/gtk/lighting-profiles.blp:121
+msgid ""
+"Um perfil é o conjunto de cores que vários dispositivos vestem durante a "
+"sessão do jogo."
+msgstr ""
+
+#: data/gtk/lighting-profiles.blp:137
+msgid "Dispositivos do perfil"
+msgstr ""
+
+#: data/gtk/lighting-profiles.blp:138 cartridges/lighting_page.py:402
+msgid "Só os dispositivos incluídos mudam; os demais continuam como estão."
 msgstr ""
 
 #: data/gtk/logo-picker.blp:7
@@ -745,8 +796,8 @@ msgstr ""
 msgid "General"
 msgstr ""
 
-#: data/gtk/preferences.blp:14 data/gtk/preferences.blp:856
-#: data/gtk/preferences.blp:1491
+#: data/gtk/preferences.blp:14 data/gtk/preferences.blp:949
+#: data/gtk/preferences.blp:1584
 msgid "Behavior"
 msgstr ""
 
@@ -782,7 +833,7 @@ msgstr ""
 msgid "Language"
 msgstr ""
 
-#: data/gtk/preferences.blp:37 cartridges/preferences.py:3125
+#: data/gtk/preferences.blp:37 cartridges/preferences.py:3310
 msgid "Restart Jolven to apply the new language"
 msgstr ""
 
@@ -795,16 +846,17 @@ msgid "Abrir com Super+G"
 msgstr ""
 
 #: data/gtk/preferences.blp:46 data/gtk/preferences.blp:670
-#: cartridges/preferences.py:1246
+#: data/gtk/preferences.blp:869 cartridges/preferences.py:1269
+#: cartridges/preferences.py:1921
 msgid "Verificando…"
 msgstr ""
 
-#: data/gtk/preferences.blp:51 cartridges/preferences.py:1769
-#: cartridges/preferences.py:1787 cartridges/preferences.py:1792
+#: data/gtk/preferences.blp:51 cartridges/preferences.py:1792
+#: cartridges/preferences.py:1810 cartridges/preferences.py:1815
 msgid "Ativar"
 msgstr ""
 
-#: data/gtk/preferences.blp:62 cartridges/details_dialog.py:239
+#: data/gtk/preferences.blp:62 cartridges/details_dialog.py:247
 #: cartridges/image_picker.py:648
 msgid "Images"
 msgstr ""
@@ -821,7 +873,7 @@ msgstr ""
 msgid "Cloud Gaming"
 msgstr ""
 
-#: data/gtk/preferences.blp:74 cartridges/main.py:786
+#: data/gtk/preferences.blp:74 cartridges/main.py:823
 msgid "Xbox Cloud Gaming"
 msgstr ""
 
@@ -953,7 +1005,7 @@ msgstr ""
 msgid "Estado"
 msgstr ""
 
-#: data/gtk/preferences.blp:207 cartridges/preferences.py:2771
+#: data/gtk/preferences.blp:207 cartridges/preferences.py:2956
 msgid "Verificando a Steam…"
 msgstr ""
 
@@ -985,7 +1037,7 @@ msgstr ""
 msgid "Devolve os arquivos que existiam antes do Jolven"
 msgstr ""
 
-#: data/gtk/preferences.blp:250 cartridges/preferences.py:3571
+#: data/gtk/preferences.blp:250 cartridges/preferences.py:3756
 msgid "Restaurar"
 msgstr ""
 
@@ -1070,7 +1122,7 @@ msgstr ""
 msgid "Conexão com o Sunshine"
 msgstr ""
 
-#: data/gtk/preferences.blp:337
+#: data/gtk/preferences.blp:337 data/gtk/preferences.blp:885
 msgid "Endereço"
 msgstr ""
 
@@ -1090,7 +1142,7 @@ msgstr ""
 msgid "Não verificado"
 msgstr ""
 
-#: data/gtk/preferences.blp:360 data/gtk/preferences.blp:831
+#: data/gtk/preferences.blp:360 data/gtk/preferences.blp:841
 msgid "Testar"
 msgstr ""
 
@@ -1198,10 +1250,10 @@ msgstr ""
 #. precisa refletir o estado real: a sessão pode já estar
 #. instalada (por uma instalação anterior) e o rótulo "Instalar"
 #. seria enganoso.
-#: data/gtk/preferences.blp:462 cartridges/preferences.py:1306
-#: cartridges/preferences.py:1339 cartridges/preferences.py:1600
-#: cartridges/preferences.py:1633 cartridges/preferences.py:1780
-#: cartridges/preferences.py:3230 cartridges/preferences.py:3238
+#: data/gtk/preferences.blp:462 cartridges/preferences.py:1329
+#: cartridges/preferences.py:1362 cartridges/preferences.py:1623
+#: cartridges/preferences.py:1656 cartridges/preferences.py:1803
+#: cartridges/preferences.py:3415 cartridges/preferences.py:3423
 msgid "Remover"
 msgstr ""
 
@@ -1332,7 +1384,7 @@ msgid "Sessão"
 msgstr ""
 
 #: data/gtk/preferences.blp:629 data/gtk/preferences.blp:669
-#: data/gtk/window.blp:93 cartridges/main.py:1130
+#: data/gtk/window.blp:93 cartridges/main.py:1171
 msgid "Jolven Session"
 msgstr ""
 
@@ -1389,9 +1441,9 @@ msgstr ""
 msgid "Instala a Jolven Session no seletor de sessões do display manager."
 msgstr ""
 
-#: data/gtk/preferences.blp:676 cartridges/main.py:929
-#: cartridges/integrations_page.py:173 cartridges/preferences.py:3230
-#: cartridges/preferences.py:3243
+#: data/gtk/preferences.blp:676 cartridges/main.py:966
+#: cartridges/integrations_page.py:173 cartridges/preferences.py:3415
+#: cartridges/preferences.py:3428
 msgid "Instalar"
 msgstr ""
 
@@ -1405,418 +1457,489 @@ msgid ""
 "such as HDMI-A-1 or DP-1."
 msgstr ""
 
-#: data/gtk/preferences.blp:686
+#: data/gtk/preferences.blp:686 data/gtk/preferences.blp:695
 msgid "Monitor connector"
 msgstr ""
 
-#: data/gtk/preferences.blp:690
+#: data/gtk/preferences.blp:691
+msgid "Janela do aplicativo"
+msgstr ""
+
+#: data/gtk/preferences.blp:692
+msgid "Define em qual monitor a janela principal deve abrir no modo desktop."
+msgstr ""
+
+#: data/gtk/preferences.blp:696
+msgid "\"Nenhum\" abre no comportamento padrão."
+msgstr ""
+
+#: data/gtk/preferences.blp:700
 msgid "Audio output"
 msgstr ""
 
-#: data/gtk/preferences.blp:694
+#: data/gtk/preferences.blp:704
 msgid "Audio input"
 msgstr ""
 
-#: data/gtk/preferences.blp:699
+#: data/gtk/preferences.blp:709
 msgid "Barra superior"
 msgstr ""
 
-#: data/gtk/preferences.blp:702
+#: data/gtk/preferences.blp:712
 msgid "Mostrar o botão Novidades"
 msgstr ""
 
-#: data/gtk/preferences.blp:707
+#: data/gtk/preferences.blp:717
 msgid "Papel de parede"
 msgstr ""
 
-#: data/gtk/preferences.blp:709
+#: data/gtk/preferences.blp:719
 msgid ""
 "Durante a sessão, substitui temporariamente o papel de parede dos outros "
 "monitores por uma imagem relacionada ao jogo. A chave libera Sketchy e NSFW "
 "nos filtros da escolha."
 msgstr ""
 
-#: data/gtk/preferences.blp:712
+#: data/gtk/preferences.blp:722
 msgid "Trocar o papel de parede dos outros monitores"
 msgstr ""
 
-#: data/gtk/preferences.blp:716
+#: data/gtk/preferences.blp:726
 msgid "Chave da API do wallhaven (opcional)"
 msgstr ""
 
-#: data/gtk/preferences.blp:721
+#: data/gtk/preferences.blp:731
 msgid "Restaurar o papel de parede anterior"
 msgstr ""
 
-#: data/gtk/preferences.blp:722
+#: data/gtk/preferences.blp:732
 msgid "Devolve o papel de parede de antes da sessão"
 msgstr ""
 
-#: data/gtk/preferences.blp:729
+#: data/gtk/preferences.blp:739
 msgid "Restaurar agora"
 msgstr ""
 
-#: data/gtk/preferences.blp:740
+#: data/gtk/preferences.blp:750
 msgid ""
 "Muda a cor da iluminação inteligente enquanto o Jolven está aberto: a cor do "
 "aplicativo fora do jogo e a cor do jogo durante a sessão. Ao fechar o "
 "aplicativo, a iluminação inteligente volta ao estado anterior."
 msgstr ""
 
-#: data/gtk/preferences.blp:743
+#: data/gtk/preferences.blp:753
 msgid "Mudar a cor da iluminação inteligente"
 msgstr ""
 
-#: data/gtk/preferences.blp:748
+#: data/gtk/preferences.blp:758
 msgid "Aplicado aos jogos sem brilho próprio definido"
 msgstr ""
 
-#: data/gtk/preferences.blp:760 cartridges/preferences.py:1930
+#: data/gtk/preferences.blp:770 cartridges/preferences.py:2112
 msgid "Brilho máximo por dispositivo"
 msgstr ""
 
-#: data/gtk/preferences.blp:761
+#: data/gtk/preferences.blp:771
 msgid "Define o brilho máximo de cada dispositivo"
 msgstr ""
 
-#: data/gtk/preferences.blp:769
+#: data/gtk/preferences.blp:779
 msgid "Ajustar o brilho de cada dispositivo"
 msgstr ""
 
-#: data/gtk/preferences.blp:778
+#: data/gtk/preferences.blp:788
 msgid "Cor do app"
 msgstr ""
 
-#: data/gtk/preferences.blp:779
+#: data/gtk/preferences.blp:789
 msgid ""
 "A cor da iluminação inteligente com o aplicativo aberto e nenhum jogo em "
 "execução"
 msgstr ""
 
-#: data/gtk/preferences.blp:787
+#: data/gtk/preferences.blp:797
 msgid "Voltar à cor padrão"
 msgstr ""
 
-#: data/gtk/preferences.blp:815
+#: data/gtk/preferences.blp:825
 msgid "Busca os dispositivos na sua conta da Tuya"
 msgstr ""
 
-#: data/gtk/preferences.blp:822
+#: data/gtk/preferences.blp:832
 msgid "Abrir assistente"
 msgstr ""
 
-#: data/gtk/preferences.blp:832
+#: data/gtk/preferences.blp:842
 msgid "Acende cada dispositivo na cor do aplicativo"
 msgstr ""
 
-#: data/gtk/preferences.blp:840
+#: data/gtk/preferences.blp:850
 msgid "Ligar a iluminação inteligente"
 msgstr ""
 
-#: data/gtk/preferences.blp:852 data/gtk/shortcuts-dialog.blp:53
+#: data/gtk/preferences.blp:860
+msgid "Iluminação por jogo (OpenRGB)"
+msgstr ""
+
+#: data/gtk/preferences.blp:861
+msgid ""
+"Deixa a iluminação de memórias, placa-mãe, coolers, gabinete e periféricos "
+"acompanhar o perfil de cada jogo. A configuração permanente desses "
+"dispositivos não é alterada: o Jolven só empresta a cor durante a sessão."
+msgstr ""
+
+#: data/gtk/preferences.blp:864
+msgid "Ativar perfis de iluminação por jogo"
+msgstr ""
+
+#: data/gtk/preferences.blp:868
+msgid "Servidor do OpenRGB"
+msgstr ""
+
+#: data/gtk/preferences.blp:876
+msgid "Verificar novamente"
+msgstr ""
+
+#: data/gtk/preferences.blp:886
+msgid "Do servidor do SDK, normalmente 127.0.0.1:6742"
+msgstr ""
+
+#: data/gtk/preferences.blp:891
+msgid "Instalar o OpenRGB"
+msgstr ""
+
+#: data/gtk/preferences.blp:892
+msgid "Disponível na Flathub"
+msgstr ""
+
+#: data/gtk/preferences.blp:899
+msgid "Instalar pelo Flatpak"
+msgstr ""
+
+#: data/gtk/preferences.blp:908
+msgid "Iniciar o servidor"
+msgstr ""
+
+#: data/gtk/preferences.blp:909
+msgid "Abre o servidor em segundo plano, sem a janela do OpenRGB"
+msgstr ""
+
+#: data/gtk/preferences.blp:916
+msgid "Iniciar o servidor do OpenRGB"
+msgstr ""
+
+#: data/gtk/preferences.blp:926
+msgid "Crie os perfis que cada jogo vai vestir"
+msgstr ""
+
+#: data/gtk/preferences.blp:933
+msgid "Abrir os perfis de iluminação"
+msgstr ""
+
+#: data/gtk/preferences.blp:945 data/gtk/shortcuts-dialog.blp:53
 #: data/gtk/window.blp:27 data/gtk/window.blp:1459
 msgid "Import"
 msgstr ""
 
-#: data/gtk/preferences.blp:859
+#: data/gtk/preferences.blp:952
 msgid "Import Games Automatically"
 msgstr ""
 
-#: data/gtk/preferences.blp:863
+#: data/gtk/preferences.blp:956
 msgid "Remove Uninstalled Games"
 msgstr ""
 
-#: data/gtk/preferences.blp:868
+#: data/gtk/preferences.blp:961
 msgid "Sources"
 msgstr ""
 
-#: data/gtk/preferences.blp:872 cartridges/preferences.py:2832
+#: data/gtk/preferences.blp:965 cartridges/preferences.py:3017
 #: cartridges/utils/integrations.py:124 cartridges/importer/steam_source.py:242
 msgid "Steam"
 msgstr ""
 
-#: data/gtk/preferences.blp:881 data/gtk/preferences.blp:908
-#: data/gtk/preferences.blp:943 data/gtk/preferences.blp:986
-#: data/gtk/preferences.blp:1067 data/gtk/preferences.blp:1094
-#: data/gtk/preferences.blp:1165 data/gtk/preferences.blp:1203
-#: data/gtk/preferences.blp:1230 data/gtk/preferences.blp:1301
-#: data/gtk/preferences.blp:1333 data/gtk/preferences.blp:1360
+#: data/gtk/preferences.blp:974 data/gtk/preferences.blp:1001
+#: data/gtk/preferences.blp:1036 data/gtk/preferences.blp:1079
+#: data/gtk/preferences.blp:1160 data/gtk/preferences.blp:1187
+#: data/gtk/preferences.blp:1258 data/gtk/preferences.blp:1296
+#: data/gtk/preferences.blp:1323 data/gtk/preferences.blp:1394
+#: data/gtk/preferences.blp:1426 data/gtk/preferences.blp:1453
 msgid "Install Location"
 msgstr ""
 
-#: data/gtk/preferences.blp:899 data/gtk/window.blp:1470
+#: data/gtk/preferences.blp:992 data/gtk/window.blp:1470
 #: cartridges/utils/integrations.py:129
 #: cartridges/importer/lutris_source.py:116
 msgid "Lutris"
 msgstr ""
 
-#: data/gtk/preferences.blp:925
+#: data/gtk/preferences.blp:1018
 msgid "Import Steam Games"
 msgstr ""
 
-#: data/gtk/preferences.blp:929
+#: data/gtk/preferences.blp:1022
 msgid "Import Flatpak Games"
 msgstr ""
 
-#: data/gtk/preferences.blp:934 cartridges/importer/heroic_source.py:366
+#: data/gtk/preferences.blp:1027 cartridges/importer/heroic_source.py:366
 msgid "Heroic"
 msgstr ""
 
-#: data/gtk/preferences.blp:960
+#: data/gtk/preferences.blp:1053
 msgid "Import Epic Games"
 msgstr ""
 
-#: data/gtk/preferences.blp:964
+#: data/gtk/preferences.blp:1057
 msgid "Import GOG Games"
 msgstr ""
 
-#: data/gtk/preferences.blp:968
+#: data/gtk/preferences.blp:1061
 msgid "Import Amazon Games"
 msgstr ""
 
-#: data/gtk/preferences.blp:972
+#: data/gtk/preferences.blp:1065
 msgid "Import Sideloaded Games"
 msgstr ""
 
-#: data/gtk/preferences.blp:977 cartridges/utils/integrations.py:139
+#: data/gtk/preferences.blp:1070 cartridges/utils/integrations.py:139
 #: cartridges/importer/bottles_source.py:86
 msgid "Bottles"
 msgstr ""
 
-#: data/gtk/preferences.blp:1004 cartridges/utils/integrations.py:175
+#: data/gtk/preferences.blp:1097 cartridges/utils/integrations.py:175
 #: cartridges/importer/cemu_source.py:164
 msgid "Cemu"
 msgstr ""
 
-#: data/gtk/preferences.blp:1013
+#: data/gtk/preferences.blp:1106
 msgid "Config Location"
 msgstr ""
 
-#: data/gtk/preferences.blp:1031 cartridges/utils/integrations.py:170
+#: data/gtk/preferences.blp:1124 cartridges/utils/integrations.py:170
 #: cartridges/importer/dolphin_source.py:66
 msgid "Dolphin"
 msgstr ""
 
-#: data/gtk/preferences.blp:1040
+#: data/gtk/preferences.blp:1133
 msgid "Cache Location"
 msgstr ""
 
-#: data/gtk/preferences.blp:1058 cartridges/importer/itch_source.py:81
+#: data/gtk/preferences.blp:1151 cartridges/importer/itch_source.py:81
 msgid "itch"
 msgstr ""
 
-#: data/gtk/preferences.blp:1085 cartridges/utils/integrations.py:154
+#: data/gtk/preferences.blp:1178 cartridges/utils/integrations.py:154
 #: cartridges/importer/legendary_source.py:196
 msgid "Legendary"
 msgstr ""
 
-#: data/gtk/preferences.blp:1112 cartridges/importer/epic_source.py:378
+#: data/gtk/preferences.blp:1205 cartridges/importer/epic_source.py:378
 msgid "Epic Games Launcher"
 msgstr ""
 
-#: data/gtk/preferences.blp:1121
+#: data/gtk/preferences.blp:1214
 msgid "Data Folder"
 msgstr ""
 
-#: data/gtk/preferences.blp:1138
+#: data/gtk/preferences.blp:1231
 msgid "Cache Folder"
 msgstr ""
 
-#: data/gtk/preferences.blp:1156 cartridges/utils/integrations.py:165
+#: data/gtk/preferences.blp:1249 cartridges/utils/integrations.py:165
 #: cartridges/importer/retroarch_source.py:143
 msgid "RetroArch"
 msgstr ""
 
-#: data/gtk/preferences.blp:1183 cartridges/utils/integrations.py:190
+#: data/gtk/preferences.blp:1276 cartridges/utils/integrations.py:190
 #: cartridges/importer/waydroid_source.py:107
 msgid "Waydroid"
 msgstr ""
 
-#: data/gtk/preferences.blp:1184
+#: data/gtk/preferences.blp:1277
 msgid "Android apps installed through Waydroid"
 msgstr ""
 
-#: data/gtk/preferences.blp:1194 cartridges/utils/integrations.py:185
+#: data/gtk/preferences.blp:1287 cartridges/utils/integrations.py:185
 #: cartridges/importer/yuzu_source.py:112
 msgid "Yuzu"
 msgstr ""
 
-#: data/gtk/preferences.blp:1221 cartridges/importer/eden_source.py:98
+#: data/gtk/preferences.blp:1314 cartridges/importer/eden_source.py:98
 msgid "Eden"
 msgstr ""
 
-#: data/gtk/preferences.blp:1248 cartridges/importer/uzdoom_source.py:163
+#: data/gtk/preferences.blp:1341 cartridges/importer/uzdoom_source.py:163
 msgid "UZDoom"
 msgstr ""
 
-#: data/gtk/preferences.blp:1257
+#: data/gtk/preferences.blp:1350
 msgid "WADs Folder"
 msgstr ""
 
-#: data/gtk/preferences.blp:1274
+#: data/gtk/preferences.blp:1367
 msgid "Mods Folder"
 msgstr ""
 
-#: data/gtk/preferences.blp:1292 cartridges/importer/quiver_source.py:816
+#: data/gtk/preferences.blp:1385 cartridges/importer/quiver_source.py:816
 msgid "Quiver"
 msgstr ""
 
-#: data/gtk/preferences.blp:1318
+#: data/gtk/preferences.blp:1411
 msgid "Enrich with the Quiver catalog"
 msgstr ""
 
-#: data/gtk/preferences.blp:1319
+#: data/gtk/preferences.blp:1412
 msgid "Ask the public catalog for the cover and the description of the games"
 msgstr ""
 
-#: data/gtk/preferences.blp:1324 cartridges/utils/integrations.py:149
+#: data/gtk/preferences.blp:1417 cartridges/utils/integrations.py:149
 #: cartridges/importer/twintail_source.py:89
 msgid "TwinTail"
 msgstr ""
 
-#: data/gtk/preferences.blp:1351
+#: data/gtk/preferences.blp:1444
 msgid "Windows Shortcuts"
 msgstr ""
 
-#: data/gtk/preferences.blp:1377
+#: data/gtk/preferences.blp:1470
 msgid "Scan Subfolders"
 msgstr ""
 
-#: data/gtk/preferences.blp:1378
+#: data/gtk/preferences.blp:1471
 msgid "Also import shortcuts from subfolders"
 msgstr ""
 
-#: data/gtk/preferences.blp:1383 cartridges/preferences.py:2828
+#: data/gtk/preferences.blp:1476 cartridges/preferences.py:3013
 #: cartridges/utils/integrations.py:159
 #: cartridges/importer/flatpak_source.py:147
 msgid "Flatpak"
 msgstr ""
 
 #. The location of the system-wide data directory
-#: data/gtk/preferences.blp:1393
+#: data/gtk/preferences.blp:1486
 msgid "System Location"
 msgstr ""
 
 #. The location of the user-specific data directory
-#: data/gtk/preferences.blp:1411
+#: data/gtk/preferences.blp:1504
 msgid "User Location"
 msgstr ""
 
-#: data/gtk/preferences.blp:1428 data/gtk/preferences.blp:1462
+#: data/gtk/preferences.blp:1521 data/gtk/preferences.blp:1555
 msgid "Import Game Launchers"
 msgstr ""
 
-#: data/gtk/preferences.blp:1433 cartridges/importer/appimage_source.py:118
+#: data/gtk/preferences.blp:1526 cartridges/importer/appimage_source.py:118
 msgid "AppImage"
 msgstr ""
 
 #. An extra folder with AppImage files, for the games that are
 #. not installed in one of the usual places.
-#: data/gtk/preferences.blp:1444
+#: data/gtk/preferences.blp:1537
 msgid "Extra Location"
 msgstr ""
 
-#: data/gtk/preferences.blp:1445
+#: data/gtk/preferences.blp:1538
 msgid "Another folder with AppImage files"
 msgstr ""
 
-#: data/gtk/preferences.blp:1467 cartridges/importer/desktop_source.py:220
+#: data/gtk/preferences.blp:1560 cartridges/importer/desktop_source.py:220
 msgid "Desktop Entries"
 msgstr ""
 
-#: data/gtk/preferences.blp:1479 data/gtk/window.blp:1467
+#: data/gtk/preferences.blp:1572 data/gtk/window.blp:1467
 msgid "SteamGridDB"
 msgstr ""
 
-#: data/gtk/preferences.blp:1483
+#: data/gtk/preferences.blp:1576
 msgid "Authentication"
 msgstr ""
 
-#: data/gtk/preferences.blp:1486
+#: data/gtk/preferences.blp:1579
 msgid "API Key"
 msgstr ""
 
-#: data/gtk/preferences.blp:1494
+#: data/gtk/preferences.blp:1587
 msgid "Use SteamGridDB"
 msgstr ""
 
-#: data/gtk/preferences.blp:1495
+#: data/gtk/preferences.blp:1588
 msgid "Download images when adding or importing games"
 msgstr ""
 
-#: data/gtk/preferences.blp:1499
+#: data/gtk/preferences.blp:1592
 msgid "Prefer Over Official Images"
 msgstr ""
 
-#: data/gtk/preferences.blp:1503
+#: data/gtk/preferences.blp:1596
 msgid "Prefer Animated Images"
 msgstr ""
 
-#: data/gtk/preferences.blp:1509
+#: data/gtk/preferences.blp:1602
 msgid "Update Covers"
 msgstr ""
 
-#: data/gtk/preferences.blp:1510
+#: data/gtk/preferences.blp:1603
 msgid "Fetch covers for games already in your library"
 msgstr ""
 
-#: data/gtk/preferences.blp:1515
+#: data/gtk/preferences.blp:1608
 msgid "Update"
 msgstr ""
 
-#: data/gtk/preferences.blp:1530
+#: data/gtk/preferences.blp:1623
 msgid "TheGamesDB"
 msgstr ""
 
-#: data/gtk/preferences.blp:1533 data/gtk/preferences.blp:1576
+#: data/gtk/preferences.blp:1626 data/gtk/preferences.blp:1669
 msgid "Autenticação"
 msgstr ""
 
-#: data/gtk/preferences.blp:1536
+#: data/gtk/preferences.blp:1629
 msgid "Chave da API"
 msgstr ""
 
-#: data/gtk/preferences.blp:1541
+#: data/gtk/preferences.blp:1634
 msgid "Metadados e imagens"
 msgstr ""
 
-#: data/gtk/preferences.blp:1544
+#: data/gtk/preferences.blp:1637
 msgid "Usar TheGamesDB"
 msgstr ""
 
-#: data/gtk/preferences.blp:1545
+#: data/gtk/preferences.blp:1638
 msgid "Completa detalhes e usa capas e fanarts como fallback"
 msgstr ""
 
-#: data/gtk/preferences.blp:1551
+#: data/gtk/preferences.blp:1644
 msgid "Atualizar biblioteca"
 msgstr ""
 
-#: data/gtk/preferences.blp:1552
+#: data/gtk/preferences.blp:1645
 msgid "Busca dados e imagens para os jogos já adicionados"
 msgstr ""
 
-#: data/gtk/preferences.blp:1572 data/gtk/window.blp:1466
+#: data/gtk/preferences.blp:1665 data/gtk/window.blp:1466
 msgid "IGDB"
 msgstr ""
 
-#: data/gtk/preferences.blp:1579
+#: data/gtk/preferences.blp:1672
 msgid "Client ID"
 msgstr ""
 
-#: data/gtk/preferences.blp:1583
+#: data/gtk/preferences.blp:1676
 msgid "Client Secret"
 msgstr ""
 
-#: data/gtk/preferences.blp:1588
+#: data/gtk/preferences.blp:1681
 msgid "Capas e capturas"
 msgstr ""
 
-#: data/gtk/preferences.blp:1591
+#: data/gtk/preferences.blp:1684
 msgid "Onde conseguir as chaves"
 msgstr ""
 
-#: data/gtk/preferences.blp:1592
+#: data/gtk/preferences.blp:1685
 msgid "Crie um app em api.igdb.com para obter o Client ID e o Secret"
 msgstr ""
 
@@ -1830,8 +1953,8 @@ msgstr ""
 msgid "Keyboard Shortcuts"
 msgstr ""
 
-#: data/gtk/shortcuts-dialog.blp:24 cartridges/game.py:299
-#: cartridges/preferences.py:609 cartridges/importer/importer.py:446
+#: data/gtk/shortcuts-dialog.blp:24 cartridges/game.py:303
+#: cartridges/preferences.py:625 cartridges/importer/importer.py:446
 msgid "Undo"
 msgstr ""
 
@@ -1866,7 +1989,7 @@ msgstr ""
 msgid "Remove Game"
 msgstr ""
 
-#: data/gtk/uzdoom-mods-dialog.blp:22 cartridges/details_dialog.py:217
+#: data/gtk/uzdoom-mods-dialog.blp:22 cartridges/details_dialog.py:224
 msgid "Apply"
 msgstr ""
 
@@ -1970,7 +2093,7 @@ msgstr ""
 msgid "Power"
 msgstr ""
 
-#: data/gtk/window.blp:192 cartridges/window.py:567 cartridges/window.py:571
+#: data/gtk/window.blp:192 cartridges/window.py:568 cartridges/window.py:572
 msgid "Biblioteca"
 msgstr ""
 
@@ -2003,7 +2126,7 @@ msgstr ""
 msgid "Voltar ao jogo"
 msgstr ""
 
-#: data/gtk/window.blp:514 cartridges/window.py:3094
+#: data/gtk/window.blp:514 cartridges/window.py:3110
 msgid "Iniciar a gravação. Clique com o botão direito para salvar o replay."
 msgstr ""
 
@@ -2033,11 +2156,11 @@ msgid ""
 "sair, pressione Menu e View juntos."
 msgstr ""
 
-#: data/gtk/window.blp:604 cartridges/window.py:861
+#: data/gtk/window.blp:604 cartridges/window.py:865
 msgid "Nenhum gamepad conectado"
 msgstr ""
 
-#: data/gtk/window.blp:611 cartridges/window.py:872
+#: data/gtk/window.blp:611 cartridges/window.py:876
 msgid "Layout não identificado"
 msgstr ""
 
@@ -2095,7 +2218,7 @@ msgstr ""
 msgid "Menu principal"
 msgstr ""
 
-#: data/gtk/window.blp:831 cartridges/window.py:2163
+#: data/gtk/window.blp:831 cartridges/window.py:2178
 msgid "Fontes"
 msgstr ""
 
@@ -2111,11 +2234,11 @@ msgstr ""
 msgid "Todas as novidades"
 msgstr ""
 
-#: data/gtk/window.blp:960 cartridges/window.py:1931
+#: data/gtk/window.blp:960 cartridges/window.py:1944
 msgid "Sem novidades"
 msgstr ""
 
-#: data/gtk/window.blp:961 cartridges/window.py:1933
+#: data/gtk/window.blp:961 cartridges/window.py:1946
 msgid "Não foi possível carregar as novidades."
 msgstr ""
 
@@ -2143,7 +2266,7 @@ msgstr ""
 msgid "Atualização disponível"
 msgstr ""
 
-#: data/gtk/window.blp:1266 cartridges/window.py:1545
+#: data/gtk/window.blp:1266 cartridges/window.py:1549
 msgid "Play"
 msgstr ""
 
@@ -2151,7 +2274,8 @@ msgstr ""
 msgid "Jogar via…"
 msgstr ""
 
-#: data/gtk/window.blp:1329 cartridges/window.py:2820
+#: data/gtk/window.blp:1329 cartridges/window.py:2835
+#: cartridges/lighting_page.py:204 cartridges/lighting_page.py:305
 #: cartridges/session_history.py:550
 msgid "Excluir"
 msgstr ""
@@ -2224,458 +2348,459 @@ msgstr ""
 msgid "HowLongToBeat"
 msgstr ""
 
-#: cartridges/main.py:194
+#: cartridges/main.py:195
 msgid "Controle desconhecido"
 msgstr ""
 
-#: cartridges/main.py:609
+#: cartridges/main.py:614
 #, python-brace-format
 msgid "Jolven — {}"
 msgstr ""
 
-#: cartridges/main.py:726
+#: cartridges/main.py:763
 msgid "Não foi possível restaurar o backup"
 msgstr ""
 
 #. The variable is the title of the game
-#: cartridges/main.py:759 cartridges/game.py:318 cartridges/game.py:417
+#: cartridges/main.py:796 cartridges/game.py:322 cartridges/game.py:430
 #, python-brace-format
 msgid "{} launched"
 msgstr ""
 
-#: cartridges/main.py:782
+#: cartridges/main.py:819
 msgid "All Games"
 msgstr ""
 
-#: cartridges/main.py:784
+#: cartridges/main.py:821
 msgid "Added"
 msgstr ""
 
 #. Translators: Replace this with Your Name, Your Name <your.email@example.com>, or Your Name https://your-site.com for it to show up in the About dialog.
-#: cartridges/main.py:833
+#: cartridges/main.py:870
 msgid "translator-credits"
 msgstr ""
 
-#: cartridges/main.py:864
+#: cartridges/main.py:901
 msgid "Open Preferences"
 msgstr ""
 
-#: cartridges/main.py:871
+#: cartridges/main.py:908
 msgid "Authentication is required to open Preferences"
 msgstr ""
 
-#: cartridges/main.py:892
+#: cartridges/main.py:929
 msgid "Could not open Preferences"
 msgstr ""
 
-#: cartridges/main.py:922
+#: cartridges/main.py:959
 msgid "Sunshine não está instalado"
 msgstr ""
 
-#: cartridges/main.py:924
+#: cartridges/main.py:961
 msgid "Para configurar o streaming, instale o Sunshine via Flatpak (sem sudo)."
 msgstr ""
 
-#: cartridges/main.py:928
+#: cartridges/main.py:965
 msgid "Agora não"
 msgstr ""
 
-#: cartridges/main.py:937
+#: cartridges/main.py:974
 msgid "Instalando o Sunshine…"
 msgstr ""
 
-#: cartridges/main.py:956
+#: cartridges/main.py:993
 msgid "Não foi possível instalar o Sunshine"
 msgstr ""
 
-#: cartridges/main.py:960
+#: cartridges/main.py:997
 msgid "Sunshine instalado!"
 msgstr ""
 
-#: cartridges/main.py:993
+#: cartridges/main.py:1030
 msgid "This game cannot be added to Sunshine"
 msgstr ""
 
-#: cartridges/main.py:1001
+#: cartridges/main.py:1038
 msgid "Could not add to Sunshine"
 msgstr ""
 
-#: cartridges/main.py:1003
+#: cartridges/main.py:1040
 #, python-brace-format
 msgid "{} added to Sunshine"
 msgstr ""
 
-#: cartridges/main.py:1131
+#: cartridges/main.py:1172
 msgid "Choose a session or power action."
 msgstr ""
 
-#: cartridges/main.py:1134
+#: cartridges/main.py:1175
 msgid "Exit Jolven Session"
 msgstr ""
 
-#: cartridges/main.py:1135
+#: cartridges/main.py:1176
 msgid "Back to Library"
 msgstr ""
 
-#: cartridges/main.py:1139
+#: cartridges/main.py:1180
 msgid "Close Current Game"
 msgstr ""
 
-#: cartridges/main.py:1145
+#: cartridges/main.py:1186
 msgid "Suspend"
 msgstr ""
 
-#: cartridges/main.py:1147
+#: cartridges/main.py:1188
 msgid "Restart"
 msgstr ""
 
-#: cartridges/main.py:1149
+#: cartridges/main.py:1190
 msgid "Shut Down"
 msgstr ""
 
-#: cartridges/main.py:1175
+#: cartridges/main.py:1216
 msgid "The power action could not be completed"
 msgstr ""
 
-#: cartridges/main.py:1234
+#: cartridges/main.py:1275
 msgid "Could not open the system authorization dialog"
 msgstr ""
 
-#: cartridges/main.py:1244
+#: cartridges/main.py:1285
 msgid "Installing Jolven Session…"
 msgstr ""
 
-#: cartridges/main.py:1246
+#: cartridges/main.py:1287
 msgid "Uninstalling Jolven Session…"
 msgstr ""
 
-#: cartridges/main.py:1258
+#: cartridges/main.py:1299
 msgid "Jolven Session setup was not completed"
 msgstr ""
 
-#: cartridges/window.py:417
+#: cartridges/window.py:418
 msgid "Left click toggles • Right click shows only this"
 msgstr ""
 
-#: cartridges/window.py:453
+#: cartridges/window.py:454
 msgid "Xbox Cloud Gaming — Grátis"
 msgstr ""
 
-#: cartridges/window.py:454
+#: cartridges/window.py:455
 msgid "Xbox Cloud Gaming — Game Pass"
 msgstr ""
 
-#: cartridges/window.py:455
+#: cartridges/window.py:456
 msgid "Xbox Cloud Gaming — Comprados"
 msgstr ""
 
-#: cartridges/window.py:488
+#: cartridges/window.py:489
 msgid "Also shows games from this source that are not installed yet"
 msgstr ""
 
-#: cartridges/window.py:501
+#: cartridges/window.py:502
 msgid "Show uninstalled"
 msgstr ""
 
-#: cartridges/window.py:573
+#: cartridges/window.py:574
 #, python-brace-format
 msgid "{} plataformas"
 msgstr ""
 
-#: cartridges/window.py:792
+#: cartridges/window.py:796
 #, python-brace-format
 msgid "Welcome, {}"
 msgstr ""
 
-#: cartridges/window.py:812
+#: cartridges/window.py:816
 msgid "No recently played game"
 msgstr ""
 
-#: cartridges/window.py:859
+#: cartridges/window.py:863
 #, python-brace-format
 msgid "Conectado: {}"
 msgstr ""
 
-#: cartridges/window.py:867
+#: cartridges/window.py:871
 msgid "Controle Xbox"
 msgstr ""
 
-#: cartridges/window.py:868
+#: cartridges/window.py:872
 msgid "Controle PlayStation"
 msgstr ""
 
-#: cartridges/window.py:869 cartridges/window.py:870
+#: cartridges/window.py:873 cartridges/window.py:874
 msgid "Controle genérico"
 msgstr ""
 
-#: cartridges/window.py:886
+#: cartridges/window.py:890
 #, python-brace-format
 msgid "{} pressionado"
 msgstr ""
 
-#: cartridges/window.py:888
+#: cartridges/window.py:892
 #, python-brace-format
 msgid "{} solto"
 msgstr ""
 
-#: cartridges/window.py:912
+#: cartridges/window.py:916
 #, python-brace-format
 msgid "Eixo {}: {:.2f}"
 msgstr ""
 
-#: cartridges/window.py:929
+#: cartridges/window.py:933
 #, python-brace-format
 msgid "{}: {:.2f}"
 msgstr ""
 
-#: cartridges/window.py:939
+#: cartridges/window.py:943
 msgid "esquerda"
 msgstr ""
 
-#: cartridges/window.py:940
+#: cartridges/window.py:944
 msgid "cima"
 msgstr ""
 
-#: cartridges/window.py:941
+#: cartridges/window.py:945
 msgid "direita"
 msgstr ""
 
-#: cartridges/window.py:942
+#: cartridges/window.py:946
 msgid "baixo"
 msgstr ""
 
-#: cartridges/window.py:945
+#: cartridges/window.py:949
 msgid "centralizado"
 msgstr ""
 
-#: cartridges/window.py:950
+#: cartridges/window.py:954
 #, python-brace-format
 msgid "Direcional {}: {}"
 msgstr ""
 
-#: cartridges/window.py:953
+#: cartridges/window.py:957
 #, python-brace-format
 msgid "Direcional: {}"
 msgstr ""
 
 #. The variable is the launcher/source name of the default variant
-#: cartridges/window.py:1524
+#: cartridges/window.py:1528
 #, python-brace-format
 msgid "{} (last played)"
 msgstr ""
 
 #. The variable is the section title listing the launchers
-#: cartridges/window.py:1532 cartridges/window.py:2478
+#: cartridges/window.py:1536 cartridges/window.py:2493
 msgid "Jogar via"
 msgstr ""
 
-#: cartridges/window.py:1541 cartridges/window.py:1542 cartridges/game.py:599
+#: cartridges/window.py:1545 cartridges/window.py:1546 cartridges/game.py:612
 msgid "Install"
-msgstr ""
-
-#: cartridges/window.py:1556
-#, python-brace-format
-msgid "Plataforma: {}"
-msgstr ""
-
-#: cartridges/window.py:1558
-#, python-brace-format
-msgid "Lançamento: {}"
 msgstr ""
 
 #: cartridges/window.py:1560
 #, python-brace-format
-msgid "Publicadora: {}"
+msgid "Plataforma: {}"
 msgstr ""
 
 #: cartridges/window.py:1562
 #, python-brace-format
-msgid "Gênero: {}"
+msgid "Lançamento: {}"
 msgstr ""
 
 #: cartridges/window.py:1564
 #, python-brace-format
-msgid "Jogadores: {}"
+msgid "Publicadora: {}"
 msgstr ""
 
 #: cartridges/window.py:1566
 #, python-brace-format
-msgid "Classificação: {}"
+msgid "Gênero: {}"
 msgstr ""
 
 #: cartridges/window.py:1568
+#, python-brace-format
+msgid "Jogadores: {}"
+msgstr ""
+
+#: cartridges/window.py:1570
+#, python-brace-format
+msgid "Classificação: {}"
+msgstr ""
+
+#: cartridges/window.py:1572
 #, python-brace-format
 msgid "Cooperativo: {}"
 msgstr ""
 
 #. The variable is the date when the game was added
-#: cartridges/window.py:1605
+#: cartridges/window.py:1609
 #, python-brace-format
 msgid "Added: {}"
 msgstr ""
 
-#: cartridges/window.py:1608
+#: cartridges/window.py:1612
 msgid "Never"
 msgstr ""
 
 #. The variable is the date when the game was last played
-#: cartridges/window.py:1612
+#: cartridges/window.py:1616
 #, python-brace-format
 msgid "Last played: {}"
 msgstr ""
 
-#: cartridges/window.py:1869
+#: cartridges/window.py:1882
 msgid "Novidades atualizadas"
 msgstr ""
 
-#: cartridges/window.py:1871
+#: cartridges/window.py:1884
 msgid "Não foi possível atualizar as novidades"
 msgstr ""
 
-#: cartridges/window.py:1880
+#: cartridges/window.py:1893
 msgid "Atualizando novidades…"
 msgstr ""
 
-#: cartridges/window.py:1925
+#: cartridges/window.py:1938
 msgid "Nenhuma fonte selecionada"
 msgstr ""
 
-#: cartridges/window.py:1927
+#: cartridges/window.py:1940
 msgid "Ative uma fonte no menu de fontes para ver as novidades."
 msgstr ""
 
-#: cartridges/window.py:2205
+#: cartridges/window.py:2220
 msgid "Abrir no navegador"
 msgstr ""
 
-#: cartridges/window.py:2384
+#: cartridges/window.py:2399
 msgid "Você instalou a atualização?"
 msgstr ""
 
-#: cartridges/window.py:2386
+#: cartridges/window.py:2401
 msgid ""
 "A página da atualização foi aberta no navegador. Confirme após instalá-la "
 "para ocultar o aviso."
 msgstr ""
 
-#: cartridges/window.py:2390
+#: cartridges/window.py:2405
 msgid "Ainda não"
 msgstr ""
 
-#: cartridges/window.py:2391
+#: cartridges/window.py:2406
 msgid "Já instalei"
 msgstr ""
 
-#: cartridges/window.py:2413
+#: cartridges/window.py:2428
 #, python-brace-format
 msgid "Tamanho: {}"
 msgstr ""
 
-#: cartridges/window.py:2417
+#: cartridges/window.py:2432
 msgid "Definir status"
 msgstr ""
 
-#: cartridges/window.py:2433 cartridges/details_dialog.py:153
+#: cartridges/window.py:2448 cartridges/details_dialog.py:156
 msgid "Sem status"
 msgstr ""
 
-#: cartridges/window.py:2494 cartridges/window.py:2744
+#: cartridges/window.py:2509 cartridges/window.py:2759
 msgid "Marcar como jogo"
 msgstr ""
 
-#: cartridges/window.py:2496
+#: cartridges/window.py:2511
 msgid "Marcar como launcher"
 msgstr ""
 
-#: cartridges/window.py:2507
+#: cartridges/window.py:2522
 msgid "Desagrupar"
 msgstr ""
 
-#: cartridges/window.py:2655 cartridges/window.py:2671
+#: cartridges/window.py:2670 cartridges/window.py:2686
 msgid "Sincronização do Xbox Cloud em andamento"
 msgstr ""
 
-#: cartridges/window.py:2675
+#: cartridges/window.py:2690
 msgid "Atualizando catálogo Xbox Cloud…"
 msgstr ""
 
-#: cartridges/window.py:2687
+#: cartridges/window.py:2702
 #, python-brace-format
 msgid "Catálogo Xbox Cloud atualizado: {} jogos"
 msgstr ""
 
-#: cartridges/window.py:2700
+#: cartridges/window.py:2715
 msgid "Não foi possível atualizar o Xbox Cloud (offline?)"
 msgstr ""
 
-#: cartridges/window.py:2769
+#: cartridges/window.py:2784
 msgid "Ative o Xbox Cloud Gaming nas preferências"
 msgstr ""
 
-#: cartridges/window.py:2777
+#: cartridges/window.py:2792
 msgid "Não foi possível abrir o jogo no Xbox Cloud Gaming"
 msgstr ""
 
-#: cartridges/window.py:2789
+#: cartridges/window.py:2804
 msgid "Não foi possível abrir o navegador"
 msgstr ""
 
-#: cartridges/window.py:2813
+#: cartridges/window.py:2828
 #, python-brace-format
 msgid "Excluir {}?"
 msgstr ""
 
-#: cartridges/window.py:2815
+#: cartridges/window.py:2830
 msgid "Tem certeza que deseja excluir este jogo? Esta ação é irreversível."
 msgstr ""
 
-#: cartridges/window.py:2819 cartridges/preferences.py:1228
-#: cartridges/preferences.py:1544 cartridges/preferences.py:1935
+#: cartridges/window.py:2834 cartridges/lighting_page.py:304
+#: cartridges/lighting_page.py:357 cartridges/preferences.py:1251
+#: cartridges/preferences.py:1567 cartridges/preferences.py:2117
 msgid "Cancelar"
 msgstr ""
 
-#: cartridges/window.py:2847
+#: cartridges/window.py:2862
 #, python-brace-format
 msgid "{} excluído"
 msgstr ""
 
-#: cartridges/window.py:2870
+#: cartridges/window.py:2885
 #, python-brace-format
 msgid "Tempo de jogo: {}"
 msgstr ""
 
-#: cartridges/window.py:2875
+#: cartridges/window.py:2890
 msgid "Ver o histórico de sessões"
 msgstr ""
 
-#: cartridges/window.py:2921
+#: cartridges/window.py:2936
 #, python-brace-format
 msgid "{} em execução"
 msgstr ""
 
-#: cartridges/window.py:3063 cartridges/window.py:3108
+#: cartridges/window.py:3079 cartridges/window.py:3124
 msgid ""
 "GPU Screen Recorder não foi encontrado. Instale o aplicativo e tente "
 "novamente."
 msgstr ""
 
-#: cartridges/window.py:3071
+#: cartridges/window.py:3087
 msgid "Gravação iniciada"
 msgstr ""
 
-#: cartridges/window.py:3076
+#: cartridges/window.py:3092
 msgid "Gravação salva"
 msgstr ""
 
-#: cartridges/window.py:3079
+#: cartridges/window.py:3095
 msgid "Replay salvo"
 msgstr ""
 
-#: cartridges/window.py:3081
+#: cartridges/window.py:3097
 msgid "Não foi possível controlar o gravador."
 msgstr ""
 
-#: cartridges/window.py:3089
+#: cartridges/window.py:3105
 msgid "Parar a gravação. Clique com o botão direito para salvar o replay."
 msgstr ""
 
@@ -2734,39 +2859,39 @@ msgstr ""
 msgid "Face button {}"
 msgstr ""
 
-#: cartridges/details_dialog.py:236
+#: cartridges/details_dialog.py:244
 msgid "Add New Game"
 msgstr ""
 
-#: cartridges/details_dialog.py:237
+#: cartridges/details_dialog.py:245
 msgid "Add"
 msgstr ""
 
-#: cartridges/details_dialog.py:250
+#: cartridges/details_dialog.py:258
 msgid "Executables"
 msgstr ""
 
-#: cartridges/details_dialog.py:264
+#: cartridges/details_dialog.py:272
 msgid "Imagens de logo"
 msgstr ""
 
 #. Translate this string as you would translate "file"
-#: cartridges/details_dialog.py:275
+#: cartridges/details_dialog.py:283
 msgid "file.txt"
 msgstr ""
 
 #. As in software
-#: cartridges/details_dialog.py:277
+#: cartridges/details_dialog.py:285
 msgid "program"
 msgstr ""
 
 #. Translate this string as you would translate "path to {}"
-#: cartridges/details_dialog.py:280 cartridges/details_dialog.py:282
+#: cartridges/details_dialog.py:288 cartridges/details_dialog.py:290
 #, python-brace-format
 msgid "/path/to/{}"
 msgstr ""
 
-#: cartridges/details_dialog.py:287
+#: cartridges/details_dialog.py:295
 #, python-brace-format
 msgid ""
 "To launch the executable \"{}\", use the command:\n"
@@ -2780,66 +2905,74 @@ msgid ""
 "If the path contains spaces, make sure to wrap it in double quotes!"
 msgstr ""
 
-#: cartridges/details_dialog.py:418 cartridges/details_dialog.py:495
-#: cartridges/details_dialog.py:556
+#: cartridges/details_dialog.py:427 cartridges/details_dialog.py:504
+#: cartridges/details_dialog.py:565
 msgid "Escolhido manualmente"
 msgstr ""
 
-#: cartridges/details_dialog.py:419
+#: cartridges/details_dialog.py:428
 msgid "Sem logo; o título é exibido"
 msgstr ""
 
-#: cartridges/details_dialog.py:420
+#: cartridges/details_dialog.py:429
 msgid "Automático (SteamGridDB)"
 msgstr ""
 
-#: cartridges/details_dialog.py:496
+#: cartridges/details_dialog.py:505
 msgid "Não trocar o papel de parede"
 msgstr ""
 
-#: cartridges/details_dialog.py:497 cartridges/details_dialog.py:557
+#: cartridges/details_dialog.py:506 cartridges/details_dialog.py:566
 msgid "Automático (IGDB, TheGamesDB, wallhaven)"
 msgstr ""
 
-#: cartridges/details_dialog.py:589 cartridges/details_dialog.py:591
-#: cartridges/preferences.py:1915
+#: cartridges/details_dialog.py:612
+msgid "Nenhum"
+msgstr ""
+
+#: cartridges/details_dialog.py:617
+msgid "Nenhum perfil ainda — crie um em Preferências, Iluminação"
+msgstr ""
+
+#: cartridges/details_dialog.py:647 cartridges/details_dialog.py:649
+#: cartridges/preferences.py:2097
 msgid "Nenhum dispositivo configurado"
 msgstr ""
 
-#: cartridges/details_dialog.py:605
+#: cartridges/details_dialog.py:663
 msgid "Escolhida manualmente"
 msgstr ""
 
-#: cartridges/details_dialog.py:605
+#: cartridges/details_dialog.py:663
 msgid "Extraída da capa"
 msgstr ""
 
-#: cartridges/details_dialog.py:686
+#: cartridges/details_dialog.py:744
 msgid "Invalid environment"
 msgstr ""
 
-#: cartridges/details_dialog.py:687
+#: cartridges/details_dialog.py:745
 msgid "Use a JSON object containing text keys and values."
 msgstr ""
 
-#: cartridges/details_dialog.py:694 cartridges/details_dialog.py:700
+#: cartridges/details_dialog.py:752 cartridges/details_dialog.py:758
 msgid "Couldn't Add Game"
 msgstr ""
 
-#: cartridges/details_dialog.py:694 cartridges/details_dialog.py:732
+#: cartridges/details_dialog.py:752 cartridges/details_dialog.py:790
 msgid "Game title cannot be empty."
 msgstr ""
 
-#: cartridges/details_dialog.py:700 cartridges/details_dialog.py:740
+#: cartridges/details_dialog.py:758 cartridges/details_dialog.py:798
 msgid "Executable cannot be empty."
 msgstr ""
 
-#: cartridges/details_dialog.py:731 cartridges/details_dialog.py:739
-#: cartridges/details_dialog.py:747
+#: cartridges/details_dialog.py:789 cartridges/details_dialog.py:797
+#: cartridges/details_dialog.py:805
 msgid "Couldn't Apply Preferences"
 msgstr ""
 
-#: cartridges/details_dialog.py:748
+#: cartridges/details_dialog.py:806
 msgid "Release date not recognized."
 msgstr ""
 
@@ -2859,29 +2992,29 @@ msgstr ""
 msgid "Abandonado"
 msgstr ""
 
-#: cartridges/game.py:336 cartridges/game.py:358 cartridges/game.py:377
+#: cartridges/game.py:340 cartridges/game.py:362 cartridges/game.py:381
 #, python-brace-format
 msgid "{} could not be launched"
 msgstr ""
 
-#: cartridges/game.py:338
+#: cartridges/game.py:342
 #, python-brace-format
 msgid "Installing {}"
 msgstr ""
 
 #. The variable is the title of the game
-#: cartridges/game.py:525
+#: cartridges/game.py:538
 #, python-brace-format
 msgid "{} hidden"
 msgstr ""
 
-#: cartridges/game.py:525
+#: cartridges/game.py:538
 #, python-brace-format
 msgid "{} unhidden"
 msgstr ""
 
 #. The variable is the title of the game
-#: cartridges/game.py:539
+#: cartridges/game.py:552
 #, python-brace-format
 msgid "{} removed"
 msgstr ""
@@ -2938,6 +3071,91 @@ msgstr ""
 #: cartridges/integrations_page.py:234
 #, python-brace-format
 msgid "{} instalado"
+msgstr ""
+
+#: cartridges/lighting_page.py:88 cartridges/lighting_page.py:478
+#, python-brace-format
+msgid "{} LEDs"
+msgstr ""
+
+#: cartridges/lighting_page.py:90
+msgid "não altera"
+msgstr ""
+
+#: cartridges/lighting_page.py:186
+msgid "Renomear"
+msgstr ""
+
+#: cartridges/lighting_page.py:195
+msgid "Duplicar"
+msgstr ""
+
+#: cartridges/lighting_page.py:223
+msgid "nenhum dispositivo"
+msgstr ""
+
+#: cartridges/lighting_page.py:225
+msgid "1 dispositivo"
+msgstr ""
+
+#: cartridges/lighting_page.py:226
+#, python-brace-format
+msgid "{} dispositivos"
+msgstr ""
+
+#: cartridges/lighting_page.py:255 cartridges/lighting_page.py:271
+msgid "Não foi possível gravar o perfil"
+msgstr ""
+
+#: cartridges/lighting_page.py:264
+msgid "Novo perfil de iluminação"
+msgstr ""
+
+#: cartridges/lighting_page.py:281
+msgid "Renomear perfil"
+msgstr ""
+
+#: cartridges/lighting_page.py:292
+msgid "Não foi possível duplicar o perfil"
+msgstr ""
+
+#: cartridges/lighting_page.py:301
+#, python-brace-format
+msgid "Excluir o perfil {}?"
+msgstr ""
+
+#: cartridges/lighting_page.py:302
+msgid "Os jogos que usam este perfil voltam a não ter iluminação especial."
+msgstr ""
+
+#: cartridges/lighting_page.py:318
+msgid "Não foi possível excluir o perfil"
+msgstr ""
+
+#: cartridges/lighting_page.py:341
+msgid "Voltar ao estado anterior"
+msgstr ""
+
+#: cartridges/lighting_page.py:358
+msgid "Confirmar"
+msgstr ""
+
+#: cartridges/lighting_page.py:362
+msgid "Nome"
+msgstr ""
+
+#: cartridges/lighting_page.py:396
+msgid ""
+"Nenhum dispositivo encontrado. Abra as Preferências para ligar o OpenRGB ou "
+"configurar as fitas inteligentes."
+msgstr ""
+
+#: cartridges/lighting_page.py:478
+msgid "zona"
+msgstr ""
+
+#: cartridges/lighting_page.py:584
+msgid "Cor"
 msgstr ""
 
 #: cartridges/onscreen_keyboard.py:77
@@ -3012,638 +3230,692 @@ msgstr ""
 msgid "Type with the controller"
 msgstr ""
 
-#: cartridges/preferences.py:608
+#: cartridges/preferences.py:624
 msgid "All games removed"
 msgstr ""
 
-#: cartridges/preferences.py:762
+#: cartridges/preferences.py:778
 #, python-brace-format
 msgid ""
 "An API key is required to use SteamGridDB. You can generate one {}here{}."
 msgstr ""
 
-#: cartridges/preferences.py:777
+#: cartridges/preferences.py:793
 msgid "Downloading covers…"
 msgstr ""
 
-#: cartridges/preferences.py:796
+#: cartridges/preferences.py:812
 msgid "Covers updated"
 msgstr ""
 
-#: cartridges/preferences.py:826
+#: cartridges/preferences.py:842
 #, python-brace-format
 msgid ""
 "A chave permite buscar detalhes, capturas de tela e imagens. Consulte a {}"
 "página da API do TheGamesDB{}."
 msgstr ""
 
-#: cartridges/preferences.py:851
+#: cartridges/preferences.py:867
 #, python-brace-format
 msgid ""
 "As credenciais permitem buscar capas e capturas de tela. Consulte a {}página "
 "da API do IGDB{}."
 msgstr ""
 
-#: cartridges/preferences.py:865
+#: cartridges/preferences.py:881
 msgid "Buscando metadados…"
 msgstr ""
 
-#: cartridges/preferences.py:885
+#: cartridges/preferences.py:901
 msgid "Não foi possível concluir a atualização"
 msgstr ""
 
-#: cartridges/preferences.py:886 cartridges/image_picker.py:281
+#: cartridges/preferences.py:902 cartridges/image_picker.py:281
 #: cartridges/image_picker.py:460 cartridges/logo_picker.py:183
 #: cartridges/wallpaper_picker.py:311
 msgid "Verifique a conexão e tente novamente."
 msgstr ""
 
-#: cartridges/preferences.py:889
+#: cartridges/preferences.py:905
 msgid "Metadados atualizados"
 msgstr ""
 
-#: cartridges/preferences.py:1061
+#: cartridges/preferences.py:1084
 msgid "Automático (navegador padrão)"
 msgstr ""
 
-#: cartridges/preferences.py:1077
+#: cartridges/preferences.py:1100
 msgid "Nenhum navegador detectado no sistema."
 msgstr ""
 
-#: cartridges/preferences.py:1102
+#: cartridges/preferences.py:1125
 #, python-brace-format
 msgid "{} jogo(s) sincronizado(s) com o Sunshine"
 msgstr ""
 
-#: cartridges/preferences.py:1109
+#: cartridges/preferences.py:1132
 msgid "Não foi possível sincronizar"
 msgstr ""
 
-#: cartridges/preferences.py:1252
+#: cartridges/preferences.py:1275
 msgid "Não foi possível conectar"
 msgstr ""
 
-#: cartridges/preferences.py:1256
+#: cartridges/preferences.py:1279
 msgid "desconhecida"
 msgstr ""
 
-#: cartridges/preferences.py:1259
+#: cartridges/preferences.py:1282
 #, python-brace-format
 msgid "Sunshine {} · {} app(s)"
 msgstr ""
 
-#: cartridges/preferences.py:1314
+#: cartridges/preferences.py:1337
 msgid "Nenhum app cadastrado"
 msgstr ""
 
-#: cartridges/preferences.py:1337
+#: cartridges/preferences.py:1360
 msgid "Remover do Sunshine?"
 msgstr ""
 
-#: cartridges/preferences.py:1338
+#: cartridges/preferences.py:1361
 #, python-brace-format
 msgid "{} deixará de aparecer no Moonlight."
 msgstr ""
 
-#: cartridges/preferences.py:1359
+#: cartridges/preferences.py:1382
 #, python-brace-format
 msgid "{} jogo(s) exportado(s) via API"
 msgstr ""
 
-#: cartridges/preferences.py:1431 cartridges/preferences.py:1434
+#: cartridges/preferences.py:1454 cartridges/preferences.py:1457
 msgid "Bitrate e FPS precisam ser números"
 msgstr ""
 
-#: cartridges/preferences.py:1438
+#: cartridges/preferences.py:1461
 msgid "Origem válida: pc, lan ou wan"
 msgstr ""
 
-#: cartridges/preferences.py:1466
+#: cartridges/preferences.py:1489
 msgid "Aplicar ajustes do host?"
 msgstr ""
 
-#: cartridges/preferences.py:1467
+#: cartridges/preferences.py:1490
 msgid "A config inteira do Sunshine será regravada."
 msgstr ""
 
-#: cartridges/preferences.py:1490
+#: cartridges/preferences.py:1513
 msgid "Ajustes aplicados. Reiniciando…"
 msgstr ""
 
-#: cartridges/preferences.py:1496
+#: cartridges/preferences.py:1519
 msgid "Reiniciar o Sunshine?"
 msgstr ""
 
-#: cartridges/preferences.py:1497
+#: cartridges/preferences.py:1520
 msgid "Os ajustes do host só valem após reiniciar."
 msgstr ""
 
-#: cartridges/preferences.py:1498
+#: cartridges/preferences.py:1521
 msgid "Reiniciar"
 msgstr ""
 
-#: cartridges/preferences.py:1507 cartridges/preferences.py:1597
+#: cartridges/preferences.py:1530 cartridges/preferences.py:1620
 msgid "Sem nome"
 msgstr ""
 
-#: cartridges/preferences.py:1511 cartridges/preferences.py:1545
+#: cartridges/preferences.py:1534 cartridges/preferences.py:1568
 msgid "Aprovar"
 msgstr ""
 
-#: cartridges/preferences.py:1516
+#: cartridges/preferences.py:1539
 msgid "Recusar"
 msgstr ""
 
-#: cartridges/preferences.py:1525
+#: cartridges/preferences.py:1548
 msgid "Nenhum pedido pendente"
 msgstr ""
 
-#: cartridges/preferences.py:1541
+#: cartridges/preferences.py:1564
 msgid "Aprovar pareamento?"
 msgstr ""
 
-#: cartridges/preferences.py:1542
+#: cartridges/preferences.py:1565
 msgid "Digite o PIN mostrado no Moonlight."
 msgstr ""
 
-#: cartridges/preferences.py:1610
+#: cartridges/preferences.py:1633
 msgid "Nenhum cliente pareado"
 msgstr ""
 
-#: cartridges/preferences.py:1631
+#: cartridges/preferences.py:1654
 msgid "Desemparelhar cliente?"
 msgstr ""
 
-#: cartridges/preferences.py:1656
+#: cartridges/preferences.py:1679
 msgid "Desemparelhar todos?"
 msgstr ""
 
-#: cartridges/preferences.py:1657
+#: cartridges/preferences.py:1680
 msgid "Todos os Moonlights precisarão parear de novo."
 msgstr ""
 
-#: cartridges/preferences.py:1658
+#: cartridges/preferences.py:1681
 msgid "Remover todos"
 msgstr ""
 
-#: cartridges/preferences.py:1670
+#: cartridges/preferences.py:1693
 msgid "Porta inválida"
 msgstr ""
 
-#: cartridges/preferences.py:1684
+#: cartridges/preferences.py:1707
 msgid "O Sunshine já está rodando"
 msgstr ""
 
-#: cartridges/preferences.py:1686
+#: cartridges/preferences.py:1709
 msgid "Iniciando o Sunshine…"
 msgstr ""
 
-#: cartridges/preferences.py:1720
+#: cartridges/preferences.py:1743
 msgid "Sunshine não instalado"
 msgstr ""
 
-#: cartridges/preferences.py:1766
+#: cartridges/preferences.py:1789
 msgid ""
 "Sem suporte neste ambiente. No GNOME: Configurações > Teclado > Atalhos "
 "personalizados."
 msgstr ""
 
-#: cartridges/preferences.py:1776
+#: cartridges/preferences.py:1799
 #, python-brace-format
 msgid "Ativo no {} — Super+G abre o Jolven de qualquer lugar"
 msgstr ""
 
-#: cartridges/preferences.py:1783
+#: cartridges/preferences.py:1806
 #, python-brace-format
 msgid "Super+G está com {} — ativar move para o Jolven ({})"
 msgstr ""
 
-#: cartridges/preferences.py:1790
+#: cartridges/preferences.py:1813
 #, python-brace-format
 msgid "Abre o Jolven de qualquer lugar ({})"
 msgstr ""
 
-#: cartridges/preferences.py:1797
+#: cartridges/preferences.py:1820
 msgid "Aplicando…"
 msgstr ""
 
-#: cartridges/preferences.py:1816
+#: cartridges/preferences.py:1839
 msgid "Atalho Super+G ativo"
 msgstr ""
 
-#: cartridges/preferences.py:1818
+#: cartridges/preferences.py:1841
 msgid "Atalho Super+G removido"
 msgstr ""
 
-#: cartridges/preferences.py:1824
+#: cartridges/preferences.py:1847
 msgid "Não foi possível configurar o atalho"
 msgstr ""
 
-#: cartridges/preferences.py:1826
+#: cartridges/preferences.py:1849
 msgid "Verifique as permissões do ambiente e tente novamente."
 msgstr ""
 
-#: cartridges/preferences.py:1845
+#: cartridges/preferences.py:1868
 msgid "Há um papel de parede de sessão a devolver"
 msgstr ""
 
-#: cartridges/preferences.py:1847
+#: cartridges/preferences.py:1870
 msgid "Nenhum papel de parede de sessão a devolver"
 msgstr ""
 
-#: cartridges/preferences.py:1858
+#: cartridges/preferences.py:1881
 msgid "Não foi possível devolver o papel de parede"
 msgstr ""
 
-#: cartridges/preferences.py:1861
+#: cartridges/preferences.py:1884
 msgid "Papel de parede restaurado"
 msgstr ""
 
-#: cartridges/preferences.py:1936
+#: cartridges/preferences.py:1966
+msgid "Não foi possível verificar o servidor"
+msgstr ""
+
+#: cartridges/preferences.py:1968 cartridges/preferences.py:1980
+#: cartridges/preferences.py:2023
+msgid "OpenRGB não está instalado"
+msgstr ""
+
+#: cartridges/preferences.py:1970
+#, python-brace-format
+msgid "Servidor no ar, {} dispositivos"
+msgstr ""
+
+#: cartridges/preferences.py:1972
+msgid "Servidor no ar, nenhum dispositivo detectado"
+msgstr ""
+
+#: cartridges/preferences.py:1974
+msgid "Instalado, mas o servidor não está respondendo"
+msgstr ""
+
+#: cartridges/preferences.py:1976
+msgid "Há algo na porta, mas não fala o protocolo do OpenRGB"
+msgstr ""
+
+#: cartridges/preferences.py:1978
+msgid "Sem permissão para acessar os dispositivos"
+msgstr ""
+
+#: cartridges/preferences.py:1981
+msgid "Falha ao falar com o servidor"
+msgstr ""
+
+#: cartridges/preferences.py:1988
+msgid "Instalando…"
+msgstr ""
+
+#: cartridges/preferences.py:2004
+msgid "Não foi possível instalar"
+msgstr ""
+
+#: cartridges/preferences.py:2007
+msgid "Instalado"
+msgstr ""
+
+#: cartridges/preferences.py:2050
+msgid "Não foi possível iniciar o servidor"
+msgstr ""
+
+#: cartridges/preferences.py:2053
+msgid "Servidor solicitado; verificando…"
+msgstr ""
+
+#: cartridges/preferences.py:2118
 msgid "Salvar"
 msgstr ""
 
-#: cartridges/preferences.py:1942
+#: cartridges/preferences.py:2124
 msgid ""
 "Brilho máximo de cada dispositivo, em porcentagem. O brilho definido nas "
 "Preferências e em cada jogo é aplicado proporcionalmente sobre estes valores."
 msgstr ""
 
-#: cartridges/preferences.py:2055
+#: cartridges/preferences.py:2237
 msgid "Teste interrompido"
 msgstr ""
 
-#: cartridges/preferences.py:2059
+#: cartridges/preferences.py:2241
 #, python-brace-format
 msgid ""
 "Sem resposta: {}. Se o dispositivo estiver ligado, o endereço dele na rede "
 "pode ter mudado; configure a iluminação inteligente novamente."
 msgstr ""
 
-#: cartridges/preferences.py:2064
+#: cartridges/preferences.py:2246
 msgid "Teste concluído"
 msgstr ""
 
-#: cartridges/preferences.py:2092
+#: cartridges/preferences.py:2274
 msgid "System default"
 msgstr ""
 
-#: cartridges/preferences.py:2114
+#: cartridges/preferences.py:2299
 msgid "Jolven D-pad (padrão)"
 msgstr ""
 
-#: cartridges/preferences.py:2115
+#: cartridges/preferences.py:2300
 msgid "Jolven Portal"
 msgstr ""
 
-#: cartridges/preferences.py:2130
+#: cartridges/preferences.py:2315
 msgid "Ícone atualizado. Saia e entre de novo se o menu não mudar."
 msgstr ""
 
-#: cartridges/preferences.py:2365 cartridges/preferences.py:2668
+#: cartridges/preferences.py:2550 cartridges/preferences.py:2853
 msgid "Claro"
 msgstr ""
 
-#: cartridges/preferences.py:2365 cartridges/preferences.py:2668
+#: cartridges/preferences.py:2550 cartridges/preferences.py:2853
 msgid "Escuro"
 msgstr ""
 
-#: cartridges/preferences.py:2365 cartridges/preferences.py:2672
-#: cartridges/preferences.py:3372 cartridges/preferences.py:3395
+#: cartridges/preferences.py:2550 cartridges/preferences.py:2857
+#: cartridges/preferences.py:3557 cartridges/preferences.py:3580
 msgid "Automático"
 msgstr ""
 
-#: cartridges/preferences.py:2391
+#: cartridges/preferences.py:2576
 msgid "Padrão do tema"
 msgstr ""
 
-#: cartridges/preferences.py:2393 cartridges/preferences.py:2830
+#: cartridges/preferences.py:2578 cartridges/preferences.py:3015
 msgid "Personalizado"
 msgstr ""
 
-#: cartridges/preferences.py:2499
+#: cartridges/preferences.py:2684
 msgid "Aparência restaurada ao padrão"
 msgstr ""
 
-#: cartridges/preferences.py:2595
+#: cartridges/preferences.py:2780
 #, python-brace-format
 msgid "{} — usa o modo escuro"
 msgstr ""
 
-#: cartridges/preferences.py:2663
+#: cartridges/preferences.py:2848
 msgid "Padrão do Adwaita"
 msgstr ""
 
-#: cartridges/preferences.py:2663
+#: cartridges/preferences.py:2848
 msgid "Cantarell"
 msgstr ""
 
-#: cartridges/preferences.py:2663
+#: cartridges/preferences.py:2848
 msgid "Fonte do sistema"
 msgstr ""
 
-#: cartridges/preferences.py:2668
+#: cartridges/preferences.py:2853
 msgid "Seguir o tema"
 msgstr ""
 
-#: cartridges/preferences.py:2672
+#: cartridges/preferences.py:2857
 msgid "Todos à esquerda"
 msgstr ""
 
-#: cartridges/preferences.py:2672
+#: cartridges/preferences.py:2857
 msgid "Todos à direita"
 msgstr ""
 
-#: cartridges/preferences.py:2723
+#: cartridges/preferences.py:2908
 msgid "Indisponível nesta versão da skin"
 msgstr ""
 
-#: cartridges/preferences.py:2726
+#: cartridges/preferences.py:2911
 msgid "Esta versão da skin não oferece ajustes finos"
 msgstr ""
 
-#: cartridges/preferences.py:2790 cartridges/preferences.py:2871
-#: cartridges/preferences.py:2984
+#: cartridges/preferences.py:2975 cartridges/preferences.py:3056
+#: cartridges/preferences.py:3169
 msgid "Integração com a Steam indisponível"
 msgstr ""
 
-#: cartridges/preferences.py:2798
+#: cartridges/preferences.py:2983
 #: cartridges/integrations/steam_skin/recovery.py:86
 msgid "Steam não encontrada"
 msgstr ""
 
-#: cartridges/preferences.py:2827
+#: cartridges/preferences.py:3012
 msgid "Nativo"
 msgstr ""
 
-#: cartridges/preferences.py:2829
+#: cartridges/preferences.py:3014
 msgid "Snap"
 msgstr ""
 
-#: cartridges/preferences.py:2889
+#: cartridges/preferences.py:3074
 msgid "Não foi possível verificar a Steam"
 msgstr ""
 
-#: cartridges/preferences.py:2991
+#: cartridges/preferences.py:3176
 msgid "Aplicando o tema à Steam…"
 msgstr ""
 
-#: cartridges/preferences.py:2992
+#: cartridges/preferences.py:3177
 msgid "Reparando a skin da Steam…"
 msgstr ""
 
-#: cartridges/preferences.py:2993
+#: cartridges/preferences.py:3178
 msgid "Restaurando a aparência original da Steam…"
 msgstr ""
 
-#: cartridges/preferences.py:2995
+#: cartridges/preferences.py:3180
 msgid "Trabalhando…"
 msgstr ""
 
-#: cartridges/preferences.py:3026
+#: cartridges/preferences.py:3211
 msgid "Não foi possível concluir a ação. Tente de novo."
 msgstr ""
 
-#: cartridges/preferences.py:3030
+#: cartridges/preferences.py:3215
 msgid "Tema aplicado à Steam"
 msgstr ""
 
-#: cartridges/preferences.py:3031
+#: cartridges/preferences.py:3216
 msgid "Skin da Steam reparada"
 msgstr ""
 
-#: cartridges/preferences.py:3032
+#: cartridges/preferences.py:3217
 msgid "Aparência original da Steam devolvida"
 msgstr ""
 
-#: cartridges/preferences.py:3034
+#: cartridges/preferences.py:3219
 msgid "Pronto"
 msgstr ""
 
-#: cartridges/preferences.py:3110
+#: cartridges/preferences.py:3295
 msgid "Automatic detection"
 msgstr ""
 
-#: cartridges/preferences.py:3135
+#: cartridges/preferences.py:3320
 msgid "Button Mode"
 msgstr ""
 
-#: cartridges/preferences.py:3136
+#: cartridges/preferences.py:3321
 msgid "Button Home"
 msgstr ""
 
-#: cartridges/preferences.py:3137
+#: cartridges/preferences.py:3322
 msgid "Both buttons"
 msgstr ""
 
-#: cartridges/preferences.py:3233 cartridges/preferences.py:3257
-#: cartridges/preferences.py:3270 cartridges/platform/system_integration.py:186
+#: cartridges/preferences.py:3418 cartridges/preferences.py:3442
+#: cartridges/preferences.py:3455 cartridges/platform/system_integration.py:186
 msgid "Integração de sistema ausente — reinstale o Jolven"
 msgstr ""
 
-#: cartridges/preferences.py:3240
+#: cartridges/preferences.py:3425
 msgid "Instalada — aparece no seletor de sessões no próximo login"
 msgstr ""
 
-#: cartridges/preferences.py:3245
+#: cartridges/preferences.py:3430
 msgid "Não instalada — o Jolven não aparece no seletor de sessões"
 msgstr ""
 
-#: cartridges/preferences.py:3279
+#: cartridges/preferences.py:3464
 msgid "Instalando a Jolven Session…"
 msgstr ""
 
-#: cartridges/preferences.py:3281
+#: cartridges/preferences.py:3466
 msgid "Removendo a Jolven Session…"
 msgstr ""
 
-#: cartridges/preferences.py:3301
+#: cartridges/preferences.py:3486
 msgid "Não foi possível iniciar a Jolven Session"
 msgstr ""
 
-#: cartridges/preferences.py:3313
+#: cartridges/preferences.py:3498
 msgid "Jolven Session instalada."
 msgstr ""
 
-#: cartridges/preferences.py:3315
+#: cartridges/preferences.py:3500
 msgid "Não foi possível alterar a Jolven Session."
 msgstr ""
 
-#: cartridges/preferences.py:3355
+#: cartridges/preferences.py:3540
 msgid "Portal (escolher a cada gravação)"
 msgstr ""
 
-#: cartridges/preferences.py:3356
+#: cartridges/preferences.py:3541
 msgid "Monitor inteiro"
 msgstr ""
 
-#: cartridges/preferences.py:3357
+#: cartridges/preferences.py:3542
 msgid "Janela em foco"
 msgstr ""
 
-#: cartridges/preferences.py:3364
+#: cartridges/preferences.py:3549
 msgid "MP4"
 msgstr ""
 
-#: cartridges/preferences.py:3365
+#: cartridges/preferences.py:3550
 msgid "Matroska (MKV)"
 msgstr ""
 
-#: cartridges/preferences.py:3373
+#: cartridges/preferences.py:3558
 msgid "H.264"
 msgstr ""
 
-#: cartridges/preferences.py:3374
+#: cartridges/preferences.py:3559
 msgid "H.265 (HEVC)"
 msgstr ""
 
-#: cartridges/preferences.py:3375
+#: cartridges/preferences.py:3560
 msgid "AV1"
 msgstr ""
 
-#: cartridges/preferences.py:3376
+#: cartridges/preferences.py:3561
 msgid "VP8"
 msgstr ""
 
-#: cartridges/preferences.py:3377
+#: cartridges/preferences.py:3562
 msgid "VP9"
 msgstr ""
 
-#: cartridges/preferences.py:3384
+#: cartridges/preferences.py:3569
 msgid "Baixa"
 msgstr ""
 
-#: cartridges/preferences.py:3385
+#: cartridges/preferences.py:3570
 msgid "Média"
 msgstr ""
 
-#: cartridges/preferences.py:3386
+#: cartridges/preferences.py:3571
 msgid "Alta"
 msgstr ""
 
-#: cartridges/preferences.py:3387
+#: cartridges/preferences.py:3572
 msgid "Muito alta"
 msgstr ""
 
-#: cartridges/preferences.py:3388
+#: cartridges/preferences.py:3573
 msgid "Ultra"
 msgstr ""
 
-#: cartridges/preferences.py:3396
+#: cartridges/preferences.py:3581
 msgid "Taxa constante (CBR)"
 msgstr ""
 
-#: cartridges/preferences.py:3397
+#: cartridges/preferences.py:3582
 msgid "Taxa variável (VBR)"
 msgstr ""
 
-#: cartridges/preferences.py:3414
+#: cartridges/preferences.py:3599
 msgid "Saída padrão"
 msgstr ""
 
-#: cartridges/preferences.py:3415
+#: cartridges/preferences.py:3600
 msgid "Entrada (microfone)"
 msgstr ""
 
-#: cartridges/preferences.py:3416
+#: cartridges/preferences.py:3601
 msgid "Saída e entrada"
 msgstr ""
 
-#: cartridges/preferences.py:3417
+#: cartridges/preferences.py:3602
 msgid "Sem áudio"
 msgstr ""
 
-#: cartridges/preferences.py:3424
+#: cartridges/preferences.py:3609
 msgid "Opus"
 msgstr ""
 
-#: cartridges/preferences.py:3425
+#: cartridges/preferences.py:3610
 msgid "AAC"
 msgstr ""
 
-#: cartridges/preferences.py:3426
+#: cartridges/preferences.py:3611
 msgid "FLAC"
 msgstr ""
 
-#: cartridges/preferences.py:3439
+#: cartridges/preferences.py:3624
 msgid "Memória RAM"
 msgstr ""
 
-#: cartridges/preferences.py:3440
+#: cartridges/preferences.py:3625
 msgid "Disco"
 msgstr ""
 
-#: cartridges/preferences.py:3500
+#: cartridges/preferences.py:3685
 msgid "Backup do Jolven"
 msgstr ""
 
-#: cartridges/preferences.py:3517
+#: cartridges/preferences.py:3702
 msgid "Exportando backup…"
 msgstr ""
 
-#: cartridges/preferences.py:3538
+#: cartridges/preferences.py:3723
 msgid "Não foi possível exportar"
 msgstr ""
 
-#: cartridges/preferences.py:3540
+#: cartridges/preferences.py:3725
 msgid ""
 "Não foi possível gravar o arquivo. Verifique se a pasta de destino está "
 "acessível e se há espaço livre em disco."
 msgstr ""
 
-#: cartridges/preferences.py:3545
+#: cartridges/preferences.py:3730
 msgid "Backup exportado"
 msgstr ""
 
-#: cartridges/preferences.py:3568
+#: cartridges/preferences.py:3753
 msgid "Restaurar este backup?"
 msgstr ""
 
-#: cartridges/preferences.py:3569
+#: cartridges/preferences.py:3754
 msgid "Tem certeza que deseja restaurar este backup? Esta ação é irreversível."
 msgstr ""
 
-#: cartridges/preferences.py:3577
+#: cartridges/preferences.py:3762
 msgid "Preparando a restauração…"
 msgstr ""
 
-#: cartridges/preferences.py:3598
+#: cartridges/preferences.py:3783
 msgid "Backup inválido"
 msgstr ""
 
-#: cartridges/preferences.py:3599
+#: cartridges/preferences.py:3784
 msgid "O arquivo não é um backup válido do Jolven."
 msgstr ""
 
-#: cartridges/preferences.py:3607
+#: cartridges/preferences.py:3792
 msgid "Não foi possível restaurar"
 msgstr ""
 
-#: cartridges/preferences.py:3608
+#: cartridges/preferences.py:3793
 msgid "Não foi possível restaurar o backup. Tente novamente."
 msgstr ""
 
-#: cartridges/preferences.py:3671
+#: cartridges/preferences.py:3856
 msgid "Installation Not Found"
 msgstr ""
 
-#: cartridges/preferences.py:3672
+#: cartridges/preferences.py:3857
 msgid "Select a valid directory"
 msgstr ""
 
-#: cartridges/preferences.py:3708 cartridges/importer/importer.py:373
+#: cartridges/preferences.py:3893 cartridges/importer/importer.py:373
 msgid "Warning"
 msgstr ""
 
-#: cartridges/preferences.py:3746
+#: cartridges/preferences.py:3931
 msgid "None"
 msgstr ""
 
-#: cartridges/preferences.py:3776
+#: cartridges/preferences.py:3961
 msgid "Invalid Directory"
 msgstr ""
 
-#: cartridges/preferences.py:3782
+#: cartridges/preferences.py:3967
 msgid "Set Location"
 msgstr ""
 
@@ -3737,7 +4009,7 @@ msgid "Não foi possível baixar o logo"
 msgstr ""
 
 #. The variables are the game's title and the session length.
-#: cartridges/process_session.py:372
+#: cartridges/process_session.py:444
 #, python-brace-format
 msgid "{} played for {}"
 msgstr ""
@@ -4178,6 +4450,14 @@ msgstr ""
 msgid "Grava jogos direto da GPU, sem pesar no desempenho"
 msgstr ""
 
+#: cartridges/utils/integrations.py:201
+msgid "OpenRGB"
+msgstr ""
+
+#: cartridges/utils/integrations.py:202
+msgid "Controla a iluminação RGB de memórias, placas, coolers e periféricos"
+msgstr ""
+
 #: cartridges/utils/ligacao_zerado.py:149
 #, python-brace-format
 msgid "Os dados de {} em Jogos Zerados foram transferidos para a biblioteca"
@@ -4428,4 +4708,64 @@ msgstr ""
 
 #: cartridges/integrations/steam_skin/recovery.py:142
 msgid "Estado desconhecido"
+msgstr ""
+
+#: cartridges/iluminacao/modelo.py:73
+msgid "Teclado"
+msgstr ""
+
+#: cartridges/iluminacao/modelo.py:74
+msgid "Mouse"
+msgstr ""
+
+#: cartridges/iluminacao/modelo.py:75
+msgid "Mousepad"
+msgstr ""
+
+#: cartridges/iluminacao/modelo.py:76
+msgid "Memória"
+msgstr ""
+
+#: cartridges/iluminacao/modelo.py:77
+msgid "Placa-mãe"
+msgstr ""
+
+#: cartridges/iluminacao/modelo.py:78
+msgid "Placa de vídeo"
+msgstr ""
+
+#: cartridges/iluminacao/modelo.py:79
+msgid "Gabinete"
+msgstr ""
+
+#: cartridges/iluminacao/modelo.py:80
+msgid "Cooler"
+msgstr ""
+
+#: cartridges/iluminacao/modelo.py:81
+msgid "Fita LED"
+msgstr ""
+
+#: cartridges/iluminacao/modelo.py:82
+msgid "Ventoinha"
+msgstr ""
+
+#: cartridges/iluminacao/modelo.py:83
+msgid "Headset"
+msgstr ""
+
+#: cartridges/iluminacao/modelo.py:84
+msgid "Alto-falante"
+msgstr ""
+
+#: cartridges/iluminacao/modelo.py:85
+msgid "Controle"
+msgstr ""
+
+#: cartridges/iluminacao/modelo.py:86
+msgid "Armazenamento"
+msgstr ""
+
+#: cartridges/iluminacao/modelo.py:87 cartridges/iluminacao/modelo.py:210
+msgid "Outro"
 msgstr ""
