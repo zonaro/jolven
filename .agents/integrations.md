@@ -338,11 +338,17 @@ acontece no worker do importador, nunca na thread GTK.
 
 - Só há consulta quando a entrada tem identidade (`catalogEntryId`,
   `repository` ou `name`); uma entrada sem nenhum deles não gera requisição.
-- A identidade é resolvida em ordem: `GET /apps/{catalogEntryId}`; se o
-  catálogo não tem esse app, `GET /apps?search=…` com o repositório e, por
-  fim, com o nome. Um candidato só é aceito quando casa exatamente com o
-  repositório ou com o nome da entrada e é o único assim — nunca "o primeiro
-  resultado". Sem casamento único, não há enriquecimento.
+- A identidade é resolvida em ordem, sempre dentro de `GET /apps?search=…`:
+  primeiro o `catalogEntryId` casado com o `id` (ou `catalogId`) de um item da
+  busca, depois o repositório confirmado no detalhe (`project.repository`) e,
+  por fim, o nome exato. O `GET /apps/{valor}` fica como último recurso, porque
+  o endpoint só resolve o `slug`: serve para uma entrada escrita à mão que
+  guardou o slug ali. Um candidato só é aceito quando casa exatamente com o
+  identificador, com o repositório ou com o nome da entrada e é o único assim
+  — nunca "o primeiro resultado". Sem casamento único, não há enriquecimento.
+- A desenvolvedora vem do catálogo (`developer.name`). O `project` do
+  `apps.json` é o nome do porte (por exemplo "G1R Deluxe"), não a
+  desenvolvedora, e nunca é usado como uma.
 - Timeout de 10 s e teto de 2 MiB por resposta, lidos em stream pelo
   `get_capped` das outras integrações.
 - Resposta JSON inválida, corpo grande demais ou erro de rede não são
@@ -358,6 +364,22 @@ acontece no worker do importador, nunca na thread GTK.
   repositório, que já estão no `apps.json` do próprio usuário. Nenhum dado do
   usuário, identificador de máquina ou credencial é transmitido, e a API é
   pública: não existe autenticação para guardar.
+
+O programa a lançar é escolhido sem chute, em camadas, como o launcher faz em
+`GameInstallationService.FindExecutableCandidates`: `launcher`
+(`.AppImage`, `.x86_64`, `.arm64`, `.aarch64`), depois `native` (ELF de
+execução com ponto de entrada, ou shebang com interpretador absoluto,
+excluindo `.txt`, `.dll`, `.so`, `.so.*`, `.json`, `.sh` e `.exe`), depois
+`windows` (`.exe`, que ainda precisa de um runner) e por fim `script` (`.sh`).
+A primeira camada não vazia decide; duas opções na mesma camada são ambiguidade
+e o app fica sem comando, porque o Jolven não pergunta. O topo da pasta é
+varrido primeiro e só se desce até dois níveis (ignorando `.wine-prefix` e
+`.steam-compat-data`) quando o topo não tem nenhum candidato. O
+`selected_executable.txt` do launcher continua tendo prioridade sobre a
+varredura. O diretório de trabalho do jogo é a pasta do programa escolhido,
+como no upstream, porque portes abrem os próprios assets por caminho relativo.
+Sem um runner de Wine/Proton configurado, um app que só tem `.exe` entra na
+biblioteca sem comando.
 
 Os dados do catálogo são consumidos sob a licença MIT do Quiver Launcher, e
 o conteúdo publicado nele é responsabilidade de quem o publica. A

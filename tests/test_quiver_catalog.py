@@ -105,8 +105,8 @@ class QuiverCatalogTests(unittest.TestCase):
         with patch.object(quiver_catalog, "get_capped", side_effect=api):
             return enrich_entry(entry, cache_path=self.cache, **kwargs)
 
-    def test_detalhe_por_catalog_entry_id(self):
-        self.api.on("/apps/k179cwcjmbeves16st2tehqsr98f4z51", _response(_detail()))
+    def test_catalog_entry_id_casa_com_o_id_da_busca(self):
+        self.api.on("search=example-project", _response({"items": [_item()]}))
 
         result = self._enrich(
             {
@@ -126,11 +126,41 @@ class QuiverCatalogTests(unittest.TestCase):
                 tags=["port", "linux"],
             ),
         )
+        # Uma requisição só: a busca, sem o `GET /apps/{id}` que responderia
+        # 404 e sem conferir o detalhe de um app já identificado.
         self.assertEqual(len(self.api.calls), 1)
-        self.assertIn("/apps/k179cwcjmbeves16st2tehqsr98f4z51", self.api.calls[0])
+        self.assertIn("search=", self.api.calls[0])
 
-    def test_404_no_id_cai_para_a_busca_por_repositorio(self):
-        self.api.on("/apps/k179", _response({"error": {"code": "NOT_FOUND"}}, 404))
+    def test_catalog_entry_id_vence_o_repositorio_da_busca(self):
+        # A entrada aponta um app do catálogo e o repositório dela é outro: o
+        # id é a identidade exata, então nada precisa ser confirmado.
+        self.api.on("search=example-project", _response({"items": [_item()]}))
+
+        result = self._enrich(
+            {
+                "catalogEntryId": "k179cwcjmbeves16st2tehqsr98f4z51",
+                "name": "Outro Nome",
+                "repository": "owner/example-project",
+            }
+        )
+
+        self.assertIsNotNone(result)
+        self.assertEqual(result.developer, "Studio")
+        self.assertEqual(len(self.api.calls), 1)
+        self.assertNotIn("/apps/example-app", self.api.calls)
+
+    def test_slug_escrito_a_mao_resolve_no_detalhe(self):
+        # Sem repositório nem nome não há busca: um `apps.json` escrito à mão
+        # que guardou o slug no lugar do id ainda resolve.
+        self.api.on("/apps/example-app", _response(_detail()))
+
+        result = self._enrich({"catalogEntryId": "example-app"})
+
+        self.assertIsNotNone(result)
+        self.assertEqual(len(self.api.calls), 1)
+        self.assertIn("/apps/example-app", self.api.calls[0])
+
+    def test_busca_por_repositorio_confirma_no_detalhe(self):
         self.api.on("search=example-project", _response({"items": [_item()]}))
         self.api.on("/apps/example-app", _response(_detail()))
 
@@ -170,7 +200,6 @@ class QuiverCatalogTests(unittest.TestCase):
     def test_nome_exato_serve_quando_o_repositorio_nao_casa(self):
         # O nome da entrada é igual ao do candidato: a regra do nome vale
         # mesmo com outro repositório, e o app continua sendo o mesmo.
-        self.api.on("/apps/k179", _response({"error": {"code": "NOT_FOUND"}}, 404))
         self.api.on(
             "search=example-project",
             _response({"items": [_item(name="Example App")]}),

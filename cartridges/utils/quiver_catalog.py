@@ -30,11 +30,11 @@ nenhum dado do usuário sai daqui.
 
 Resolução da identidade, nesta ordem:
 
-1. ``catalogEntryId`` → ``GET /apps/{valor}``. O upstream grava ali o
-   ``id`` do app no catálogo, e o endpoint só resolve por ``slug``
-   (``GET /apps/{id}`` responde 404). A tentativa é feita mesmo assim: um
-   ``apps.json`` escrito à mão pode trazer o slug, e um catálogo que passe a
-   aceitar o id faria a busca funcionar sem nenhuma mudança aqui.
+1. ``catalogEntryId`` → casado com o ``id`` dos itens de ``GET /apps?search=…``.
+   O upstream grava ali o ``id`` do app no catálogo, e é o mesmo campo que a
+   busca devolve: a identidade mais forte é resolvida na busca que já seria
+   feita, sem uma requisição extra. Um ``apps.json`` escrito à mão pode trazer
+   o ``slug``, então ``GET /apps/{valor}`` continua como último recurso.
 2. ``repository`` → ``GET /apps?search=…`` com o nome do repositório. Só é
    aceito um candidato cujo repositório é igual ao da entrada, confirmado
    no detalhe do app (``project.repository``).
@@ -319,17 +319,49 @@ def _repository_queries(repository: str) -> list[str]:
     return queries
 
 
+def _same_entry(candidate: dict, entry_id: str) -> bool:
+    """True quando o item do catálogo é o app apontado pela biblioteca.
+
+    O upstream grava em ``catalogEntryId`` o ``id`` do app no catálogo, que
+    é exatamente o campo que a busca devolve. Uma biblioteca escrita à mão
+    pode trazer o ``catalogId``; os dois são identificadores exatos, então a
+    comparação é literal e nunca aproximada.
+    """
+    wanted = entry_id.casefold()
+    for key in ("id", "catalogId"):
+        value = _text(candidate.get(key))
+        if value and value.casefold() == wanted:
+            return True
+    return False
+
+
 def _select(
     candidates: list[dict],
     repository: Optional[str],
     name: Optional[str],
+    entry_id: Optional[str] = None,
 ) -> Optional[dict]:
     """Escolhe o candidato sem ambiguidade, ou ``None``.
 
-    O repositório tem precedência: ele identifica o projeto, enquanto o nome
-    identifica o jogo que o app joga — e o catálogo usa os dois para as
-    mesmas coisas em apps diferentes.
+    A identidade do catálogo vem primeiro: quando a biblioteca aponta um
+    ``catalogEntryId``, o item da busca que tem esse ``id`` é o app certo, sem
+    nenhuma confirmação adicional. Depois o repositório tem precedência sobre
+    o nome: ele identifica o projeto, enquanto o nome identifica o jogo que o
+    app joga — e o catálogo usa os dois para as mesmas coisas em apps
+    diferentes.
     """
+    if entry_id:
+        id_hits = [
+            candidate
+            for candidate in candidates
+            if _same_entry(candidate, entry_id)
+        ]
+        if len(id_hits) == 1:
+            return id_hits[0]
+        if len(id_hits) > 1:
+            # O mesmo id em dois itens só pode ser resposta corrompida.
+            return None
+
     if repository:
         wanted = _norm(_repo_name(repository))
         ranked = [
@@ -376,25 +408,29 @@ def _resolve(
     repository: Optional[str],
     name: Optional[str],
 ) -> Optional[dict]:
-    """Encontra o app no catálogo. ``None`` quando não há casamento certo."""
-    if entry_id:
-        detail = _detail(entry_id)
-        if detail is not None:
-            return detail
+    """Encontra o app no catálogo. ``None`` quando não há casamento certo.
 
+    O ``catalogEntryId`` é conferido nos itens de cada busca, antes do
+    repositório e do nome: ele é a identidade exata e não custa requisição
+    nenhuma. O ``GET /apps/{valor}`` fica para o fim, porque ele só resolve o
+    ``slug`` — serve para a entrada escrita à mão que guardou o slug ali.
+    """
     queries: list[str] = []
     if repository:
         queries.extend(_repository_queries(repository))
-    if name:
+    if name and name not in queries:
         queries.append(name)
 
     for query in queries:
         candidates = _search(query)
         if not candidates:
             continue
-        selected = _select(candidates, repository, name)
+        selected = _select(candidates, repository, name, entry_id)
         if selected is not None:
             return selected
+
+    if entry_id:
+        return _detail(entry_id)
     return None
 
 

@@ -21,7 +21,7 @@ import os
 import re
 import shlex
 from pathlib import Path
-from typing import Any, Generator, NamedTuple, Optional
+from typing import Any, Generator, Iterable, NamedTuple, Optional
 from urllib.parse import urlparse
 
 from cartridges import shared
@@ -83,6 +83,29 @@ LAUNCHER_SUFFIXES = (".appimage", ".x86_64", ".arm64", ".aarch64")
 
 #: Suffix of a Windows program, which needs a runner (Wine or Proton).
 WINDOWS_SUFFIX = ".exe"
+
+#: Suffix of a shell script. It is usually the wrapper of the real program,
+#: so it is only taken when the folder has no program of its own.
+SCRIPT_SUFFIX = ".sh"
+
+#: Suffixes a native program never carries: data, libraries and the kinds of
+#: file classified before the header is read. The launcher skips them too.
+NON_PROGRAM_SUFFIXES = (".txt", ".dll", ".so", ".json", ".sh", ".exe")
+
+#: A versioned shared library ends in ``.so.1``, which the suffix above does
+#: not catch.
+SHARED_LIBRARY_INFIX = ".so."
+
+#: Preference between the kinds of program of an app folder, best first. A
+#: folder with no program of a kind falls to the next one; two programs of
+#: the same kind are an ambiguity, and the Jolven does not guess between them.
+PROGRAM_TIERS = ("launcher", "native", "windows", "script")
+
+#: Bytes of a file read to tell a program from the other files.
+HEADER_SIZE = 64
+
+#: Bytes a 64-bit ELF header needs before its entry point is complete.
+ELF64_HEADER_SIZE = 64
 
 #: Folders of a Wine or Proton prefix. They hold the Windows copy of the
 #: game, not the native one, so the scan never descends into them.
@@ -155,38 +178,77 @@ def is_launcher_metadata(path: Path) -> bool:
     return path.name.casefold() in LAUNCHER_METADATA_FILES
 
 
-def is_launcher_name(path: Path) -> bool:
-    """Whether the name of a file is the one of a downloaded program."""
-    return path.name.casefold().endswith(LAUNCHER_SUFFIXES)
-
-
 def is_windows_name(path: Path) -> bool:
     """Whether a file is a Windows program."""
     return path.name.casefold().endswith(WINDOWS_SUFFIX)
 
 
-def has_executable_bit(path: Path) -> bool:
-    """Whether a file carries the executable bit."""
-    try:
-        return os.access(path, os.X_OK)
-    except OSError:
-        return False
-
-
-def looks_like_program(path: Path) -> bool:
-    """Whether a file without the executable bit looks like a program.
-
-    The launcher downloads AppImages and raw binaries, but a wrapper script
-    is a program too. The magic number is the same check the launcher does.
-    """
+def read_header(path: Path) -> bytes:
+    """The first bytes of a file, empty when they cannot be read."""
     try:
         with path.open("rb") as handle:
-            header = handle.read(64)
+            return handle.read(HEADER_SIZE)
     except OSError:
+        return b""
+
+
+def has_absolute_shebang(header: bytes) -> bool:
+    """Whether the header is a script run by an interpreter with a full path.
+
+    A shebang is only trusted when the interpreter is an absolute path: a
+    script run by ``env`` or by a bare name depends on the ``PATH`` of the
+    session, which is the same check the launcher makes.
+    """
+    if len(header) < 3 or header[:2] != b"#!":
         return False
-    if header.startswith(b"\x7fELF"):
-        return True
-    return header.startswith(b"#!")
+    interpreter = header[2:].decode("utf-8", errors="replace")
+    return interpreter.lstrip(" \t").startswith("/")
+
+
+def is_elf_executable(header: bytes) -> bool:
+    """Whether the header is an ELF file meant to be executed.
+
+    A shared library is an ELF file too, but it has no entry point: it is
+    loaded by a program, never launched, so it must not be a candidate. The
+    file type says it runs (``ET_EXEC`` or a PIE) and the entry point must
+    be set, exactly like the launcher checks it.
+    """
+    if len(header) < 52 or header[:4] != b"\x7fELF":
+        return False
+    elf_class, elf_data, elf_version = header[4], header[5], header[6]
+    if elf_class not in (1, 2) or elf_data not in (1, 2) or elf_version != 1:
+        return False
+    if elf_class == 2 and len(header) < ELF64_HEADER_SIZE:
+        return False
+    byte_order = "little" if elf_data == 1 else "big"
+    file_type = int.from_bytes(header[16:18], byte_order)
+    entry_size = 4 if elf_class == 1 else 8
+    entry_point = header[24 : 24 + entry_size]
+    return file_type in (2, 3) and any(entry_point)
+
+
+def program_kind(path: Path) -> Optional[str]:
+    """Which kind of program a file is, or ``None`` when it is not one.
+
+    The order follows the launcher: the file names it downloads
+    (AppImages and raw binaries) come first, then any other native
+    executable, then the Windows program and, at the end, a shell script.
+    Without the header check, a ``.so`` beside the binary or the ``.desktop``
+    of the port would count as a program and make the folder ambiguous.
+    """
+    name = path.name.casefold()
+    if name.endswith(LAUNCHER_SUFFIXES):
+        return "launcher"
+    if name.endswith(WINDOWS_SUFFIX):
+        return "windows"
+    if name.endswith(SCRIPT_SUFFIX):
+        return "script"
+    if name.endswith(NON_PROGRAM_SUFFIXES) or SHARED_LIBRARY_INFIX in name:
+        return None
+    header = read_header(path)
+    if has_absolute_shebang(header) or is_elf_executable(header):
+        return "native"
+    return None
 
 
 def join_command(tokens: list[str]) -> str:
@@ -484,24 +546,26 @@ class QuiverSourceIterable(SourceIterable):
         """Find the program to launch of an installed app.
 
         Returns the path of the program and whether it is a Windows one,
-        which then needs a runner (Wine or Proton).
+        which then needs a runner (Wine or Proton). The kinds of program are
+        tried in order, so a shell script or a shared library never wins over
+        the real binary of the port.
         """
         selected = self.read_selected_executable(app_dir)
         if selected is not None:
             return selected, is_windows_name(selected)
 
-        native, windows = self.scan_candidates(app_dir)
-        if len(native) == 1:
-            return native[0], False
-        if len(native) > 1:
-            # Several programs of the same folder: the launcher would ask
-            # the user, and the Jolven does not guess between them.
-            logging.debug("Ambiguous Quiver programs in %s", app_dir)
-            return None, False
-        if len(windows) == 1:
-            return windows[0], True
-        if len(windows) > 1:
-            logging.debug("Ambiguous Quiver Windows programs in %s", app_dir)
+        candidates = self.scan_candidates(app_dir)
+        for kind in PROGRAM_TIERS:
+            paths = candidates.get(kind, [])
+            if len(paths) > 1:
+                # Two programs of the same kind: the launcher asks the user
+                # which one to run, and the Jolven does not guess.
+                logging.debug(
+                    "Ambiguous Quiver programs of kind %s in %s", kind, app_dir
+                )
+                return None, False
+            if paths:
+                return paths[0], kind == "windows"
         return None, False
 
     def read_selected_executable(self, app_dir: Path) -> Optional[Path]:
@@ -537,60 +601,55 @@ class QuiverSourceIterable(SourceIterable):
             return None
         return resolved
 
-    def scan_candidates(self, app_dir: Path) -> tuple[list[Path], list[Path]]:
-        """Programs found in an app folder, native ones first.
+    def scan_candidates(self, app_dir: Path) -> dict[str, list[Path]]:
+        """Programs found in an app folder, grouped by kind.
 
         The top of the folder is scanned first; only when it holds no
-        program at all the sub folders are looked at.
+        program at all the sub folders are looked at, the way the launcher
+        does it before asking the user.
         """
-        native, windows = self.top_level_candidates(app_dir)
-        if native or windows:
-            return native, windows
+        candidates = self.top_level_candidates(app_dir)
+        if any(candidates.values()):
+            return candidates
         return self.recursive_candidates(app_dir)
 
-    def top_level_candidates(self, app_dir: Path) -> tuple[list[Path], list[Path]]:
+    def top_level_candidates(self, app_dir: Path) -> dict[str, list[Path]]:
         """Programs found at the top of an app folder."""
         try:
             entries = sorted(app_dir.iterdir())
         except OSError:
-            return [], []
-        files = [
+            return {}
+        return self.collect_candidates(
             path
             for path in entries
             if path.is_file() and not is_launcher_metadata(path)
-        ]
-        windows = [path for path in files if is_windows_name(path)]
-        others = [path for path in files if not is_windows_name(path)]
+        )
 
-        native = [path for path in others if has_executable_bit(path)]
-        if len(native) > 1:
-            # Several programs at the top: the one named after the
-            # platform wins, but two of them are still a guess.
-            launchers = [path for path in native if is_launcher_name(path)]
-            if len(launchers) == 1:
-                return launchers, windows
-            return native, windows
-        if native:
-            return native, windows
+    @staticmethod
+    def collect_candidates(paths: Iterable[Path]) -> dict[str, list[Path]]:
+        """Group files by the kind of program they are.
 
-        launchers = [path for path in others if is_launcher_name(path)]
-        if launchers:
-            return launchers, windows
-
-        if len(others) == 1 and looks_like_program(others[0]):
-            return others, windows
-        return [], windows
+        The shallowest file comes first, then the alphabetical order, so the
+        choice of a folder with several programs is stable between scans.
+        """
+        candidates: dict[str, list[Path]] = {}
+        for path in paths:
+            kind = program_kind(path)
+            if kind is not None:
+                candidates.setdefault(kind, []).append(path)
+        for found in candidates.values():
+            found.sort(key=lambda path: (len(path.parts), path.name.casefold()))
+        return candidates
 
     def recursive_candidates(
         self, app_dir: Path, max_depth: int = 2
-    ) -> tuple[list[Path], list[Path]]:
+    ) -> dict[str, list[Path]]:
         """Programs found in the sub folders of an app folder.
 
         The walk stops after a couple of levels: a deep tree is a data
         folder of the game, not the program to launch.
         """
-        native: list[Path] = []
-        windows: list[Path] = []
+        found: list[Path] = []
         base_depth = len(app_dir.parts)
         try:
             for dir_path, dir_names, file_names in os.walk(app_dir):
@@ -607,13 +666,10 @@ class QuiverSourceIterable(SourceIterable):
                     path = current / name
                     if is_launcher_metadata(path):
                         continue
-                    if is_windows_name(path):
-                        windows.append(path)
-                    elif has_executable_bit(path) or is_launcher_name(path):
-                        native.append(path)
+                    found.append(path)
         except OSError:
-            return native, windows
-        return native, windows
+            pass
+        return self.collect_candidates(found)
 
     # Commands
 
@@ -731,9 +787,15 @@ class QuiverSourceIterable(SourceIterable):
 
         command = ""
         version = ""
+        working_directory = ""
         if app_dir is not None and installed:
             executable, needs_runner = self.resolve_executable(app_dir)
             command = self.make_command(entry, app_dir, executable, needs_runner)
+            if executable is not None:
+                # The launcher runs the game from the folder of the program.
+                # A port that opens its assets by a relative path only works
+                # that way, and the Jolven would otherwise use the home.
+                working_directory = str(executable.parent)
             version = self.read_version(app_dir)
 
         values = {
@@ -743,23 +805,20 @@ class QuiverSourceIterable(SourceIterable):
             "game_id": game_id,
             "executable": command,
             "installed": installed,
+            "launch_working_directory": working_directory,
             # The launcher has no address to install an app from, so the
             # game is imported without a command to install it.
             "install_executable": "",
         }
-        project = entry.get("project")
-        if isinstance(project, str) and project.strip():
-            values["developer"] = project.strip()
         tags = sanitize_tags(entry.get("tags"))
         if enrichment is not None:
-            # The catalog only fills what the library does not say: the
-            # local entry always wins over the remote one.
-            description = enrichment.description
-            if description and not values.get("description"):
-                values["description"] = description
-            developer = enrichment.developer
-            if developer and not values.get("developer"):
-                values["developer"] = developer
+            # The catalog only fills what the library does not say. The
+            # ``project`` of the library is the name of the port, not the
+            # developer, so it is never used as one.
+            if enrichment.description:
+                values["description"] = enrichment.description
+            if enrichment.developer:
+                values["developer"] = enrichment.developer
             if not tags:
                 tags = sanitize_tags(enrichment.tags)
         if tags:

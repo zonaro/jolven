@@ -230,9 +230,12 @@ class LibraryParsingTests(QuiverSourceTestCase):
         self.assertEqual(game.values["game_id"], "quiver_MyGame")
         self.assertEqual(game.values["name"], "My Game")
         self.assertEqual(game.values["source"], "quiver")
-        self.assertEqual(game.values["developer"], "Some Studio")
+        # `project` é o nome do porte, não a desenvolvedora: sem catálogo, o
+        # campo fica vazio em vez de receber o valor errado.
+        self.assertNotIn("developer", game.values)
         self.assertTrue(game.values["installed"])
         self.assertEqual(game.values["executable"], shell_quote(str(program)))
+        self.assertEqual(game.values["launch_working_directory"], str(app_dir))
         self.assertEqual(additional["quiver_installed_version"], "v1.2.3")
 
         other, _additional = results[1]
@@ -460,7 +463,104 @@ class ExecutableResolutionTests(QuiverSourceTestCase):
         game, _additional = results[0]
         self.assertEqual(game.values["executable"], "")
 
-    def test_a_folder_without_a_program_has_no_executable(self):
+    def _values(self, app_dir: Path, **entry) -> dict:
+        """Import the library of an app folder and return the game values."""
+        payload = {"name": "Game", "folderName": app_dir.name}
+        payload.update(entry)
+        self.write_library(self.make_root(), {"apps": [payload]})
+        game, _additional = list(QuiverSourceIterable(QuiverSource()))[0]
+        return game.values
+
+    @staticmethod
+    def _write(path: Path, content: bytes) -> Path:
+        """Write a file that is not a script (a library, a desktop entry)."""
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(content)
+        return path
+
+    @staticmethod
+    def _elf_header(entry: int = 0x401000) -> bytes:
+        """A minimal 64-bit ELF header of a program (or of a library)."""
+        header = bytearray(64)
+        header[0:4] = b"\x7fELF"
+        header[4] = 2  # 64-bit
+        header[5] = 1  # little endian
+        header[6] = 1  # current version
+        header[16:18] = (3).to_bytes(2, "little")  # ET_DYN (PIE)
+        header[18:20] = (0x3E).to_bytes(2, "little")
+        header[20:24] = (1).to_bytes(4, "little")
+        header[24:32] = entry.to_bytes(8, "little")
+        return bytes(header)
+
+    def test_a_shared_library_beside_the_program_is_not_a_candidate(self):
+        # GoldenEye 007 e Mario Strikers Charged: o binário do porte ao lado
+        # das bibliotecas que ele carrega.
+        app_dir = self.make_root() / "Apps" / "Game"
+        program = self.make_program(app_dir / "ProjectMidas")
+        self._write(app_dir / "libSDL2-2.0.so.0", b"\x7fELF" + b"\x00" * 60)
+        self._write(app_dir / "recharged_game_eu.so", b"\x7fELF" + b"\x00" * 60)
+        values = self._values(app_dir)
+        self.assertEqual(values["executable"], shell_quote(str(program)))
+
+    def test_a_wrapper_script_beside_the_program_is_not_a_candidate(self):
+        # Banjo-Tooie: o `run.sh` do porte não é o programa a lançar.
+        app_dir = self.make_root() / "Apps" / "Game"
+        program = self.make_program(app_dir / "BanjoTooieRecompiled")
+        self.make_program(app_dir / "run.sh")
+        values = self._values(app_dir)
+        self.assertEqual(values["executable"], shell_quote(str(program)))
+
+    def test_an_installer_script_beside_the_program_is_not_a_candidate(self):
+        # Forza Horizon 1 ReImagined: `install.sh` e `uninstall.sh` ficam ao
+        # lado do launcher e não podem competir com ele.
+        app_dir = self.make_root() / "Apps" / "Game"
+        program = self.make_program(app_dir / "forza-launcher")
+        self.make_program(app_dir / "install.sh")
+        self.make_program(app_dir / "uninstall.sh")
+        values = self._values(app_dir)
+        self.assertEqual(values["executable"], shell_quote(str(program)))
+
+    def test_a_desktop_file_beside_the_program_is_not_a_candidate(self):
+        # New Super Mario Bros. U: o `.desktop` do porte não é um binário.
+        app_dir = self.make_root() / "Apps" / "Game"
+        program = self.make_program(app_dir / "nsmbu-launcher")
+        self._write(app_dir / "NSMBU.desktop", b"[Desktop Entry]\nType=Application\n")
+        values = self._values(app_dir)
+        self.assertEqual(values["executable"], shell_quote(str(program)))
+
+    def test_a_shell_script_is_used_when_it_is_the_only_candidate(self):
+        app_dir = self.make_root() / "Apps" / "Game"
+        script = self.make_program(app_dir / "run.sh")
+        values = self._values(app_dir)
+        self.assertEqual(values["executable"], shell_quote(str(script)))
+
+    def test_a_launcher_file_wins_over_a_plain_binary(self):
+        app_dir = self.make_root() / "Apps" / "Game"
+        launcher = self.make_program(app_dir / "Game.AppImage")
+        self.make_program(app_dir / "Game")
+        values = self._values(app_dir)
+        self.assertEqual(values["executable"], shell_quote(str(launcher)))
+
+    def test_an_elf_program_without_the_executable_bit_is_found(self):
+        app_dir = self.make_root() / "Apps" / "Game"
+        program = self._write(app_dir / "Game", self._elf_header())
+        values = self._values(app_dir)
+        self.assertEqual(values["executable"], shell_quote(str(program)))
+
+    def test_an_elf_without_an_entry_point_is_not_a_program(self):
+        # Uma biblioteca é ELF também, mas não tem ponto de entrada.
+        app_dir = self.make_root() / "Apps" / "Game"
+        self._write(app_dir / "library", self._elf_header(entry=0))
+        values = self._values(app_dir)
+        self.assertEqual(values["executable"], "")
+
+    def test_the_working_directory_is_the_folder_of_the_program(self):
+        app_dir = self.make_root() / "Apps" / "Game"
+        self.make_program(app_dir / "bin" / "Game")
+        values = self._values(app_dir)
+        self.assertEqual(values["launch_working_directory"], str(app_dir / "bin"))
+
+    def test_a_game_without_a_program_has_no_executable(self):
         root = self.make_root()
         app_dir = root / "Apps" / "Game"
         app_dir.mkdir(parents=True, exist_ok=True)
@@ -472,6 +572,7 @@ class ExecutableResolutionTests(QuiverSourceTestCase):
         game, _additional = results[0]
         self.assertTrue(game.values["installed"])
         self.assertEqual(game.values["executable"], "")
+        self.assertEqual(game.values["launch_working_directory"], "")
 
 
 class RunnerTests(QuiverSourceTestCase):
@@ -665,7 +766,7 @@ class EnrichmentTests(QuiverSourceTestCase):
         )
         self.assertEqual(game.values["developer"], "Catalog Studio")
 
-    def test_the_local_entry_wins_over_the_catalog(self):
+    def test_the_project_is_not_used_as_the_developer(self):
         self.enrich_result = QuiverEnrichment(
             cover_url="https://catalog.example/cover.png",
             description="The catalog description.",
@@ -675,7 +776,9 @@ class EnrichmentTests(QuiverSourceTestCase):
             project="Local Studio", appIconUrl="https://example.com/icon.png"
         )
         game, additional = results[0]
-        self.assertEqual(game.values["developer"], "Local Studio")
+        # `project` é o nome do porte ("G1R Deluxe"), não a desenvolvedora: o
+        # campo vem do catálogo, ou fica vazio.
+        self.assertEqual(game.values["developer"], "Catalog Studio")
         self.assertEqual(
             additional["online_cover_url"], "https://catalog.example/cover.png"
         )
