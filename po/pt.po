@@ -2761,17 +2761,21 @@ msgstr "Marcar como lançador"
 msgid "Desagrupar"
 msgstr "Desagrupar"
 
-#: cartridges/window.py:2658
+#: cartridges/window.py:2536
+msgid "Agrupar novamente"
+msgstr "Agrupar novamente"
+
+#: cartridges/window.py:2680
 msgid "Atualização da biblioteca em andamento"
 msgstr "Atualização da biblioteca em andamento"
 
-#: cartridges/window.py:2667
+#: cartridges/window.py:2689
 msgid "Aguarde a operação atual terminar"
 msgstr "Aguarde a operação atual terminar"
 
-#: cartridges/window.py:2698
+#: cartridges/window.py:2720
 msgid "Atualizando catálogo Xbox Cloud…"
-msgstr ""
+msgstr "A atualizar o catálogo Xbox Cloud…"
 
 #: cartridges/window.py:2732
 #, python-brace-format

@@ -2715,8 +2715,20 @@ msgstr ""
 msgid "Desagrupar"
 msgstr ""
 
-#: cartridges/window.py:2658
+#: cartridges/window.py:2536
+msgid "Agrupar novamente"
+msgstr ""
+
+#: cartridges/window.py:2680
 msgid "Atualização da biblioteca em andamento"
+msgstr ""
+
+#: cartridges/window.py:2689
+msgid "Aguarde a operação atual terminar"
+msgstr ""
+
+#: cartridges/window.py:2720
+msgid "Atualizando catálogo Xbox Cloud…"
 msgstr ""
 
 #: cartridges/window.py:2667

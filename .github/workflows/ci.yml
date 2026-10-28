@@ -59,6 +59,35 @@ jobs:
             mingw-w64-ucrt-x86_64-meson
             mingw-w64-ucrt-x86_64-ninja
 
+      # O pacote ucrt64 do blueprint-compiler 0.22.2-3 vem com o shebang
+      # apontando para o MSYS2 de quem empacotou (D:\M\msys64), que nao existe
+      # no runner. O meson adota esse interpretador em `find_program` e todo
+      # .blp falha com "CreateProcess failed" (issue #97). So reescreve quando
+      # o caminho do shebang nao existe, para virar no-op quando o pacote for
+      # corrigido a montante.
+      - name: Corrigir o interpretador do blueprint-compiler
+        shell: msys2 {0}
+        run: |
+          python3 - <<'PY'
+          import pathlib
+          import sys
+
+          # No Windows o python nao entende o prefixo POSIX /ucrt64; o proprio
+          # interpretador ja aponta para o binario dentro dele.
+          script = pathlib.Path(sys.executable).with_name("blueprint-compiler")
+          if not script.exists():
+              print("blueprint-compiler nao e um script; nada a fazer")
+              raise SystemExit(0)
+          linhas = script.read_text(encoding="utf-8").splitlines(True)
+          alvo = linhas[0][2:].strip()
+          if pathlib.Path(alvo.replace("\\", "/")).exists():
+              print("shebang ok:", alvo)
+          else:
+              linhas[0] = "#!" + sys.executable.replace("\\", "/") + "\n"
+              script.write_text("".join(linhas), encoding="utf-8")
+              print("shebang reescrito:", linhas[0].strip())
+          PY
+
       # Fase 0: prova so a compilacao. O teste de abrir a janela entra quando o
       # aplicativo conseguir iniciar no Windows.
       - name: Compile

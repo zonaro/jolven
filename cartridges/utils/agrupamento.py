@@ -205,6 +205,16 @@ def desagrupar_chave(chave: str) -> None:
     limpar_indice()
 
 
+def reagrupar_chave(chave: str) -> None:
+    """Desfaz um desagrupamento manual: a chave volta a juntar as cópias."""
+    prefs = _carregar()
+    if chave not in prefs["desagrupados"]:
+        return
+    prefs["desagrupados"].remove(chave)
+    _salvar()
+    limpar_indice()
+
+
 def garantir(game) -> None:
     """Garante card para o primário do grupo (cura após remoção)."""
     global _curando

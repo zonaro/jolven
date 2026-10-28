@@ -176,5 +176,21 @@ class WindowNewsPortalTests(unittest.TestCase):
         self.assertIn("wrap_mode=Pango.WrapMode.WORD", py)
 
 
+class WindowRegroupActionTests(unittest.TestCase):
+    """O desagrupamento manual é reversível pelo menu do próprio card."""
+
+    def test_reagrupar_wired_and_offered_on_ungrouped_card(self) -> None:
+        py = (ROOT / "cartridges" / "window.py").read_text(encoding="utf-8")
+        ag = (ROOT / "cartridges" / "utils" / "agrupamento.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('Gio.SimpleAction.new("reagrupar"', py)
+        self.assertIn("def on_reagrupar_action", py)
+        self.assertIn('"win.reagrupar"', py)
+        self.assertIn('_("Agrupar novamente")', py)
+        self.assertIn("agrupamento.desagrupada(chave)", py)
+        self.assertIn("def reagrupar_chave", ag)
+
+
 if __name__ == "__main__":
     unittest.main()
