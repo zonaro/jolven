@@ -17,7 +17,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
-import logging
 from shutil import rmtree
 from sqlite3 import connect
 from typing import NamedTuple
@@ -35,16 +34,14 @@ class LutrisSourceIterable(SourceIterable):
     def __iter__(self):
         """Generator method producing games"""
 
-        # Always import installed and uninstalled games; the sidebar
-        # handles display filtering.
+        # Only what Lutris has installed: the library mirrors the disk.
         request = """
                 SELECT
                     games.id,
                     games.name,
                     games.slug,
                     games.runner,
-                    categories.name = ".hidden" as hidden,
-                    games.installed
+                    categories.name = ".hidden" as hidden
                 FROM
                     games
                 LEFT JOIN
@@ -55,6 +52,7 @@ class LutrisSourceIterable(SourceIterable):
                     games.name IS NOT NULL
                     AND games.slug IS NOT NULL
                     AND games.configPath IS NOT NULL
+                    AND games.installed = 1
                     AND (games.runner IS NOT "steam" OR :import_steam)
                     AND (games.runner IS NOT "flatpak" OR :import_flatpak)
                 ;
@@ -73,9 +71,6 @@ class LutrisSourceIterable(SourceIterable):
 
         # Create games from the DB results
         for row in cursor:
-            is_installed = bool(row[5])
-            if not is_installed:
-                logging.debug("Including Lutris game %s: not installed", row[1])
             # Create game
             values = {
                 "added": shared.import_time,
@@ -86,10 +81,6 @@ class LutrisSourceIterable(SourceIterable):
                     runner=row[3], game_id=row[0]
                 ),
                 "executable": self.source.make_executable(game_id=row[0]),
-                "installed": is_installed,
-                "install_executable": (
-                    f"xdg-open lutris:install/{row[2]}" if not is_installed else ""
-                ),
             }
             game = Game(values)
             additional_data = {}

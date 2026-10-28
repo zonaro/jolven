@@ -783,20 +783,21 @@ class QuiverSourceIterable(SourceIterable):
         enrichment = self.enrich(entry)
 
         app_dir = self.app_dir(entry)
-        installed = app_dir is not None and app_dir.is_dir()
+        if app_dir is None or not app_dir.is_dir():
+            # The launcher keeps a record of every app it knows, but only the
+            # folder on disk means the app is installed.
+            logging.debug("Skipped the Quiver app %s: not installed", name)
+            return None
 
-        command = ""
-        version = ""
+        executable, needs_runner = self.resolve_executable(app_dir)
+        command = self.make_command(entry, app_dir, executable, needs_runner)
         working_directory = ""
-        if app_dir is not None and installed:
-            executable, needs_runner = self.resolve_executable(app_dir)
-            command = self.make_command(entry, app_dir, executable, needs_runner)
-            if executable is not None:
-                # The launcher runs the game from the folder of the program.
-                # A port that opens its assets by a relative path only works
-                # that way, and the Jolven would otherwise use the home.
-                working_directory = str(executable.parent)
-            version = self.read_version(app_dir)
+        if executable is not None:
+            # The launcher runs the game from the folder of the program.
+            # A port that opens its assets by a relative path only works
+            # that way, and the Jolven would otherwise use the home.
+            working_directory = str(executable.parent)
+        version = self.read_version(app_dir)
 
         values = {
             "added": shared.import_time,
@@ -804,11 +805,7 @@ class QuiverSourceIterable(SourceIterable):
             "name": name,
             "game_id": game_id,
             "executable": command,
-            "installed": installed,
             "launch_working_directory": working_directory,
-            # The launcher has no address to install an app from, so the
-            # game is imported without a command to install it.
-            "install_executable": "",
         }
         tags = sanitize_tags(entry.get("tags"))
         if enrichment is not None:

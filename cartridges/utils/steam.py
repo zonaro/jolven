@@ -94,13 +94,6 @@ class SteamManifestData(TypedDict):
     stateflags: str
 
 
-class SteamStoreItemInfo(TypedDict, total=False):
-    """Name and type for one store item from a bulk GetItems lookup."""
-
-    name: str
-    type: str
-
-
 class SteamAPIData(TypedDict, total=False):
     """Dict returned by SteamAPIHelper.get_api_data"""
 
@@ -656,104 +649,6 @@ class SteamAPIHelper:
                     for tag in tags
                     if isinstance(tag, dict) and isinstance(tag.get("tagid"), int)
                 ]
-        return result
-
-    def get_store_basic_info_bulk(
-        self, appids: list[str], should_stop: Optional[Callable[[], bool]] = None
-    ) -> dict[str, SteamStoreItemInfo]:
-        """Return name and type for many store items at once, keyed by appid.
-
-        Same endpoint and batching as :meth:`get_store_tags_bulk` (one
-        request covers :data:`TAG_BATCH_SIZE` appids through the shared rate
-        limiter), but asking for ``include_basic_info`` instead of only tags:
-        the importer uses it to name games that were never installed and so
-        have no local manifest to read a title from.
-
-        Entries without a usable name are absent from the result. The type
-        follows the appdetails vocabulary (``game``, ``demo``, ``mod``, …)
-        and is left out when the endpoint does not carry it, so the caller —
-        which applies the same game-type criterion as ``parse_app_data`` —
-        can tell "no type came back" from "this is a game".
-        """
-        # Same numeric mapping as the tags lookup: the endpoint wants
-        # numbers, and a hand-edited appid may not parse.
-        numeric: dict[int, str] = {}
-        for appid in appids:
-            try:
-                numeric[int(appid)] = appid
-            except (TypeError, ValueError):
-                continue
-        if not numeric:
-            return {}
-
-        wanted = list(numeric)
-        result: dict[str, SteamStoreItemInfo] = {}
-        for start in range(0, len(wanted), TAG_BATCH_SIZE):
-            if should_stop is not None and should_stop():
-                break
-            batch = wanted[start : start + TAG_BATCH_SIZE]
-            payload = {
-                "ids": [{"appid": appid} for appid in batch],
-                "context": {"language": "english", "country_code": "US"},
-                "data_request": {
-                    "include_basic_info": True,
-                    "include_tag_count": TAG_COUNT,
-                },
-            }
-            with self.rate_limiter:
-                try:
-                    with get_capped(
-                        self.store_items_url,
-                        params={"input_json": json.dumps(payload)},
-                        timeout=30,
-                    ) as response:
-                        response.raise_for_status()
-                        body = response.json()
-                        # isinstance before .get(): a 200 with a non-object
-                        # body (proxy, captive portal) carries no store
-                        # items, and must read as "nothing came back"
-                        # rather than kill the caller's thread.
-                        container = (
-                            body.get("response")
-                            if isinstance(body, dict)
-                            else None
-                        )
-                        items = (
-                            container.get("store_items", [])
-                            if isinstance(container, dict)
-                            else []
-                        )
-                # Same net as the tags lookup: any transport, shape or
-                # protocol failure drops the batch, and whatever other
-                # batches answered still comes back.
-                except (
-                    RequestException,
-                    ValueError,
-                    KeyError,
-                    TypeError,
-                    AttributeError,
-                ) as error:
-                    logging.debug(
-                        "Steam basic info error for %d apps", len(batch), exc_info=error
-                    )
-                    continue
-
-            if not isinstance(items, list):
-                continue
-            for item in items:
-                if not isinstance(item, dict):
-                    continue
-                key = numeric.get(item.get("appid"))
-                if key is None or key in result:
-                    continue
-                name = item.get("name")
-                if not isinstance(name, str) or not name.strip():
-                    continue
-                info = SteamStoreItemInfo(name=name)
-                item_type = item.get("type")
-                if isinstance(item_type, str) and item_type:
-                    info["type"] = item_type
-                result[key] = info
         return result
 
     def get_review_summary(self, appid: str) -> Optional[str]:

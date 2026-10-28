@@ -101,8 +101,6 @@ class Game(Gtk.Box):
     source: str
     hidden: bool = False
     is_launcher: bool = False
-    installed: bool = True
-    install_executable: str = ""
     last_played: int = 0
     playtime: int = 0
     name: str
@@ -320,26 +318,6 @@ class Game(Gtk.Box):
             self.save()
             self.update()
             self.create_toast(_("{} launched"))
-            return
-
-        if not self.installed and self.install_executable:
-            try:
-                run_executable(
-                    self.install_executable,
-                    use_gamemode=self.game_mode_use_gamemode,
-                    use_mangohud=self.game_mode_use_mangohud,
-                    working_directory=self.launch_working_directory or None,
-                    environment=self.launch_environment,
-                    gamescope_options=self.gamescope_options,
-                    fps_limit=self.fps_limit,
-                    resolution=self.game_resolution,
-                    scaling_mode=self.scaling_mode,
-                )
-            except OSError as error:
-                logging.error("Could not install %s: %s", self.name, error)
-                self.create_toast(_("{} could not be launched"))
-                return
-            self.create_toast(_("Installing {}"))
             return
 
         try:
@@ -607,10 +585,6 @@ class Game(Gtk.Box):
             shared.win.show_details_page(self)
 
     def set_play_icon(self) -> None:
-        if not self.installed:
-            self.play_button.set_icon_name("folder-download-symbolic")
-            self.play_button.set_tooltip_text(_("Install"))
-            return
         self.play_button.set_icon_name(
             "help-about-symbolic"
             if shared.schema.get_boolean("cover-launches-game")

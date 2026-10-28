@@ -25,7 +25,7 @@ from functools import cached_property
 from hashlib import sha256
 from json import JSONDecodeError
 from pathlib import Path
-from typing import Iterable, NamedTuple, Optional, TypedDict
+from typing import Iterable, NamedTuple, TypedDict
 
 from cartridges import shared
 from cartridges.game import Game
@@ -62,7 +62,6 @@ class InvalidStoreFileError(Exception):
 
 class HeroicLibraryEntry(TypedDict):
     app_name: str
-    installed: Optional[bool]
     runner: str
     title: str
     developer: str
@@ -149,7 +148,8 @@ class SubSourceIterable(Iterable):
 class StoreSubSourceIterable(SubSourceIterable):
     """
     Class representing a "store" sub source.
-    Games can be installed or not, this class does the check accordingly.
+    The store lists everything the user owns; only the games present in the
+    installed file enter the library.
     """
 
     relative_installed_path: Path
@@ -178,23 +178,15 @@ class StoreSubSourceIterable(SubSourceIterable):
     ) -> SourceIterationResult:
         app_name = entry["app_name"]
         if not self.is_installed(app_name):
-            # Include the uninstalled game: Heroic offers to install it
-            # when its launch URL is opened.
-            result = super().process_library_entry(entry)
-            if result is None:
-                return None
-            game, additional_data = result
-            game.installed = False
-            game.install_executable = self.source.make_executable(
-                runner=entry["runner"], app_name=app_name
-            )
+            # The store lists what the user owns, not what is on disk: only
+            # an installed game is part of the library.
             logging.debug(
-                "Including %s game %s (%s): not installed",
+                "Skipped %s game %s (%s): not installed",
                 self.service,
                 entry["title"],
                 app_name,
             )
-            return (game, additional_data)
+            return None
         # Process entry as normal
         return super().process_library_entry(entry)
 

@@ -811,6 +811,12 @@ class CartridgesApplication(Adw.Application):
                     data = json.load(game_file.open())
                 except (OSError, json.decoder.JSONDecodeError):
                     continue
+                if data.get("installed") is False:
+                    # Legacy entry of a game that was never installed. The
+                    # library only holds what is on disk now; the file stays
+                    # untouched, so installing the game brings it back.
+                    logging.debug("Skipped legacy uninstalled game %s", game_file)
+                    continue
                 game = Game(data)
                 shared.store.add_game(game, {"skip_save": True})
 

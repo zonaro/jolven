@@ -115,53 +115,6 @@ _RECORDER_AUDIO_SOURCES = {
 }
 _ALLOWED_STREAM_SCHEMES = frozenset({"rtmp", "srt", "http", "https"})
 
-#: Sufixo das chaves GSettings que mandam na exibição de jogos não
-#: instalados de uma fonte (ex.: ``steam-show-uninstalled``).
-_SUFIXO_NAO_INSTALADOS = "-show-uninstalled"
-
-#: Base dessas chaves, descoberta uma vez do schema instalado. Fontes fora
-#: desta lista (todas as demais) sempre exibem tudo.
-_CHAVES_NAO_INSTALADOS: Optional[frozenset[str]] = None
-
-
-def _fontes_com_chave_nao_instalados() -> frozenset[str]:
-    """Fontes que publicam ``<fonte>-show-uninstalled`` no schema."""
-    global _CHAVES_NAO_INSTALADOS
-    if _CHAVES_NAO_INSTALADOS is None:
-        try:
-            chaves = set(shared.schema.list_keys())
-        except Exception:  # pylint: disable=broad-exception-caught
-            logging.warning("Não foi possível ler as chaves do schema", exc_info=True)
-            chaves = set()
-        _CHAVES_NAO_INSTALADOS = frozenset(
-            chave[: -len(_SUFIXO_NAO_INSTALADOS)]
-            for chave in chaves
-            if chave.endswith(_SUFIXO_NAO_INSTALADOS)
-        )
-    return _CHAVES_NAO_INSTALADOS
-
-
-def chave_mostrar_nao_instalados(base_source: str) -> Optional[str]:
-    """Chave de exibição da fonte, ou ``None`` quando ela não tem uma."""
-    if base_source and base_source in _fontes_com_chave_nao_instalados():
-        return base_source + _SUFIXO_NAO_INSTALADOS
-    return None
-
-
-def mostra_nao_instalados(base_source: str) -> bool:
-    """Se a biblioteca deve exibir os não instalados de ``base_source``.
-
-    O importador traz tudo; aqui a decisão é de exibição. Fontes sem chave
-    exibem tudo, como antes.
-    """
-    chave = chave_mostrar_nao_instalados(base_source)
-    if chave is None:
-        return True
-    try:
-        return bool(shared.schema.get_boolean(chave))
-    except Exception:  # pylint: disable=broad-exception-caught
-        return True
-
 
 def can_edit_notes(game: Game) -> bool:
     if game.zerado:
@@ -423,14 +376,7 @@ class CartridgesWindow(Adw.ApplicationWindow):
             right.connect("released", self._on_source_filter_right_click, source_id)
             button.add_controller(right)
 
-            # O olho de "não instalados" entra como irmão do filtro, nunca
-            # como filho: dentro do ToggleButton, o clique no filho
-            # alternaria também a plataforma inteira.
-            linha = Gtk.Box(spacing=6, hexpand=True)
-            linha.append(button)
-            if chave := chave_mostrar_nao_instalados(source_id):
-                linha.append(self._criar_toggle_nao_instalados(chave))
-            self.sidebar.append(linha)
+            self.sidebar.append(button)
             self.source_rows[button] = (source_id, games_no)
 
         header = self.sidebar.get_row_at_index(0)
@@ -473,54 +419,9 @@ class CartridgesWindow(Adw.ApplicationWindow):
             )
         )
 
-    def _criar_toggle_nao_instalados(self, chave: str) -> Gtk.ToggleButton:
-        """Olho ligado à chave de exibição da fonte, irmão do filtro dela.
-
-        Fica fora do ``ToggleButton`` principal de propósito (ver
-        :meth:`create_source_rows`), e não herda contagem nem estado dele:
-        só liga e desliga a exibição de jogos não instalados.
-        """
-        toggle = Gtk.ToggleButton(
-            width_request=44,
-            height_request=44,
-            margin_end=6,
-            valign=Gtk.Align.CENTER,
-            tooltip_text=_(
-                "Also shows games from this source that are not installed yet"
-            ),
-        )
-        toggle.add_css_class("flat")
-        toggle.add_css_class("source-filter-toggle")
-        try:
-            shared.schema.bind(chave, toggle, "active", Gio.SettingsBindFlags.DEFAULT)
-        except Exception:  # pylint: disable=broad-exception-caught
-            logging.warning("Não foi possível ligar %s ao botão", chave, exc_info=True)
-        self._atualizar_icone_nao_instalados(toggle)
-        toggle.connect(
-            "notify::active", self._on_mostrar_nao_instalados_alterado, chave
-        )
-        toggle.update_property([Gtk.AccessibleProperty.LABEL], [_("Show uninstalled")])
-        return toggle
-
-    @staticmethod
-    def _atualizar_icone_nao_instalados(toggle: Gtk.ToggleButton) -> None:
-        """Olho aberto exibindo, olho riscado ocultando."""
-        toggle.set_icon_name(
-            "view-reveal-symbolic" if toggle.get_active() else "view-conceal-symbolic"
-        )
-
-    def _on_mostrar_nao_instalados_alterado(
-        self, toggle: Gtk.ToggleButton, _pspec: Any, chave: str
-    ) -> None:
-        self._atualizar_icone_nao_instalados(toggle)
-        logging.debug("%s = %s", chave, toggle.get_active())
-        self._refresh_library_filters()
-
     def _membro_visivel_na_biblioteca(self, member: Game) -> bool:
-        """Um membro sustenta o card se a fonte está no filtro e cabe na exibição."""
-        if self._source_filter_id(member) not in self.active_source_filters:
-            return False
-        return member.installed or mostra_nao_instalados(member.base_source)
+        """Um membro sustenta o card se a fonte está no filtro."""
+        return self._source_filter_id(member) in self.active_source_filters
 
     def _source_filter_toggled(
         self, button: Gtk.ToggleButton, source_id: str
@@ -1540,14 +1441,9 @@ class CartridgesWindow(Adw.ApplicationWindow):
     def show_details_page(self, game: Game) -> None:
         self.active_game = game
         self._atualizar_botao_jogar_detalhes(game)
-        if not game.installed:
-            self.details_view_play_button.set_icon_name("folder-download-symbolic")
-            self.details_view_play_button.set_label(_("Install"))
-            self.details_view_play_button.set_tooltip_text(_("Install"))
-        else:
-            self.details_view_play_button.set_icon_name("")
-            self.details_view_play_button.set_label(_("Play"))
-            self.details_view_play_button.set_tooltip_text(None)
+        self.details_view_play_button.set_icon_name("")
+        self.details_view_play_button.set_label(_("Play"))
+        self.details_view_play_button.set_tooltip_text(None)
 
         self.details_view_cover.set_opacity(int(not game.loading))
         self.details_view_spinner.set_visible(game.loading)

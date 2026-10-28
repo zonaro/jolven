@@ -199,7 +199,7 @@ class SourceMetadataTests(QuiverSourceTestCase):
 
 
 class LibraryParsingTests(QuiverSourceTestCase):
-    def test_imports_installed_and_not_installed_entries(self):
+    def test_imports_installed_entries_and_skips_the_rest(self):
         root = self.make_root()
         app_dir = root / "Apps" / "MyGame"
         program = self.make_program(app_dir / "MyGame.x86_64")
@@ -224,7 +224,9 @@ class LibraryParsingTests(QuiverSourceTestCase):
         )
 
         results = list(QuiverSourceIterable(QuiverSource()))
-        self.assertEqual(len(results), 2)
+        # "Other Game" has no folder on disk: the launcher knows it, but it
+        # is not installed, so it does not enter the library.
+        self.assertEqual(len(results), 1)
 
         game, additional = results[0]
         self.assertEqual(game.values["game_id"], "quiver_MyGame")
@@ -233,24 +235,21 @@ class LibraryParsingTests(QuiverSourceTestCase):
         # `project` é o nome do porte, não a desenvolvedora: sem catálogo, o
         # campo fica vazio em vez de receber o valor errado.
         self.assertNotIn("developer", game.values)
-        self.assertTrue(game.values["installed"])
         self.assertEqual(game.values["executable"], shell_quote(str(program)))
         self.assertEqual(game.values["launch_working_directory"], str(app_dir))
         self.assertEqual(additional["quiver_installed_version"], "v1.2.3")
 
-        other, _additional = results[1]
-        self.assertEqual(other.values["game_id"], "quiver_OtherGame")
-        self.assertFalse(other.values["installed"])
-        self.assertEqual(other.values["executable"], "")
-
     def test_accepts_a_bare_list(self):
         root = self.make_root()
+        (root / "Apps" / "A").mkdir(parents=True, exist_ok=True)
         self.write_library(root, [{"name": "A", "folderName": "A"}])
         results = list(QuiverSourceIterable(QuiverSource()))
         self.assertEqual([game.values["game_id"] for game, _ in results], ["quiver_A"])
 
     def test_accepts_the_legacy_sections(self):
         root = self.make_root()
+        for name in ("A", "B", "C"):
+            (root / "Apps" / name).mkdir(parents=True, exist_ok=True)
         self.write_library(
             root,
             {
@@ -267,6 +266,7 @@ class LibraryParsingTests(QuiverSourceTestCase):
 
     def test_skips_invalid_entries(self):
         root = self.make_root()
+        (root / "Apps" / "Good").mkdir(parents=True, exist_ok=True)
         self.write_library(
             root,
             {
@@ -284,6 +284,7 @@ class LibraryParsingTests(QuiverSourceTestCase):
 
     def test_skips_duplicated_folder_names(self):
         root = self.make_root()
+        (root / "Apps" / "Same").mkdir(parents=True, exist_ok=True)
         self.write_library(
             root,
             {
@@ -298,32 +299,24 @@ class LibraryParsingTests(QuiverSourceTestCase):
         self.assertEqual(results[0][0].values["name"], "First")
 
     def test_id_falls_back_to_the_repository_and_then_to_the_name(self):
-        root = self.make_root()
-        self.write_library(
-            root,
-            {
-                "apps": [
-                    {"name": "No folder", "repository": "owner/repo"},
-                    {"name": "Nothing else"},
-                ]
-            },
-        )
-        results = list(QuiverSourceIterable(QuiverSource()))
+        # An entry without a folder is never imported, but its identity rule
+        # still matters: the id must not drift between two scans.
+        iterable = QuiverSourceIterable(QuiverSource())
         self.assertEqual(
-            [game.values["game_id"] for game, _ in results],
-            ["quiver_owner_repo", "quiver_Nothing-else"],
+            iterable.make_game_id({"name": "No folder", "repository": "owner/repo"}),
+            "quiver_owner_repo",
+        )
+        self.assertEqual(
+            iterable.make_game_id({"name": "Nothing else"}),
+            "quiver_Nothing-else",
         )
 
-    def test_an_entry_without_a_folder_is_not_installed(self):
+    def test_an_entry_without_a_folder_is_skipped(self):
         root = self.make_root()
         # The install root exists, but it is not the folder of an app.
         (root / "Apps").mkdir(parents=True, exist_ok=True)
         self.write_library(root, {"apps": [{"name": "No folder"}]})
-        results = list(QuiverSourceIterable(QuiverSource()))
-        self.assertEqual(len(results), 1)
-        game, _additional = results[0]
-        self.assertFalse(game.values["installed"])
-        self.assertEqual(game.values["executable"], "")
+        self.assertEqual(list(QuiverSourceIterable(QuiverSource())), [])
 
     def test_corrupt_library_raises_a_scan_error(self):
         root = self.make_root()
@@ -365,7 +358,6 @@ class InstallFolderTests(QuiverSourceTestCase):
         results = list(QuiverSourceIterable(QuiverSource()))
         self.assertEqual(len(results), 1)
         game, _additional = results[0]
-        self.assertTrue(game.values["installed"])
         self.assertEqual(game.values["executable"], shell_quote(str(program)))
 
     def test_settings_apps_path_overrides_the_install_folder(self):
@@ -379,7 +371,6 @@ class InstallFolderTests(QuiverSourceTestCase):
         results = list(QuiverSourceIterable(QuiverSource()))
         self.assertEqual(len(results), 1)
         game, _additional = results[0]
-        self.assertTrue(game.values["installed"])
         self.assertEqual(game.values["executable"], shell_quote(str(program)))
 
     def test_missing_apps_path_falls_back_to_the_default_folder(self):
@@ -391,7 +382,6 @@ class InstallFolderTests(QuiverSourceTestCase):
         )
         results = list(QuiverSourceIterable(QuiverSource()))
         game, _additional = results[0]
-        self.assertTrue(game.values["installed"])
         self.assertEqual(game.values["executable"], shell_quote(str(program)))
 
 
@@ -570,7 +560,6 @@ class ExecutableResolutionTests(QuiverSourceTestCase):
         )
         results = list(QuiverSourceIterable(QuiverSource()))
         game, _additional = results[0]
-        self.assertTrue(game.values["installed"])
         self.assertEqual(game.values["executable"], "")
         self.assertEqual(game.values["launch_working_directory"], "")
 
@@ -645,6 +634,7 @@ class RunnerTests(QuiverSourceTestCase):
 class CoverTests(QuiverSourceTestCase):
     def _library_with_icon(self, icon) -> list:
         root = self.make_root()
+        (root / "Apps" / "Game").mkdir(parents=True, exist_ok=True)
         self.write_library(
             root,
             {
@@ -668,6 +658,7 @@ class CoverTests(QuiverSourceTestCase):
 
     def test_the_game_icon_is_the_fallback(self):
         root = self.make_root()
+        (root / "Apps" / "Game").mkdir(parents=True, exist_ok=True)
         self.write_library(
             root,
             {
@@ -708,6 +699,7 @@ class EnrichmentTests(QuiverSourceTestCase):
 
     def _library(self, **entry) -> list:
         root = self.make_root()
+        (root / "Apps" / "Game").mkdir(parents=True, exist_ok=True)
         payload = {
             "name": "Game",
             "folderName": "Game",
@@ -823,6 +815,7 @@ class TagsMappingTests(QuiverSourceTestCase):
 
     def _library(self, **entry) -> list:
         root = self.make_root()
+        (root / "Apps" / "Game").mkdir(parents=True, exist_ok=True)
         payload = {
             "name": "Game",
             "folderName": "Game",
