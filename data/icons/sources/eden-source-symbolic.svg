@@ -1,12 +1,11 @@
 <!--
-  Eden: marca oficial do Eden (ícone do Flatpak dev.eden_emu.eden),
-  reduzida a silhueta monocromática de 16px. O asset oficial é um círculo
-  inscrito (clip r=192 em 512) com gradiente rosa/roxo/azul; em
-  monocromático sobra o círculo externo mais um recorte interno, que aqui é
-  um pequeno corte abstrato no centro inferior. Fonte: eden-app.svg.
+  Eden: marca oficial do Eden (Flatpak dev.eden_emu.eden), palmeira branca
+  sobre faixas horizontais em gradiente dentro de um oval. Redesenhada como
+  silhueta monocromática de 16px: tronco central com 5 folhas espalhadas.
+  Referencia: eden-oficial.svg / eden-oficial.png (dev.eden_emu.eden).
   Somente geometria preenchida: o GTK recolore pelo `fill`.
 -->
 
 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="#000000" fill-rule="evenodd">
-  <path d="M8 1.6A6.4 6.4 0 0 0 1.6 8 6.4 6.4 0 0 0 8 14.4 6.4 6.4 0 0 0 14.4 8 6.4 6.4 0 0 0 8 1.6 Z M8 5.2c-1.8 0-3.2 1.4-3.2 3.2s1.4 3.2 3.2 3.2 3.2-1.4 3.2-3.2-1.4-3.2-3.2-3.2 Z M8 10.4c-1.2 0-2.2 1-2.2 2.2s1 2.2 2.2 2.2 2.2-1 2.2-2.2-1-2.2-2.2-2.2 Z"/>
+  <path d="M 6 15 L 6 11 L 4 9 L 5 6 L 7 3 L 8 1 L 9 3 L 11 6 L 12 9 L 10 11 L 10 15 Z M 6 11 L 4 11 L 5 13 L 6 12 Z M 10 11 L 12 11 L 11 13 L 10 12 Z"/>
 </svg>

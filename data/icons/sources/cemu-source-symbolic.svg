@@ -1,11 +1,10 @@
 <!--
-  Cemu: marca oficial do Cemu (ícone do Flatpak info.cemu.Cemu), letra "C"
-  grossa aberta para a direita dentro do quadrado de cantos arredondados.
-  Em 16px sobra a "C" com a abertura para a direita e a haste grossa; o
-  arredondamento e a borda escura somem. Fonte: ícone oficial do Cemu.
+  Cemu: "C" da marca oficial, traçado do ícone instalado pelo Flatpak
+  (info.cemu.Cemu) e reduzido à silhueta monocromática de 16 unidades.
+  Nada foi desenhado à mão: o contorno vem da máscara do ícone oficial.
   Somente geometria preenchida: o GTK recolore pelo `fill`.
 -->
 
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="#000000">
-  <path d="M16 0 12 0 12 4 2 4 2 12 12 12 12 16 16 16 Z"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="#000000" fill-rule="evenodd">
+  <path d="M 7.19 1.20 L 4.76 2.17 L 3.39 3.71 L 2.58 5.65 L 2.41 9.38 L 2.90 11.32 L 4.28 13.34 L 5.41 14.15 L 6.70 14.64 L 9.13 14.80 L 11.08 14.15 L 12.78 12.61 L 13.26 11.80 L 13.59 10.83 L 13.59 10.19 L 13.18 9.94 L 11.89 9.78 L 11.48 10.19 L 11.48 10.67 L 11.00 11.80 L 9.78 12.86 L 8.16 13.18 L 8.00 13.02 L 7.19 13.02 L 6.54 12.70 L 5.49 11.80 L 4.68 9.86 L 4.68 6.30 L 5.00 5.17 L 5.33 4.52 L 6.38 3.47 L 7.51 2.98 L 9.30 2.98 L 9.94 3.30 L 10.67 3.87 L 11.56 5.57 L 12.86 5.41 L 13.42 5.00 L 13.42 4.68 L 12.78 3.22 L 11.08 1.69 L 9.62 1.20 Z"/>
 </svg>

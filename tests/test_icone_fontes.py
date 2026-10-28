@@ -81,24 +81,27 @@ class NomesDeIconeDaFonteTests(unittest.TestCase):
         "quiver": "io.github.tgeorgiadis.QuiverLauncher",
     }
 
-    def test_simbolo_enviado_vem_primeiro(self) -> None:
-        fontes = ("steam", "heroic", "lutris", "retroarch", *self.FONTES_COM_ICONE_REAL)
+    def test_asset_enviado_vem_primeiro_nas_fontes_com_simbolo_oficial(self) -> None:
+        fontes = ("steam", "heroic", "lutris", "retroarch", "bottles", "itch", "twintail")
         for fonte in fontes:
             with self.subTest(fonte=fonte):
                 nomes = launcher.nomes_de_icone_da_fonte(fonte)
                 self.assertEqual(nomes[0], f"{fonte}-source-symbolic")
 
-    def test_icone_real_da_plataforma_entra_no_fallback(self) -> None:
+    def test_icone_do_sistema_vem_primeiro_nas_quatro_plataformas(self) -> None:
+        """Com a plataforma instalada, o logo verdadeiro é o do sistema.
+
+        É o que o issue #63 pede: o ícone do sistema quando o aplicativo
+        está instalado e o asset enviado pelo Jolven quando não está.
+        """
         for fonte, icone in self.FONTES_COM_ICONE_REAL.items():
             with self.subTest(fonte=fonte):
                 nomes = launcher.nomes_de_icone_da_fonte(fonte)
+                self.assertEqual(nomes[0], icone)
+                # O símbolo enviado continua na lista: é a reserva para
+                # quando a plataforma não está instalada.
                 self.assertIn(f"{fonte}-source-symbolic", nomes)
-                self.assertIn(icone, nomes)
-                # O ícone do sistema é o último recurso: vem depois do
-                # símbolo enviado pelo app.
-                self.assertLess(
-                    nomes.index(f"{fonte}-source-symbolic"), nomes.index(icone)
-                )
+                self.assertLess(nomes.index(icone), nomes.index(f"{fonte}-source-symbolic"))
 
     def test_nenhum_nome_vem_duplicado(self) -> None:
         fontes = (
@@ -185,6 +188,30 @@ class RegistroDeRecursosTests(unittest.TestCase):
         self.assertFalse(tema.has_icon("uzdoom-source-symbolic"))
         main.registrar_icones_enviados(tema)
         self.assertTrue(tema.has_icon("uzdoom-source-symbolic"))
+
+    def test_plataformas_do_issue_63_saem_do_icone_generico(self) -> None:
+        """As quatro plataformas não podem cair no ícone genérico.
+
+        Era o sintoma relatado: a barra lateral mostrava
+        `application-x-executable-symbolic` e o badge do card mostrava o
+        ícone de imagem ausente. Basta um nome da lista existir no tema —
+        o do sistema quando a plataforma está instalada ou o asset do
+        Jolven quando não está.
+        """
+        from cartridges import main
+
+        tema = Gtk.IconTheme.new()
+        main.registrar_icones_enviados(tema)
+        for fonte in NomesDeIconeDaFonteTests.FONTES_COM_ICONE_REAL:
+            with self.subTest(fonte=fonte):
+                nomes = launcher.nomes_de_icone_da_fonte(fonte)
+                self.assertTrue(
+                    any(tema.has_icon(nome) for nome in nomes),
+                    f"{fonte}: nenhum ícone no tema, a fonte cai no genérico",
+                )
+                # O asset enviado é a reserva obrigatória: existe sempre,
+                # mesmo sem a plataforma instalada.
+                self.assertTrue(tema.has_icon(f"{fonte}-source-symbolic"))
 
     def test_icones_de_acao_tambem_sao_encontrados(self) -> None:
         from cartridges import main
