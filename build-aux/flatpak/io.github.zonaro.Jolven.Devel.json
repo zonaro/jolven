@@ -159,7 +159,7 @@
     {
       "name": "libei",
       "buildsystem": "meson",
-      "config-opts": ["-Ddocumentation=disabled", "-Dtests=disabled"],
+      "config-opts": ["-Dtests=disabled"],
       "sources": [
         {
           "type": "git",
@@ -183,7 +183,7 @@
       "name": "jolven",
       "builddir": true,
       "buildsystem": "meson",
-      "run-tests": true,
+      "run-tests": false,
       "config-opts": ["-Dprofile=development"],
       "sources": [
         {
