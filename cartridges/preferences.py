@@ -916,8 +916,6 @@ class CartridgesPreferences(Adw.PreferencesDialog):
         self.thegamesdb_fetch_button.connect("clicked", update_thegamesdb)
 
         # Switches
-        # As chaves ``*-show-uninstalled`` não entram aqui: viraram filtro de
-        # exibição no menu lateral (Janelas laterais de ``create_source_rows``).
         self.bind_switches(
             {
                 "exit-after-launch",
