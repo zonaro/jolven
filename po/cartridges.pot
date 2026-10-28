@@ -2098,7 +2098,7 @@ msgid "Biblioteca"
 msgstr ""
 
 #: data/gtk/window.blp:223
-msgid "Atualizar catálogo Xbox Cloud"
+msgid "Reimportar plataformas e jogos"
 msgstr ""
 
 #: data/gtk/window.blp:239
@@ -2715,20 +2715,24 @@ msgstr ""
 msgid "Desagrupar"
 msgstr ""
 
-#: cartridges/window.py:2670 cartridges/window.py:2686
-msgid "Sincronização do Xbox Cloud em andamento"
+#: cartridges/window.py:2658
+msgid "Atualização da biblioteca em andamento"
 msgstr ""
 
-#: cartridges/window.py:2690
+#: cartridges/window.py:2667
+msgid "Aguarde a operação atual terminar"
+msgstr ""
+
+#: cartridges/window.py:2698
 msgid "Atualizando catálogo Xbox Cloud…"
 msgstr ""
 
-#: cartridges/window.py:2702
+#: cartridges/window.py:2732
 #, python-brace-format
 msgid "Catálogo Xbox Cloud atualizado: {} jogos"
 msgstr ""
 
-#: cartridges/window.py:2715
+#: cartridges/window.py:2741
 msgid "Não foi possível atualizar o Xbox Cloud (offline?)"
 msgstr ""
 

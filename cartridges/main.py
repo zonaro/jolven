@@ -59,27 +59,8 @@ from cartridges.controller import (
     trigger_for_button,
 )
 from cartridges.game import Game
-from cartridges.importer.appimage_source import AppimageSource
-from cartridges.importer.bottles_source import BottlesSource
-from cartridges.importer.cemu_source import CemuSource
-from cartridges.importer.desktop_source import DesktopSource
-from cartridges.importer.dolphin_source import DolphinSource
-from cartridges.importer.eden_source import EdenSource
-from cartridges.importer.epic_source import EpicSource
-from cartridges.importer.flatpak_source import FlatpakSource
-from cartridges.importer.heroic_source import HeroicSource
 from cartridges.importer.importer import Importer  # yo dawg
-from cartridges.importer.itch_source import ItchSource
-from cartridges.importer.legendary_source import LegendarySource
-from cartridges.importer.lutris_source import LutrisSource
-from cartridges.importer.quiver_source import QuiverSource
-from cartridges.importer.retroarch_source import RetroarchSource
-from cartridges.importer.shortcuts_source import ShortcutsSource
-from cartridges.importer.steam_source import SteamSource
-from cartridges.importer.twintail_source import TwintailSource
-from cartridges.importer.uzdoom_source import UzdoomSource
-from cartridges.importer.waydroid_source import WaydroidSource
-from cartridges.importer.yuzu_source import YuzuSource
+from cartridges.importer.registry import build_sources
 from cartridges.logging.setup import log_system_info, setup_logging
 from cartridges.power import PowerManager
 from cartridges.preferences import CartridgesPreferences
@@ -1045,66 +1026,14 @@ class CartridgesApplication(Adw.Application):
 
         DetailsDialog().present(shared.win)
 
-    def on_import_action(self, *_args: Any) -> None:
-        shared.importer = Importer()
-
-        if shared.schema.get_boolean("lutris"):
-            shared.importer.add_source(LutrisSource())
-
-        if shared.schema.get_boolean("steam"):
-            shared.importer.add_source(SteamSource())
-
-        if shared.schema.get_boolean("heroic"):
-            shared.importer.add_source(HeroicSource())
-
-        if shared.schema.get_boolean("epic"):
-            shared.importer.add_source(EpicSource())
-
-        if shared.schema.get_boolean("bottles"):
-            shared.importer.add_source(BottlesSource())
-
-        if shared.schema.get_boolean("cemu"):
-            shared.importer.add_source(CemuSource())
-
-        if shared.schema.get_boolean("dolphin"):
-            shared.importer.add_source(DolphinSource())
-
-        if shared.schema.get_boolean("flatpak"):
-            shared.importer.add_source(FlatpakSource())
-
-        if shared.schema.get_boolean("appimage"):
-            shared.importer.add_source(AppimageSource())
-
-        if shared.schema.get_boolean("desktop"):
-            shared.importer.add_source(DesktopSource())
-
-        if shared.schema.get_boolean("itch"):
-            shared.importer.add_source(ItchSource())
-
-        if shared.schema.get_boolean("legendary"):
-            shared.importer.add_source(LegendarySource())
-
-        if shared.schema.get_boolean("retroarch"):
-            shared.importer.add_source(RetroarchSource())
-
-        if shared.schema.get_boolean("yuzu"):
-            shared.importer.add_source(YuzuSource())
-
-        if shared.schema.get_boolean("eden"):
-            shared.importer.add_source(EdenSource())
-
-        if shared.schema.get_boolean("quiver"):
-            shared.importer.add_source(QuiverSource())
-
-        if shared.schema.get_boolean("twintail"):
-            shared.importer.add_source(TwintailSource())
-
-        if shared.schema.get_boolean("uzdoom"):
-            shared.importer.add_source(UzdoomSource())
-
-        if shared.schema.get_boolean("shortcuts"):
-            shared.importer.add_source(ShortcutsSource())
-
+    def on_import_action(
+        self, *_args: Any, on_finished: Optional[Callable[[], None]] = None
+    ) -> None:
+        shared.importer = Importer(on_finished=on_finished)
+        # Redetectar a cada acionamento: as fontes nascem novas e resolvem suas
+        # locations agora, então uma plataforma instalada depois da última
+        # importação entra nesta mesma passada (issue #71).
+        shared.importer.add_sources(build_sources())
         shared.importer.run()
 
     def on_remove_game_action(self, *_args: Any) -> None:

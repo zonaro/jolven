@@ -115,6 +115,15 @@ Os importadores em `cartridges/importer/` derivam de `Source`, `SourceIterable`,
 `ExecutableFormatSource` ou `URLExecutableSource`. `Locations` resolve caminhos
 candidatos em instalações nativas, Flatpak e layouts conhecidos.
 
+A lista de fontes vive em `cartridges/importer/registry.py:SOURCE_CLASSES` e é a
+única fonte de verdade: o aplicativo e a tela de Preferências leem dela, e o
+`source_id` de cada classe é a chave do GSettings que liga a fonte. O botão
+**Atualizar** da barra lateral reconstrói essa lista a cada acionamento, então
+uma plataforma instalada depois da última importação entra na mesma passada, sem
+reiniciar o Jolven. Ao terminar, o `Importer` chama o seu `on_finished` uma vez,
+na thread principal e com o estado da aplicação já de volta a `DEFAULT`; é por
+ali que a sincronização do catálogo xCloud é encadeada.
+
 Cada fonte é executada em worker. Um item pode retornar:
 
 - um `Game`;

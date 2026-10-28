@@ -20,7 +20,7 @@
 
 import logging
 from time import time
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Iterable, Optional
 
 from gi.repository import Adw, Gio, GLib, Gtk
 
@@ -58,7 +58,12 @@ class Importer(ErrorProducer):
 
     close_attempt_id: int
 
-    def __init__(self) -> None:
+    #: Chamado uma vez, na thread principal, depois que a importação termina e
+    #: a interface volta ao estado normal. Serve para encadear trabalho que
+    #: depende da biblioteca já atualizada (por exemplo o catálogo do xCloud).
+    on_finished: Optional[Callable[[], None]] = None
+
+    def __init__(self, on_finished: Optional[Callable[[], None]] = None) -> None:
         super().__init__()
 
         shared.import_time = int(time())
@@ -73,6 +78,7 @@ class Importer(ErrorProducer):
 
         self.game_pipelines = set()
         self.sources = set()
+        self.on_finished = on_finished
 
     @property
     def n_games_added(self) -> int:
@@ -107,6 +113,9 @@ class Importer(ErrorProducer):
 
     def add_source(self, source: Source) -> None:
         self.sources.add(source)
+
+    def add_sources(self, sources: Iterable[Source]) -> None:
+        self.sources.update(sources)
 
     def run(self) -> None:
         """Use several Gio.Task to import games from added sources"""
@@ -184,6 +193,22 @@ class Importer(ErrorProducer):
         shared.win.get_application().lookup_action("preferences").set_enabled(True)
         shared.win.get_application().state = shared.AppState.DEFAULT
         shared.win.create_source_rows()
+        self.notify_finished()
+
+    def notify_finished(self) -> None:
+        """Chama ``on_finished`` na thread principal, sem deixar exceção vazar.
+
+        Roda depois de o estado da aplicação voltar a ``DEFAULT``, para que o
+        trabalho encadeado possa usar a interface (e abrir a sua própria
+        importação) sem esbarrar no diálogo modal que acabou de fechar.
+        """
+        if self.on_finished is None:
+            return
+        callback, self.on_finished = self.on_finished, None
+        try:
+            callback()
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.exception("Falha no callback de conclusão da importação")
 
     def remove_games(self) -> None:
         """Set removed to True for missing games"""

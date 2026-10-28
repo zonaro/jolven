@@ -37,28 +37,10 @@ from cartridges import shared
 from cartridges.errors.friendly_error import FriendlyError
 from cartridges.game import Game
 from cartridges.hardware import drm_connectors, pipewire_nodes, vrr_supported
-from cartridges.importer.appimage_source import AppimageSource
-from cartridges.importer.bottles_source import BottlesSource
-from cartridges.importer.cemu_source import CemuSource
 from cartridges.importer.desktop_source import DesktopSource
-from cartridges.importer.dolphin_source import DolphinSource
-from cartridges.importer.eden_source import EdenSource
-from cartridges.importer.epic_source import EpicSource
-from cartridges.importer.flatpak_source import FlatpakSource
-from cartridges.importer.heroic_source import HeroicSource
-from cartridges.importer.itch_source import ItchSource
-from cartridges.importer.legendary_source import LegendarySource
 from cartridges.importer.location import UnresolvableLocationError
-from cartridges.importer.lutris_source import LutrisSource
-from cartridges.importer.quiver_source import QuiverSource
-from cartridges.importer.retroarch_source import RetroarchSource
-from cartridges.importer.shortcuts_source import ShortcutsSource
+from cartridges.importer.registry import SOURCE_CLASSES
 from cartridges.importer.source import Source
-from cartridges.importer.steam_source import SteamSource
-from cartridges.importer.twintail_source import TwintailSource
-from cartridges.importer.uzdoom_source import UzdoomSource
-from cartridges.importer.waydroid_source import WaydroidSource
-from cartridges.importer.yuzu_source import YuzuSource
 from cartridges.store.managers.sgdb_manager import SgdbManager
 from cartridges.store.managers.thegamesdb_manager import TheGamesDBManager
 from cartridges.utils import backup
@@ -653,31 +635,16 @@ class CartridgesPreferences(Adw.PreferencesDialog):
             self.reset_button_row.set_visible(True)
             self.reset_button_row.connect("activated", self.reset_app)
 
-        # Sources settings
-        for source_class in (
-            AppimageSource,
-            BottlesSource,
-            CemuSource,
-            DolphinSource,
-            EdenSource,
-            EpicSource,
-            FlatpakSource,
-            HeroicSource,
-            ItchSource,
-            LegendarySource,
-            LutrisSource,
-            QuiverSource,
-            RetroarchSource,
-            ShortcutsSource,
-            SteamSource,
-            TwintailSource,
-            UzdoomSource,
-            WaydroidSource,
-            YuzuSource,
-        ):
+        # Sources settings — o mesmo registro que o importador usa (#71).
+        # DesktopSource é a exceção: não tem expander row, só o switch dedicado
+        # tratado abaixo. As demais precisam declarar `<id>_expander_row` no
+        # template; tests/test_importer_registry.py cobre essa exigência.
+        for source_class in SOURCE_CLASSES:
+            expander_row = getattr(self, f"{source_class.source_id}_expander_row", None)
+            if expander_row is None:
+                continue
             source = source_class()
             if not source.is_available:
-                expander_row = getattr(self, f"{source.source_id}_expander_row")
                 expander_row.set_visible(False)
             else:
                 self.init_source_row(source)

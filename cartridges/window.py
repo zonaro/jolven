@@ -298,8 +298,8 @@ class CartridgesWindow(Adw.ApplicationWindow):
     news_recent_flowbox: Gtk.FlowBox = Gtk.Template.Child()
     news_list_section: Gtk.Box = Gtk.Template.Child()
     news_list_title: Gtk.Label = Gtk.Template.Child()
-    xcloud_refresh_button: Gtk.Button = Gtk.Template.Child()
-    xcloud_refresh_spinner: Adw.Spinner = Gtk.Template.Child()
+    library_refresh_button: Gtk.Button = Gtk.Template.Child()
+    library_refresh_spinner: Adw.Spinner = Gtk.Template.Child()
 
     game_covers: dict = {}
     toasts: dict = {}
@@ -310,7 +310,7 @@ class CartridgesWindow(Adw.ApplicationWindow):
     _news_refresh_toast: Optional[Adw.Toast] = None
     _news_refresh_requested = False
     _news_source_actions: list = []
-    _xcloud_refreshing = False
+    _library_refreshing = False
     _xcloud_refresh_toast: Optional[Adw.Toast] = None
     session_game: Optional[Game] = None
     session_timer_id: int = 0
@@ -694,10 +694,9 @@ class CartridgesWindow(Adw.ApplicationWindow):
         )
         self.news_refresh_button.connect("clicked", self.on_news_refresh_clicked)
         self.news_retry_button.connect("clicked", self.on_news_refresh_clicked)
-        self.xcloud_refresh_button.connect(
-            "clicked", self._on_xcloud_refresh_clicked
+        self.library_refresh_button.connect(
+            "clicked", self._on_library_refresh_clicked
         )
-        self._update_xcloud_refresh_visible()
 
         self.set_library_child()
 
@@ -2591,7 +2590,6 @@ class CartridgesWindow(Adw.ApplicationWindow):
     def _xcloud_enabled_changed(self, *_args: Any) -> None:
         self.atualizar_launchers()
         enabled = shared.schema.get_boolean("xbox-cloud-gaming")
-        self._update_xcloud_refresh_visible()
         app = self.get_application()
         games = tuple(shared.store.source_games.get("xcloud", {}).values())
         iterator = iter(games)
@@ -2643,61 +2641,93 @@ class CartridgesWindow(Adw.ApplicationWindow):
             from cartridges.xcloud_catalog import sync_async
 
             sync_async(
-                on_complete=self._xcloud_refresh_done,
-                on_error=self._xcloud_refresh_failed,
+                on_complete=self._xcloud_sync_done,
+                on_error=self._xcloud_sync_failed,
             )
         return GLib.SOURCE_REMOVE
 
-    def _update_xcloud_refresh_visible(self) -> None:
+    def _on_library_refresh_clicked(self, *_args: Any) -> None:
+        """Reimporta todas as plataformas e, depois, o catálogo do xCloud.
+
+        O botão deixou de ser exclusivo do Xbox Cloud (issue #71): cada
+        acionamento reconstrói as fontes, então plataformas instaladas desde a
+        última importação entram nesta mesma passada, sem reiniciar o Jolven.
+        """
+        if self._library_refreshing:
+            self.toast_queue.add(
+                Adw.Toast.new(_("Atualização da biblioteca em andamento"))
+            )
+            return
+
+        app = self.get_application()
+        if app.state != shared.AppState.DEFAULT:
+            # Já existe uma importação (ou remoção em massa) em curso: ela
+            # bloqueia a interface, então só avisamos em vez de empilhar outra.
+            self.toast_queue.add(
+                Adw.Toast.new(_("Aguarde a operação atual terminar"))
+            )
+            return
+
+        self._set_library_refreshing(True)
+        app.on_import_action(on_finished=self._on_library_refresh_imported)
+
+    def _on_library_refresh_imported(self) -> None:
+        """Encadeia o catálogo do xCloud ao fim da importação, se ligado."""
+        if not self._library_refreshing:
+            return
         try:
             enabled = shared.schema.get_boolean("xbox-cloud-gaming")
         except Exception:  # pylint: disable=broad-exception-caught
             enabled = False
-        self.xcloud_refresh_button.set_visible(enabled)
         if not enabled:
-            self._set_xcloud_refreshing(False)
-
-    def _set_xcloud_refreshing(self, busy: bool) -> None:
-        self._xcloud_refreshing = busy
-        self.xcloud_refresh_button.set_sensitive(not busy)
-        self.xcloud_refresh_spinner.set_visible(busy)
-
-    def _on_xcloud_refresh_clicked(self, *_args: Any) -> None:
-        from cartridges.utils.na_tela import entregar_na_tela
-
-        if self._xcloud_refreshing:
-            self.toast_queue.add(
-                Adw.Toast.new(_("Sincronização do Xbox Cloud em andamento"))
-            )
+            self._finish_library_refresh()
             return
+
         from cartridges.xcloud_catalog import sync_async
 
+        # Chamadas de sync_async já chegam na thread principal (idle_add /
+        # entregar_na_tela); os handlers abaixo são só os da atualização manual.
         started = sync_async(
-            on_complete=lambda total: entregar_na_tela(
-                self._xcloud_refresh_done, total
-            ),
-            on_error=lambda error: entregar_na_tela(
-                self._xcloud_refresh_failed, error
-            ),
+            on_complete=self._on_library_refresh_synced,
+            on_error=self._on_library_refresh_sync_failed,
             force=True,
         )
         if not started:
-            self.toast_queue.add(
-                Adw.Toast.new(_("Sincronização do Xbox Cloud em andamento"))
-            )
+            self._finish_library_refresh()
             return
-        self._set_xcloud_refreshing(True)
         toast = Adw.Toast.new(_("Atualizando catálogo Xbox Cloud…"))
         toast.set_timeout(0)
         toast.set_use_markup(False)
         self.toast_queue.add(toast)
         self._xcloud_refresh_toast = toast
 
-    def _xcloud_refresh_done(self, total: int) -> None:
-        self._set_xcloud_refreshing(False)
-        if getattr(self, "_xcloud_refresh_toast", None) is not None:
+    def _on_library_refresh_synced(self, total: int) -> None:
+        self._xcloud_sync_done(total)
+        self._finish_library_refresh()
+
+    def _on_library_refresh_sync_failed(self, error: Any) -> None:
+        self._xcloud_sync_failed(error)
+        # A importação em si pode ter dado certo: libera o botão mesmo sem o
+        # catálogo, em vez de deixá-lo travado.
+        self._finish_library_refresh()
+
+    def _finish_library_refresh(self) -> None:
+        """Encerra o estado de atualização e devolve o botão ao usuário."""
+        self._set_library_refreshing(False)
+        self._dismiss_xcloud_refresh_toast()
+
+    def _set_library_refreshing(self, busy: bool) -> None:
+        self._library_refreshing = busy
+        self.library_refresh_button.set_sensitive(not busy)
+        self.library_refresh_spinner.set_visible(busy)
+
+    def _dismiss_xcloud_refresh_toast(self) -> None:
+        if self._xcloud_refresh_toast is not None:
             self.toast_queue.dismiss(self._xcloud_refresh_toast)
             self._xcloud_refresh_toast = None
+
+    def _xcloud_sync_done(self, total: int) -> None:
+        """Feedback do catálogo: vale para o botão Atualizar e para o switch."""
         toast = Adw.Toast.new(
             _("Catálogo Xbox Cloud atualizado: {} jogos").format(total)
         )
@@ -2705,12 +2735,8 @@ class CartridgesWindow(Adw.ApplicationWindow):
         self.toast_queue.add(toast)
         self.create_source_rows()
 
-    def _xcloud_refresh_failed(self, error: Any) -> None:
-        self._set_xcloud_refreshing(False)
-        if getattr(self, "_xcloud_refresh_toast", None) is not None:
-            self.toast_queue.dismiss(self._xcloud_refresh_toast)
-            self._xcloud_refresh_toast = None
-        logging.warning("Refresh manual do xCloud falhou: %s", error)
+    def _xcloud_sync_failed(self, error: Any) -> None:
+        logging.warning("Sincronização do catálogo xCloud falhou: %s", error)
         toast = Adw.Toast.new(
             _("Não foi possível atualizar o Xbox Cloud (offline?)")
         )
