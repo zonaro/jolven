@@ -305,12 +305,20 @@ que a chave do GSettings for limpa. A pasta de mods é opcional para a
 importação: sem ela os jogos da pasta de WADs continuam sendo importados, e as
 Preferências mostram o aviso da linha.
 
-O conteúdo do UZDoom são arquivos WAD, differentiate pelo cabeçalho mágico de
-4 bytes: `IWAD` é um jogo base (Doom, Doom II, …) e `PWAD` é um mod que
-precisa de outro IWAD para rodar. Apenas os IWADs viram jogos; os PWADs são
-ignorados em silêncio, sem virarem entradas na biblioteca. O nome e o id do
-jogo vêm do nome do arquivo sem extensão, o que dá um id estável no formato
-`uzdoom_<nome>`.
+O conteúdo do UZDoom são arquivos WAD e archives zip, diferenciados pelo
+conteúdo. Um `.wad` com o cabeçalho mágico de 4 bytes `IWAD` é um jogo base
+(Doom, Doom II, …) e com `PWAD` é um mod que precisa de outro IWAD para rodar.
+Um `.ipk3` é um jogo completo, mas o motor só o aceita como jogo quando o
+archive tem o lump `IWADINFO` na raiz; por isso
+`cartridges/utils/zdoom_archives.py` confere o cabeçalho `PK\x03\x04` do zip e a
+presença desse lump, lendo o nome do jogo do bloco `IWad`, sem extrair nada. Um
+`.pk3` é um mod e entra apenas na lista de mods do jogo. Viram jogos os WADs com
+cabeçalho `IWAD` e os `.ipk3` válidos; PWADs, `.pk3` e archives corrompidos ou
+sem `IWADINFO` nunca viram entradas na biblioteca.
+
+O id do jogo vem do nome do arquivo sem extensão, o que dá um id estável no
+formato `uzdoom_<nome>`. O nome exibido de um `.ipk3` vem do `Name` do bloco
+`IWad` do `IWADINFO`, com o nome do arquivo como reserva.
 
 O executável é detectado uma única vez por instância da fonte, porque a
 importação percorre muitos jogos: o binário nativo `uzdoom` tem prioridade,
@@ -325,7 +333,9 @@ Jolven e aplicada no lançamento pela opção `-file`
 preserva a ordem da lista). A lista é editada no diálogo
 `cartridges/uzdoom_mods_dialog.py`: a pasta de mods e a pasta de WADs são
 varridas em união (sem repetir o mesmo arquivo), a ordem dos mods é a ordem de
-aplicação e os argumentos gerados entram depois do `-iwad`.
+aplicação e os argumentos gerados entram depois do `-iwad`. São candidatos a mod
+os WADs com cabeçalho `PWAD` e os `.pk3`, aceitos pela extensão sem abrir o
+conteúdo; um `.ipk3` nunca aparece na lista, porque é um jogo inteiro.
 
 ### Quiver
 

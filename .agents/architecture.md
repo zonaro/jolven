@@ -133,10 +133,10 @@ enriquecimento opcional pelo catálogo público), Flatpak, arquivos `.desktop` e
 Waydroid. xCloud segue um fluxo próprio de catálogo remoto e delega o lançamento
 ao navegador externo em modo quiosque.
 
-O UZDoom tem duas localizações: a pasta de WADs (os IWADs, que são os jogos) e
-a pasta de mods (PWAD e PK3). As duas são detectadas na configuração do próprio
-UZDoom e podem ser sobrescritas pelo usuário nas Preferências. A detecção lê
-os arquivos `uzdoom.ini` em ordem de prioridade
+O UZDoom tem duas localizações: a pasta de WADs (os IWADs e os archives
+`.ipk3`, que são os jogos) e a pasta de mods (PWAD e PK3). As duas são detectadas
+na configuração do próprio UZDoom e podem ser sobrescritas pelo usuário nas
+Preferências. A detecção lê os arquivos `uzdoom.ini` em ordem de prioridade
 (`$XDG_CONFIG_HOME/uzdoom/uzdoom.ini`, `~/.config/uzdoom/uzdoom.ini`,
 `~/.config/uzdoom.ini` e o do Flatpak
 `~/.var/app/org.zdoom.UZDoom/config/uzdoom/uzdoom.ini`), usando a seção
