@@ -93,6 +93,28 @@ class AgrupamentoIndexTests(BaseAgrupamento, unittest.TestCase):
         self.assertEqual(self.ag.membros(games[0]), [games[0]])
         self.assertGreaterEqual(store.iters, 0)
 
+    def test_reagrupar_chave_devolve_os_membros(self):
+        games = [make_game("Celeste", "a"), make_game("Celeste", "b")]
+        self._use(games)
+        chave = self.ag.atualizar(games[0])
+        self.ag.desagrupar_chave(chave)
+        self.assertEqual(self.ag.membros(games[0]), [games[0]])
+
+        self.ag.reagrupar_chave(chave)
+
+        self.assertFalse(self.ag.desagrupada(chave))
+        self.assertEqual(
+            {g.game_id for g in self.ag.membros(games[0])}, {"a", "b"}
+        )
+
+    def test_reagrupar_chave_ausente_nao_muda_nada(self):
+        games = [make_game("Celeste", "a"), make_game("Celeste", "b")]
+        self._use(games)
+        chave = self.ag.atualizar(games[0])
+        self.ag.reagrupar_chave(chave)
+        self.assertEqual(self.ag._carregar()["desagrupados"], [])
+        self.assertEqual(len(self.ag.membros(games[0])), 2)
+
     def test_n_lookups_scan_once(self):
         games = [make_game(f"Game {i}", f"g{i}") for i in range(30)]
         store = self._use(games)
