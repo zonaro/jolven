@@ -58,10 +58,10 @@ jogo. Não considere dados raspados estáveis para migrações ou identidade.
 O catálogo xCloud usa feeds públicos de catálogo/Game Pass e cria variantes
 como gratuito, Game Pass e adquirido. O catálogo JSON é persistido em cache
 versionado com TTL de 24 h (`xcloud_catalog.py`): boot e habilitação instalam do
-cache e só buscam rede quando obsoleto ou via botão Atualizar (forçado); sem
-rede e sem cache, o erro é reportado sem derrubar a biblioteca. Rede e escrita
-de capas/JSON rodam fora da thread GTK; a UI recebe resultados via
-`entregar_na_tela`.
+cache e só buscam rede quando obsoleto ou via botão Atualizar da barra lateral
+(forçado); sem rede e sem cache, o erro é reportado sem derrubar a biblioteca.
+Rede e escrita de capas/JSON rodam fora da thread GTK; a UI recebe resultados
+via `entregar_na_tela`.
 
 A reprodução não acontece dentro do Jolven. Cada título é aberto no navegador
 escolhido pelo usuário (`cartridges/utils/browser.py`) numa janela nova em modo

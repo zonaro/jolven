@@ -5,16 +5,34 @@ from pathlib import Path
 ROOT = Path(__file__).parents[1]
 
 
-class WindowXCloudRefreshTests(unittest.TestCase):
+class WindowLibraryRefreshTests(unittest.TestCase):
+    """O botão Atualizar reimporta plataformas e jogos, não só o xCloud (#71)."""
+
     def test_refresh_widgets_declared_and_in_blueprint(self) -> None:
         py = (ROOT / "cartridges" / "window.py").read_text(encoding="utf-8")
         blp = (ROOT / "data" / "gtk" / "window.blp").read_text(encoding="utf-8")
-        for widget in ("xcloud_refresh_button", "xcloud_refresh_spinner"):
+        for widget in ("library_refresh_button", "library_refresh_spinner"):
             self.assertIn(widget, py)
             self.assertIn(widget, blp)
-        self.assertIn("_on_xcloud_refresh_clicked", py)
-        self.assertIn("_xcloud_refresh_done", py)
-        self.assertIn("_xcloud_refresh_failed", py)
+        self.assertIn("_on_library_refresh_clicked", py)
+        self.assertIn("_on_library_refresh_imported", py)
+        self.assertIn("_xcloud_sync_done", py)
+        self.assertIn("_xcloud_sync_failed", py)
+
+    def test_refresh_button_is_always_visible(self) -> None:
+        """Antes ele só existia para o xCloud; agora vale para toda a biblioteca."""
+        blp = (ROOT / "data" / "gtk" / "window.blp").read_text(encoding="utf-8")
+        start = blp.index("Button library_refresh_button {")
+        bloco = blp[start : blp.index("}", start)]
+        self.assertNotIn("visible: false", bloco)
+
+    def test_refresh_runs_an_import_and_chains_the_xcloud_sync(self) -> None:
+        py = (ROOT / "cartridges" / "window.py").read_text(encoding="utf-8")
+        self.assertIn(
+            "on_import_action(on_finished=self._on_library_refresh_imported)", py
+        )
+        # Sem importação disparada pelo botão, nada de catálogo é sincronizado.
+        self.assertIn("sync_async(", py)
 
     def test_filter_func_does_not_touch_library_child(self) -> None:
         py = (ROOT / "cartridges" / "window.py").read_text(encoding="utf-8")

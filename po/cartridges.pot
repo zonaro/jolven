@@ -16,7 +16,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
 
 #: data/io.github.zonaro.Jolven.desktop.in:2
 #: data/io.github.zonaro.Jolven.metainfo.xml.in:10 data/gtk/preferences.blp:143
@@ -2090,7 +2090,7 @@ msgid "Biblioteca"
 msgstr ""
 
 #: data/gtk/window.blp:223
-msgid "Atualizar catálogo Xbox Cloud"
+msgid "Reimportar plataformas e jogos"
 msgstr ""
 
 #: data/gtk/window.blp:239
@@ -2695,11 +2695,12 @@ msgstr ""
 msgid "Desagrupar"
 msgstr ""
 
-#: cartridges/window.py:2537
+#: cartridges/window.py:2536
 msgid "Agrupar novamente"
 msgstr ""
 
-#: cartridges/window.py:2670 cartridges/window.py:2686msgid "Sincronização do Xbox Cloud em andamento"
+#: cartridges/window.py:2670 cartridges/window.py:2686
+msgid "Sincronização do Xbox Cloud em andamento"
 msgstr ""
 
 #: cartridges/window.py:2586
@@ -2707,11 +2708,22 @@ msgid "Atualizando catálogo Xbox Cloud…"
 msgstr ""
 
 #: cartridges/window.py:2598
-#, python-brace-format
+
+#: cartridges/window.py:2680
+msgid "Atualização da biblioteca em andamento"
+msgstr ""
+
+#: cartridges/window.py:2689
+msgid "Aguarde a operação atual terminar"
+msgstr ""
+
+#: cartridges/window.py:2732#, python-brace-format
 msgid "Catálogo Xbox Cloud atualizado: {} jogos"
 msgstr ""
 
 #: cartridges/window.py:2611
+
+#: cartridges/window.py:2741
 msgid "Não foi possível atualizar o Xbox Cloud (offline?)"
 msgstr ""
 

@@ -119,7 +119,11 @@ Jolven lists the public Xbox Cloud Gaming catalog and hands the title to your ow
 - Pick the browser in **Preferences → Cloud Gaming**. Jolven detects the browsers installed on the system, including Flatpak ones, and can simply use the default browser.
 - Pressing play opens a new **fullscreen kiosk window** directly on the game. Jolven uses a dedicated browser profile, so the kiosk window is really new and your xbox.com login persists between sessions. Browsers without kiosk support fall back to a normal new window.
 - Cloud streaming needs **Game Pass Ultimate**; streaming from your own console at home (xHome) works too.
-- The catalog comes from public feeds and is cached for 24 hours. The refresh button updates it without blocking the library; without network, the last cache keeps working.
+- The catalog comes from public feeds and is cached for 24 hours. The sidebar
+  refresh button re-detects installed platforms, reimports games from every
+  enabled source and, when the integration is on, updates this catalog in the
+  same pass — without blocking the library. Without network, the last cache
+  keeps working.
 
 > The catalog format is unofficial. Microsoft may change the service and break it; reports are welcome.
 
