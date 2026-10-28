@@ -165,15 +165,15 @@ def nomes_de_icone_da_fonte(source_id: str) -> tuple[str, ...]:
         return ("desktop-source-symbolic", "user-desktop-symbolic")
     if tipo == "xcloud":
         return ("xbox-cloud-symbolic", "xbox-symbolic", "xbox")
-    # O símbolo enviado pelo app vem primeiro; depois os nomes conhecidos da
-    # plataforma e, por último, o ícone que o próprio sistema instala. O
-    # ícone do sistema é o último recurso, para o caso de o asset enviado
-    # faltar. Nomes repetidos saem: a ordem do primeiro aparecimento é a
-    # que vale e o tema não deve ser consultado duas vezes pelo mesmo nome.
+    # UZDoom, Eden, Cemu e Quiver não enviam ícone para o tema do sistema:
+    # quem instala a plataforma (Flatpak ou nativo) ganha o logo verdadeiro,
+    # e o símbolo desenhado pelo Jolven só aparece quando ela não está
+    # instalada (issue #63). Nas demais fontes o símbolo enviado é a marca
+    # oficial e vem primeiro, como sempre foi.
     nomes = (
+        *(_ICONES_PLATAFORMA.get(tipo, ())),
         f"{tipo}-source-symbolic",
         *(_APLICATIVOS.get(tipo, ())),
-        *(_ICONES_PLATAFORMA.get(tipo, ())),
     )
     return tuple(dict.fromkeys(nomes))
 

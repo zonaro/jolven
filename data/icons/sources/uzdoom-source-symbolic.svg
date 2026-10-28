@@ -1,11 +1,11 @@
 <!--
-  UZDoom: marca oficial do UZDoom (branding do repositório UZDoom/UZDoom),
-  em silhueta monocromática para o badge de 16px. O escudo com o recorte do
-  "U" vem do ícone de desktop oficial org.zdoom.UZDoom.svg
-  (branding/UZDoom App.svg), CC-BY-SA 4.0, Cardboard Marty.
-  Somente geometria preenchida: o GTK recolore pelo `fill`.
+  UZDoom: "U" da marca oficial, extraída do vetor do repositório oficial
+  (UZDoom/UZDoom, branding/UZDoom App.svg, CC-BY-SA 4.0). O path abaixo é
+  o do logo, sem redesenho: a geometria é a do original, só reduzida ao
+  viewBox da marca. Somente geometria preenchida: o GTK recolore pelo
+  `fill`.
 -->
 
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="#000000" fill-rule="evenodd">
-  <path d="M3 0 12 0 13 1 13 9 12 10 10 12 8 13 7 14 6 13 5 11 4 10 3 9 3 1 2 1 Z M6 4 6 9 7 9 7 10 9 10 9 9 8 9 8 4 Z"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="224 224 2552 2552" fill="#000000" fill-rule="evenodd">
+  <path d="m1500 2657.3-872-503.29v-1811.2l661.74 382.02v262.61l-238-137.73v938.32l-334.39 244.57 366.95-148.92 415.6 239.85 415.6-239.85 366.95 148.92-334.39-244.57v-938.32l-238 137.73v-262.61l661.74-382.02v1811.2l-871.81 503.29m210.25-1556.3 172.79-99.622v786.71l-383.04 221.91-382.95-221.91v-786.71l172.79 99.622v630.66l210.07 121.18 210.25-121.18v-630.66z"/>
 </svg>

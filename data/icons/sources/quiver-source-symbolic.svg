@@ -1,12 +1,11 @@
 <!--
-  Quiver Launcher: marca oficial do repositório tgeorgiadis/quiver-launcher
-  (quiver-icon.png / quiver-app.png). Em 16px reduzida à malha: massa
-  triangular de setas nas linhas 0-4, haste nas 5-6, trapézio do aljavaque
-  nas 7-12 e dois blocos de download nas 13-15 (blocos 2x3 para ficar
-  solido ao rasterizar em 16px). Fonte: ícones oficiais do Quiver Launcher.
+  Quiver Launcher: marca oficial do repositório tgeorgiadis/quiver-launcher,
+  taça com flechas pontiagudas saindo para cima (a central mais alta).
+  Redesenhada como silhueta monocromática de 16px: copo com 3 flechas.
+  Referencia: quiver-oficial.png (tgeorgiadis/quiver-launcher).
   Somente geometria preenchida: o GTK recolore pelo `fill`.
 -->
 
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="#000000">
-  <path d="M4 4 12 4 13 3 13 2 12 1 4 1 3 2 3 3 Z M6 5 10 5 10 6 6 6 Z M3 7 13 7 13 8 12 8 12 9 11 9 11 10 10 10 10 11 9 11 9 12 6 12 6 11 5 11 5 8 4 8 Z M6 13 7 13 7 15 6 15 Z M9 13 10 13 10 15 9 15 Z"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="#000000" fill-rule="evenodd">
+  <path d="M 4 15 L 4 13 L 12 13 L 12 15 Z M 5 13 L 5 11 L 11 11 L 11 13 Z M 7 9 L 9 9 L 8 1 Z M 4 11 L 6 11 L 5 5 Z M 10 11 L 12 11 L 11 5 Z"/>
 </svg>
