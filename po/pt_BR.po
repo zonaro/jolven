@@ -2763,6 +2763,10 @@ msgstr "Marcar como iniciador"
 msgid "Desagrupar"
 msgstr "Desagrupar"
 
+#: cartridges/window.py:2537
+msgid "Agrupar novamente"
+msgstr "Agrupar novamente"
+
 #: cartridges/window.py:2670 cartridges/window.py:2686
 msgid "Sincronização do Xbox Cloud em andamento"
 msgstr ""

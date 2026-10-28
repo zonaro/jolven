@@ -665,6 +665,10 @@ class CartridgesWindow(Adw.ApplicationWindow):
         desagrupar.connect("activate", self.on_desagrupar_action)
         self.add_action(desagrupar)
 
+        reagrupar = Gio.SimpleAction.new("reagrupar", GLib.VariantType.new("s"))
+        reagrupar.connect("activate", self.on_reagrupar_action)
+        self.add_action(reagrupar)
+
         toggle_launcher = Gio.SimpleAction.new(
             "toggle_launcher", GLib.VariantType.new("s")
         )
@@ -2517,11 +2521,22 @@ class CartridgesWindow(Adw.ApplicationWindow):
         alternar.append_item(item)
         menu.append_section(None, alternar)
 
+        chave = agrupamento.atualizar(game)
         if grouped:
             grupo = Gio.Menu()
             item = Gio.MenuItem.new(_("Desagrupar"), None)
             item.set_action_and_target_value(
-                "win.desagrupar", GLib.Variant("s", agrupamento.atualizar(game))
+                "win.desagrupar", GLib.Variant("s", chave)
+            )
+            grupo.append_item(item)
+            menu.append_section(None, grupo)
+        elif agrupamento.ativo() and agrupamento.desagrupada(chave):
+            # Um desagrupamento manual é reversível: o mesmo menu devolve a
+            # chave para o agrupamento e os membros voltam ao card único.
+            grupo = Gio.Menu()
+            item = Gio.MenuItem.new(_("Agrupar novamente"), None)
+            item.set_action_and_target_value(
+                "win.reagrupar", GLib.Variant("s", chave)
             )
             grupo.append_item(item)
             menu.append_section(None, grupo)
@@ -2539,6 +2554,13 @@ class CartridgesWindow(Adw.ApplicationWindow):
     def on_desagrupar_action(self, _action: Any, target: GLib.Variant) -> None:
         chave = target.get_string()
         agrupamento.desagrupar_chave(chave)
+        for game in shared.store:
+            if agrupamento.atualizar(game) == chave:
+                game.update()
+
+    def on_reagrupar_action(self, _action: Any, target: GLib.Variant) -> None:
+        chave = target.get_string()
+        agrupamento.reagrupar_chave(chave)
         for game in shared.store:
             if agrupamento.atualizar(game) == chave:
                 game.update()
