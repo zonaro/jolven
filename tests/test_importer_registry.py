@@ -82,6 +82,31 @@ class SourceRegistryTests(unittest.TestCase):
             sorted(klass.source_id for klass in classes), ["lutris", "steam"]
         )
 
+    def test_display_name_uses_the_source_label(self):
+        """O menu lateral nunca mostra o ``source_id`` cru (issue #107)."""
+        for klass in self.registry.SOURCE_CLASSES:
+            self.assertEqual(
+                self.registry.source_display_name(klass.source_id),
+                klass.name,
+                f"{klass.source_id} não resolve para o rótulo da fonte",
+            )
+
+    def test_display_name_accepts_a_sub_origin_suffix(self):
+        """Fontes que gravam sub-origem (``lutris_123``) caem na fonte base."""
+        lutris = next(
+            klass
+            for klass in self.registry.SOURCE_CLASSES
+            if klass.source_id == "lutris"
+        )
+        self.assertEqual(
+            self.registry.source_display_name("lutris_123"), lutris.name
+        )
+
+    def test_display_name_ignores_pseudo_sources(self):
+        """``all``, ``imported`` e as variantes do xCloud não são fontes."""
+        for source_id in ("all", "imported", "xcloud_gamepass", "nope"):
+            self.assertIsNone(self.registry.source_display_name(source_id))
+
     def test_build_sources_instantiates_only_enabled_sources(self):
         class _Schema:
             def get_boolean(self, key):
@@ -176,6 +201,19 @@ class ImportActionWiringTests(unittest.TestCase):
         self.assertIn("on_finished=on_finished", corpo)
         # Nada de lista paralela escrita à mão.
         self.assertNotIn("add_source(", corpo)
+
+    def test_source_name_lookup_uses_the_registry(self):
+        """``get_source_name`` resolve pelo registro, nunca por ``globals()``.
+
+        O ``globals()`` de ``main.py`` não contém as classes ``*Source``, então
+        o ``KeyError`` devolvia o identificador em minúsculas ao menu (issue #107).
+        """
+        fonte = (ROOT / "cartridges" / "main.py").read_text(encoding="utf-8")
+        corpo = fonte[
+            fonte.index("def get_source_name(") : fonte.index("def on_about_action(")
+        ]
+        self.assertIn("source_display_name(", corpo)
+        self.assertNotIn("globals()", corpo)
 
     def test_preferences_reuses_the_registry(self):
         fonte = (ROOT / "cartridges" / "preferences.py").read_text(encoding="utf-8")

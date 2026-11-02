@@ -78,7 +78,7 @@ class ItchLocations(NamedTuple):
 
 class ItchSource(URLExecutableSource):
     source_id = "itch"
-    name = _("itch")
+    name = _("itch.io")
     iterable_class = ItchSourceIterable
     url_format = "itch://caves/{cave_id}/launch"
     available_on = {"linux"}
