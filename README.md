@@ -146,6 +146,15 @@ Jolven can drive the native [GPU Screen Recorder](https://git.dec05eba.com/gpu-s
 - **Replay buffer** — keep the last few seconds in RAM or on disk and save a clip on demand.
 - **Streaming** — send the capture to an RTMP, SRT or WHIP URL instead of a file.
 
+### Conversa por texto com o Telegram
+
+Jolven pode se integrar ao Telegram para conversas de texto, de forma totalmente opcional: cada pessoa vincula a própria conta, nunca é requisito para usar o Jolven ou jogar, e não há backend próprio — a integração roda localmente com a TDLib (libtdjson).
+
+- Disponível na barra lateral como **Chat Telegram**, abrindo a página de conversas.
+- Lista de conversas e painel de mensagens, com envio apenas por gesto explícito do usuário.
+- A chave de criptografia da sessão local fica guardada no cofre do usuário (Secret Service), não nas configurações, e não é levada em backups.
+- Se a libtdjson não estiver instalada ou a conta não estiver autorizada, a página mostra um estado orientativo e o resto do Jolven segue funcionando normalmente.
+
 Your existing data is safe: on first launch, Jolven copies the library, covers, settings, favorites and metadata from the previous `cartridges` folders into its own folders. The originals are never deleted. GSettings keys are migrated the same way (new keys win when already customized).
 
 # Installation
