@@ -141,6 +141,7 @@ class Importer(ErrorProducer):
         self.collect_errors()
         for manager in shared.store.managers.values():
             manager.collect_errors()
+            manager.on_import_start()
             if isinstance(manager, AsyncManager):
                 manager.reset_cancellable()
 
@@ -178,6 +179,8 @@ class Importer(ErrorProducer):
     def finish_import(self) -> None:
         """Callback called when importing has finished"""
         logging.info("Import done")
+        for manager in shared.store.managers.values():
+            manager.on_import_end()
         self.remove_games()
         self.imported_game_ids = shared.store.new_game_ids
         shared.store.new_game_ids = set()

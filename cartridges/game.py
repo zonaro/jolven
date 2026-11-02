@@ -30,6 +30,7 @@ from gi.repository import Adw, GLib, GObject, Gtk
 from cartridges import shared
 from cartridges.game_cover import GameCover
 from cartridges.game_launch import append_uzdoom_mods
+from cartridges.identity.model import sanitize_identity
 from cartridges.utils.run_executable import run_executable
 
 
@@ -140,6 +141,11 @@ class Game(Gtk.Box):
     # for every later refresh: resolving by name again could land on a
     # sequel or re-release, silently breaking a title corrected by hand.
     steam_appid: Optional[str] = None
+    # Identidade canônica (issue #110): plataforma, serial, hashes do arquivo,
+    # IDs externos e a evidência de onde cada prova veio. Fica vazia até a
+    # primeira identificação e é sempre normalizada por `sanitize_identity`,
+    # então um JSON editado à mão não derruba a importação.
+    identity: dict = {}
     # Windows start-menu shortcut this game was discovered from. The path is
     # kept so later scans can match the game back to its .lnk file, and the
     # mtime (epoch seconds, int-truncated) so rescans can skip re-reading
@@ -285,6 +291,9 @@ class Game(Gtk.Box):
         # only the default, and every game owns its own list, so editing
         # the tags of one game never touches another.
         self.tags = normalize_tags(self.tags)
+        # A identidade também é por jogo: normalizar aqui garante lista/dict
+        # próprios e descarta lixo de arquivos antigos ou editados.
+        self.identity = sanitize_identity(self.identity)
 
     def update(self) -> None:
         self.emit("update-ready", {})
