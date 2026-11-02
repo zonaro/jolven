@@ -938,6 +938,115 @@ template $CartridgesPreferences: Adw.PreferencesDialog {
         }
       }
     }
+    Adw.PreferencesGroup telegram_group {
+      title: _("Comunicação / Telegram");
+      description: _("Integração opcional com o Telegram para chat textual e chamadas de voz, usando a infraestrutura oficial do Telegram (TDLib). Não é um servidor próprio: cada pessoa vincula sua própria conta. Desligado por padrão, nunca é requisito para usar o Jolven ou jogar.");
+
+      Adw.SwitchRow telegram_switch {
+        title: _("Ativar integração com o Telegram");
+      }
+
+      Adw.EntryRow telegram_api_id_row {
+        title: _("API ID");
+        sensitive: bind telegram_switch.active;
+      }
+
+      Adw.EntryRow telegram_api_hash_row {
+        title: _("API Hash");
+        sensitive: bind telegram_switch.active;
+      }
+
+      Adw.ActionRow telegram_estado_row {
+        title: _("Estado da conta");
+        subtitle: _("Não vinculada");
+      }
+
+      Adw.ActionRow telegram_desconectar_row {
+        title: _("Desconectar a conta");
+        subtitle: _("Remove apenas a sessão local do Jolven, sem apagar mensagens nem a conta no Telegram.");
+        sensitive: bind telegram_switch.active;
+
+        [suffix]
+        Button telegram_desconectar_button {
+          valign: center;
+          icon-name: "object-delete-symbolic";
+          tooltip-text: _("Encerrar a sessão local do Telegram");
+
+          styles [
+            "flat"
+          ]
+        }
+      }
+
+      Adw.EntryRow telegram_telefone_row {
+        title: _("Número de telefone");
+        visible: false;
+        sensitive: bind telegram_switch.active;
+      }
+
+      Adw.ActionRow telegram_telefone_action {
+        title: _("Enviar telefone");
+        subtitle: _("Solicita o código de verificação do Telegram");
+        visible: false;
+        sensitive: bind telegram_switch.active;
+
+        [suffix]
+        Button telegram_telefone_button {
+          label: _("Enviar");
+          valign: center;
+
+          styles [
+            "flat"
+          ]
+        }
+      }
+
+      Adw.EntryRow telegram_codigo_row {
+        title: _("Código de verificação");
+        visible: false;
+        sensitive: bind telegram_switch.active;
+      }
+
+      Adw.ActionRow telegram_codigo_action {
+        title: _("Enviar código");
+        subtitle: _("Confirma o código recebido");
+        visible: false;
+        sensitive: bind telegram_switch.active;
+
+        [suffix]
+        Button telegram_codigo_button {
+          label: _("Enviar");
+          valign: center;
+
+          styles [
+            "flat"
+          ]
+        }
+      }
+
+      Adw.PasswordEntryRow telegram_senha_row {
+        title: _("Senha de verificação em duas etapas");
+        visible: false;
+        sensitive: bind telegram_switch.active;
+      }
+
+      Adw.ActionRow telegram_senha_action {
+        title: _("Enviar senha");
+        subtitle: _("Completa a autenticação com 2FA");
+        visible: false;
+        sensitive: bind telegram_switch.active;
+
+        [suffix]
+        Button telegram_senha_button {
+          label: _("Enviar");
+          valign: center;
+
+          styles [
+            "flat"
+          ]
+        }
+      }
+    }
   }
 
   Adw.PreferencesPage import_page {

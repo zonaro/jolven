@@ -11,6 +11,7 @@ data/gtk/lighting-profiles.blp
 data/gtk/logo-picker.blp
 data/gtk/preferences.blp
 data/gtk/shortcuts-dialog.blp
+data/gtk/telegram-chat.blp
 data/gtk/uzdoom-mods-dialog.blp
 data/gtk/wallpaper-picker.blp
 data/gtk/window.blp
@@ -79,4 +80,10 @@ cartridges/store/managers/sgdb_manager.py
 cartridges/store/managers/thegamesdb_manager.py
 
 cartridges/integrations/steam_skin/recovery.py
+cartridges/integrations/telegram/adapter.py
+cartridges/integrations/telegram/auth.py
+cartridges/integrations/telegram/chat.py
+cartridges/integrations/telegram/errors.py
+cartridges/integrations/telegram/sessao.py
 cartridges/iluminacao/modelo.py
+cartridges/telegram_chat_page.py

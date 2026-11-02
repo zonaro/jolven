@@ -60,7 +60,7 @@ from cartridges.controller import (
 )
 from cartridges.game import Game
 from cartridges.importer.importer import Importer  # yo dawg
-from cartridges.importer.registry import build_sources
+from cartridges.importer.registry import build_sources, source_display_name
 from cartridges.logging.setup import log_system_info, setup_logging
 from cartridges.power import PowerManager
 from cartridges.preferences import CartridgesPreferences
@@ -166,6 +166,10 @@ class CartridgesApplication(Adw.Application):
     # privilegiado abre o diálogo do polkit e o segundo toque deve esperar
     # o primeiro terminar.
     _game_mode_setup_running: bool = False
+    # Adaptador opcional do Telegram (TDLib): criado apenas quando a
+    # integração está ativada; nunca bloqueia a inicialização do Jolven.
+    telegram_adapter: Any = None
+    _telegram_thread: Optional[threading.Thread] = None
 
     @GObject.Signal(name="emulate-key", arg_types=[int])
     def emulate_key(self, keyval) -> None:
@@ -628,6 +632,28 @@ class CartridgesApplication(Adw.Application):
 
             sync_async()
 
+        # Integração opcional com o Telegram (TDLib): só conecta quando
+        # explicitamente ativada e com API ID/hash configurados. Toda rede
+        # roda em thread de background; falha não derruba o Jolven.
+        if shared.schema.get_boolean("telegram"):
+            api_id = (shared.schema.get_string("telegram-api-id") or "").strip()
+            api_hash = (shared.schema.get_string("telegram-api-hash") or "").strip()
+            if api_id and api_hash:
+                from cartridges.integrations.telegram import (  # noqa: PLC0415
+                    TelegramAdapter,
+                )
+
+                self.telegram_adapter = TelegramAdapter(
+                    on_erro=self._ao_erro_telegram_app,
+                )
+                self._telegram_thread = threading.Thread(
+                    target=self._conectar_telegram_inicial,
+                    args=(api_id, api_hash),
+                    daemon=True,
+                    name="telegram-conectar",
+                )
+                self._telegram_thread.start()
+
         # Create actions
         self.create_actions(
             {
@@ -666,6 +692,8 @@ class CartridgesApplication(Adw.Application):
                 ("continue_game",),
                 ("install_game_mode",),
                 ("uninstall_game_mode",),
+                ("abrir_telegram_chat",),
+                ("telegram_enviar_mensagem",),
             }
         )
         power_action = self.lookup_action("power_menu")
@@ -803,17 +831,12 @@ class CartridgesApplication(Adw.Application):
 
     def get_source_name(self, source_id: str) -> Any:
         if source_id == "all":
-            name = _("All Games")
-        elif source_id == "imported":
-            name = _("Added")
-        elif source_id.split("_")[0] == "xcloud":
-            name = _("Xbox Cloud Gaming")
-        else:
-            try:
-                name = globals()[f"{source_id.split('_')[0].title()}Source"].name
-            except KeyError:
-                return source_id
-        return name
+            return _("All Games")
+        if source_id == "imported":
+            return _("Added")
+        if source_id.split("_")[0] == "xcloud":
+            return _("Xbox Cloud Gaming")
+        return source_display_name(source_id) or source_id
 
     def on_about_action(self, *_args: Any) -> None:
         # Get the debug info from the log files
@@ -872,6 +895,18 @@ class CartridgesApplication(Adw.Application):
         if shared.win is None:
             return
         shared.win.open_integrations()
+
+    def on_abrir_telegram_chat_action(self, *_args: Any) -> None:
+        """Abre a página de chat do Telegram."""
+        if shared.win is None:
+            return
+        shared.win.abrir_telegram_chat()
+
+    def on_telegram_enviar_mensagem_action(self, *_args: Any) -> None:
+        """Envia a mensagem digitada na página de chat do Telegram."""
+        if shared.win is None:
+            return
+        shared.win.telegram_enviar_mensagem()
 
     def on_preferences_action(
         self,
@@ -1081,6 +1116,18 @@ class CartridgesApplication(Adw.Application):
     def on_quit_action(self, *_args: Any) -> None:
         self.quit()
 
+    def _conectar_telegram_inicial(self, api_id: str, api_hash: str) -> None:
+        """Cria o cliente TDLib e consulta o estado de autorização (background)."""
+        try:
+            assert self.telegram_adapter is not None
+            self.telegram_adapter.conectar(api_id, api_hash)
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.exception("Não foi possível restaurar a sessão do Telegram")
+            self.telegram_adapter = None
+
+    def _ao_erro_telegram_app(self, mensagem: str) -> None:
+        logging.error("Telegram: %s", mensagem)
+
     def do_shutdown(self) -> None:  # pylint: disable=arguments-differ
         if shared.runtime.is_session:
             from cartridges.process_session import ProcessSession
@@ -1097,6 +1144,12 @@ class CartridgesApplication(Adw.Application):
         # app. Na ordem inversa, a cor do app sobrescreveria a devolução.
         iluminacao.fechar()
         session_fita.fechar()
+        # Encerra a sessão local do Telegram, se houver (não remove a conta remota).
+        if self.telegram_adapter is not None:
+            try:
+                self.telegram_adapter.desconectar()
+            except Exception:  # pylint: disable=broad-exception-caught
+                logging.exception("Falha ao encerrar o adaptador do Telegram")
         Gio.Application.do_shutdown(self)
 
     def on_power_menu_action(self, *_args: Any) -> None:

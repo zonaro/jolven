@@ -48,6 +48,8 @@ from cartridges.utils import global_shortcut
 from cartridges.utils import session_fita
 from cartridges.utils.create_dialog import create_dialog
 from cartridges.utils.na_tela import entregar_na_tela
+from cartridges.integrations.telegram import EstadoAutorizacao
+from cartridges.integrations.telegram.errors import TelegramUnavailableError
 
 #: Tamanho máximo de um erro de instalação mostrado numa linha de Preferências.
 _MAXIMO_AVISO = 200
@@ -531,6 +533,24 @@ class CartridgesPreferences(Adw.PreferencesDialog):
     openrgb_perfis_row: Adw.ActionRow = Gtk.Template.Child()
     openrgb_perfis_button: Gtk.Button = Gtk.Template.Child()
 
+    telegram_group: Adw.PreferencesGroup = Gtk.Template.Child()
+    telegram_switch: Adw.SwitchRow = Gtk.Template.Child()
+    telegram_api_id_row: Adw.EntryRow = Gtk.Template.Child()
+    telegram_api_hash_row: Adw.EntryRow = Gtk.Template.Child()
+    telegram_estado_row: Adw.ActionRow = Gtk.Template.Child()
+    telegram_desconectar_row: Adw.ActionRow = Gtk.Template.Child()
+    telegram_desconectar_button: Gtk.Button = Gtk.Template.Child()
+
+    telegram_telefone_row: Adw.EntryRow = Gtk.Template.Child()
+    telegram_telefone_button: Gtk.Button = Gtk.Template.Child()
+    telegram_telefone_action: Adw.ActionRow = Gtk.Template.Child()
+    telegram_codigo_row: Adw.EntryRow = Gtk.Template.Child()
+    telegram_codigo_button: Gtk.Button = Gtk.Template.Child()
+    telegram_codigo_action: Adw.ActionRow = Gtk.Template.Child()
+    telegram_senha_row: Adw.PasswordEntryRow = Gtk.Template.Child()
+    telegram_senha_button: Gtk.Button = Gtk.Template.Child()
+    telegram_senha_action: Adw.ActionRow = Gtk.Template.Child()
+
     appearance_page: Adw.PreferencesPage = Gtk.Template.Child()
     appearance_group: Adw.PreferencesGroup = Gtk.Template.Child()
     temas_flowbox: Gtk.FlowBox = Gtk.Template.Child()
@@ -912,6 +932,7 @@ class CartridgesPreferences(Adw.PreferencesDialog):
                 "show-news-button",
                 "session-wallpaper",
                 "session-fita",
+                "telegram",
                 "game-mode-use-gamemode",
                 "game-mode-use-mangohud",
                 "game-mode-enable-fps-limiter",
@@ -995,6 +1016,7 @@ class CartridgesPreferences(Adw.PreferencesDialog):
         self.setup_fita_rows()
         self.reler_fitas()
         self.setup_openrgb_rows()
+        self.setup_telegram_group()
         self.setup_appearance_page()
         self.setup_steam_group()
         # As páginas internas do AdwPreferencesDialog só entram na árvore quando
@@ -1878,6 +1900,232 @@ class CartridgesPreferences(Adw.PreferencesDialog):
         # A sondagem abre soquete e pode esperar segundos por um servidor que
         # não responde: nunca na thread da janela.
         self.verificar_openrgb()
+
+    def setup_telegram_group(self) -> None:
+        """Interruptor, chaves de API e ações da integração com o Telegram."""
+        self.telegram_switch.set_active(shared.schema.get_boolean("telegram"))
+        self.telegram_api_id_row.set_text(
+            shared.schema.get_string("telegram-api-id")
+        )
+        self.telegram_api_hash_row.set_text(
+            shared.schema.get_string("telegram-api-hash")
+        )
+        self.telegram_switch.connect("notify::active", self.ligar_telegram)
+        self.telegram_api_id_row.connect(
+            "changed", self._ao_mudar_api_id_telegram
+        )
+        self.telegram_api_hash_row.connect(
+            "changed", self._ao_mudar_api_hash_telegram
+        )
+        self.telegram_desconectar_button.connect(
+            "clicked", self.desconectar_telegram
+        )
+        self.telegram_telefone_button.connect(
+            "clicked", self._ao_enviar_telefone_telegram
+        )
+        self.telegram_codigo_button.connect(
+            "clicked", self._ao_enviar_codigo_telegram
+        )
+        self.telegram_senha_button.connect(
+            "clicked", self._ao_enviar_senha_telegram
+        )
+        self._atualizar_visibilidade_telegram()
+        self._mostrar_campos_autorizacao()
+        self._atualizar_estado_telegram()
+
+    def _adaptador_telegram(self) -> Any:
+        """Cria (uma única vez) o adaptador TDLib, de forma preguiçosa."""
+        if getattr(self, "_telegram_adapter", None) is None:
+            from cartridges.integrations.telegram import (  # noqa: PLC0415
+                TelegramAdapter,
+            )
+
+            self._telegram_adapter = TelegramAdapter(
+                on_estado=self._ao_estado_telegram,
+                on_atualizacao=self._ao_atualizacao_telegram,
+                on_erro=self._ao_erro_telegram,
+            )
+        return self._telegram_adapter
+
+    def _atualizar_visibilidade_telegram(self) -> None:
+        ativo = shared.schema.get_boolean("telegram")
+        self.telegram_api_id_row.set_sensitive(ativo)
+        self.telegram_api_hash_row.set_sensitive(ativo)
+
+    def ligar_telegram(self, linha: Adw.SwitchRow, *_args: Any) -> None:
+        ativar = bool(linha.get_active())
+        shared.schema.set_boolean("telegram", ativar)
+        self._atualizar_visibilidade_telegram()
+        if ativar:
+            self._conectar_telegram()
+
+    def _ao_mudar_api_id_telegram(self, linha: Adw.EntryRow, *_args: Any) -> None:
+        shared.schema.set_string("telegram-api-id", linha.get_text().strip())
+        self._atualizar_estado_telegram()
+
+    def _ao_mudar_api_hash_telegram(self, linha: Adw.EntryRow, *_args: Any) -> None:
+        shared.schema.set_string("telegram-api-hash", linha.get_text().strip())
+        self._atualizar_estado_telegram()
+
+    def _conectar_telegram(self) -> None:
+        api_id = (shared.schema.get_string("telegram-api-id") or "").strip()
+        api_hash = (shared.schema.get_string("telegram-api-hash") or "").strip()
+        if not api_id or not api_hash:
+            self.telegram_estado_row.set_subtitle(
+                _(
+                    "Configure o API ID e o API Hash do Telegram nas Preferências."
+                )
+            )
+            self.telegram_switch.set_active(False)
+            shared.schema.set_boolean("telegram", False)
+            return
+        try:
+            adaptador = self._adaptador_telegram()
+            adaptador.conectar(api_id, api_hash)
+        except TelegramUnavailableError:
+            self.telegram_estado_row.set_subtitle(
+                _(
+                    "A biblioteca TDLib (libtdjson) não está instalada no sistema."
+                )
+            )
+            self.telegram_switch.set_active(False)
+            shared.schema.set_boolean("telegram", False)
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.exception("Não foi possível conectar ao Telegram")
+            self.telegram_estado_row.set_subtitle(
+                _("Não foi possível iniciar a integração com o Telegram.")
+            )
+            self.telegram_switch.set_active(False)
+            shared.schema.set_boolean("telegram", False)
+
+    def desconectar_telegram(self, *_args: Any) -> None:
+        adaptador = getattr(self, "_telegram_adapter", None)
+        if adaptador is not None:
+            try:
+                adaptador.desconectar()
+            except Exception:  # pylint: disable=broad-exception-caught
+                logging.exception("Falha ao desconectar o Telegram")
+        self._telegram_adapter = None
+        self.telegram_switch.set_active(False)
+        shared.schema.set_boolean("telegram", False)
+        self.telegram_estado_row.set_subtitle(_("Não vinculada"))
+
+    def _atualizar_estado_telegram(self) -> None:
+        adaptador = getattr(self, "_telegram_adapter", None)
+        if adaptador is None:
+            ligado = shared.schema.get_boolean("telegram")
+            configurado = bool(
+                shared.schema.get_string("telegram-api-id")
+                and shared.schema.get_string("telegram-api-hash")
+            )
+            if ligado and not configurado:
+                self.telegram_estado_row.set_subtitle(
+                    _(
+                        "Configure o API ID e o API Hash do Telegram nas Preferências."
+                    )
+                )
+            else:
+                self.telegram_estado_row.set_subtitle(_("Não vinculada"))
+            return
+        estado = adaptador.estado
+        if estado is EstadoAutorizacao.AUTORIZADO:
+            self.telegram_estado_row.set_subtitle(_("Vinculada"))
+        elif estado is EstadoAutorizacao.ERRO:
+            self.telegram_estado_row.set_subtitle(_("Erro na conexão"))
+        elif estado.necessita_acao_do_usuario:
+            self.telegram_estado_row.set_subtitle(
+                _("Aguardando autenticação ({})").format(estado.value)
+            )
+        else:
+            self.telegram_estado_row.set_subtitle(_("Conectando…"))
+        self._mostrar_campos_autorizacao()
+
+    def _mostrar_campos_autorizacao(self) -> None:
+        """Mostra apenas o campo de autorização que o estado atual exige."""
+        adaptador = getattr(self, "_telegram_adapter", None)
+        estado = adaptador.estado if adaptador is not None else None
+
+        self.telegram_telefone_row.set_visible(False)
+        self.telegram_telefone_action.set_visible(False)
+        self.telegram_codigo_row.set_visible(False)
+        self.telegram_codigo_action.set_visible(False)
+        self.telegram_senha_row.set_visible(False)
+        self.telegram_senha_action.set_visible(False)
+
+        if estado is None:
+            return
+        if estado is EstadoAutorizacao.AUTORIZANDO_TELEFONE:
+            self.telegram_telefone_row.set_visible(True)
+            self.telegram_telefone_action.set_visible(True)
+        elif estado is EstadoAutorizacao.AUTORIZANDO_CODIGO:
+            self.telegram_codigo_row.set_visible(True)
+            self.telegram_codigo_action.set_visible(True)
+            if self.telegram_telefone_row.get_text() == "":
+                self.telegram_codigo_row.set_text(
+                    adaptador.telefone or ""
+                )
+        elif estado is EstadoAutorizacao.AUTORIZANDO_SENHA:
+            self.telegram_senha_row.set_visible(True)
+            self.telegram_senha_action.set_visible(True)
+        elif estado is EstadoAutorizacao.AUTORIZANDO_QR:
+            self.telegram_estado_row.set_subtitle(
+                _("Aguardando leitura do QR Code (em breve)")
+            )
+
+    def _ao_enviar_telefone_telegram(self, *_args: Any) -> None:
+        telefone = (self.telegram_telefone_row.get_text() or "").strip()
+        if not telefone:
+            return
+        adaptador = self._adaptador_telegram()
+        try:
+            adaptador.cadastrar_telefone(telefone)
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.exception("Não foi possível enviar o telefone do Telegram")
+            self.telegram_estado_row.set_subtitle(
+                _("Falha ao enviar o número de telefone.")
+            )
+
+    def _ao_enviar_codigo_telegram(self, *_args: Any) -> None:
+        codigo = (self.telegram_codigo_row.get_text() or "").strip()
+        if not codigo:
+            return
+        adaptador = self._adaptador_telegram()
+        try:
+            adaptador.enviar_codigo(codigo)
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.exception("Não foi possível enviar o código do Telegram")
+            self.telegram_estado_row.set_subtitle(
+                _("Falha ao enviar o código de verificação.")
+            )
+
+    def _ao_enviar_senha_telegram(self, *_args: Any) -> None:
+        senha = self.telegram_senha_row.get_text() or ""
+        if not senha:
+            return
+        adaptador = self._adaptador_telegram()
+        try:
+            adaptador.enviar_senha(senha)
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.exception("Não foi possível enviar a senha do Telegram")
+            self.telegram_estado_row.set_subtitle(
+                _("Falha ao enviar a senha de verificação.")
+            )
+
+    def _ao_estado_telegram(self, estado: EstadoAutorizacao) -> None:
+        # Chamado da thread de recepção do Telegram: a UI só pode ser tocada na
+        # thread principal, então entregamos a atualização na tela.
+        entregar_na_tela(self._atualizar_estado_telegram)
+
+    def _ao_atualizacao_telegram(self, atualizacao: dict[str, Any]) -> None:
+        logging.debug("Telegram: atualização %s", atualizacao.get("@type"))
+
+    def _ao_erro_telegram(self, mensagem: str) -> None:
+        logging.error("Telegram: %s", mensagem)
+
+        def aplicar() -> None:
+            self.telegram_estado_row.set_subtitle(_("Erro: {}").format(mensagem))
+
+        entregar_na_tela(aplicar)
 
     def ligar_openrgb(self, linha: Adw.SwitchRow, *_args: Any) -> None:
         shared.schema.set_boolean("openrgb", bool(linha.get_active()))

@@ -167,6 +167,61 @@ limite e diferencie “versão não encontrada” de falha de rede. Publicação
 release é responsabilidade dos workflows e scripts do repositório, não de código
 executado durante a inicialização do aplicativo.
 
+## Telegram (TDLib)
+
+Integração opcional de chat textual e chamadas de voz com o Telegram, via
+cliente oficial TDLib (`libtdjson`, interface C/JSON). É um cliente, **não um
+servidor nem um mensageiro isolado**: cada pessoa vincula a própria conta e as
+conversas usam a infraestrutura oficial do Telegram.
+
+### Princípios
+
+- **Opt-in:** desligado por padrão pela chave GSettings `telegram`. Nunca é
+  requisito para abrir o Jolven, usar a biblioteca local ou jogar.
+- **Sem backend próprio:** não há servidor de mensagens, relay, histórico
+  central, SFU nem conta Jolven.
+- **Falha não fatal:** ausência da `libtdjson`, erro de rede, credencial
+  inválida ou sessão expirada não impedem a biblioteca nem o lançamento de jogos.
+- **Rede fora da thread GTK:** todo envio/recebimento TDLib roda em worker;
+  resultados chegam à UI por `entregar_na_tela`.
+- **Sem ação automática:** não envia convites, anúncios de jogos ou qualquer
+  mensagem em nome do usuário sem gesto explícito.
+
+### Chaves de configuração (schema)
+
+- `telegram` (b, padrão `false`): ativa/desativa a integração.
+- `telegram-api-id` / `telegram-api-hash` (s, padrão `""`): identificador e
+  hash próprios do Jolven junto à API do Telegram, obtidos em
+  https://my.telegram.org. Usados somente quando a integração está ativada.
+- `telegram-notifications` (b, padrão `true`): notificações de mensagens e
+  chamadas.
+
+### Armazenamento e segredos
+
+A fase atual mantém o cliente TDLib apenas em memória e encerra a sessão no
+`do_shutdown`. A persistência do banco de sessão e da chave de criptografia do
+banco no Secret Service (cofre do usuário), bem como a exclusão apenas do cache
+local ao desconectar, são deixadas para uma fase seguinte — nunca gravam tokens
+ou credenciais em GSettings, logs, backups de diagnóstico ou arquivos públicos.
+
+### Privacidade e conformidade
+
+A integração expõe a UI de chat dentro do launcher; conversas comuns são
+cloud chats (não cifradas ponta a ponta por padrão) e chats secretos têm
+sincronização limitada entre dispositivos. É deixado claro que é uma integração
+não oficial com o Telegram. Não envia agenda, biblioteca, jogos em execução nem
+dados pessoais além do necessário para a ação explícita do usuário. Os
+termos da API do Telegram (core.telegram.org/api/terms) devem ser revisados
+antes de expor a UI de chat em uma versão pública.
+
+### Testes e verificação
+
+O adaptador vive em `cartridges/integrations/telegram/` (`adapter.py`,
+`auth.py`, `errors.py`) e é coberto por `tests/test_telegram_adapter.py` com
+mocks, sem rede nem a `libtdjson` instalada. Quando a biblioteca nativa está
+ausente, `disponivel()` retorna falso e a integração fica indisponível sem
+quebrar o app.
+
 ## Launchers e protocolos
 
 Importadores e launchers integram Steam, Lutris, Heroic, Bottles, itch,

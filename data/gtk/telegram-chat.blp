@@ -1,0 +1,152 @@
+using Gtk 4.0;
+using Adw 1;
+
+// Página de chat do Telegram: lista de conversas e painel de mensagens.
+// O conteúdo é montado em Python (`cartridges/telegram_chat_page.py`).
+template $TelegramChatPage: Adw.NavigationPage {
+  title: _("Telegram");
+  tag: "telegram-chat";
+
+  Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {
+      [start]
+      Button {
+        icon-name: "go-previous-symbolic";
+        tooltip-text: _("Voltar");
+        action-name: "win.open_library";
+      }
+
+      [end]
+      Button telegram_chat_botao_enviar_header {
+        visible: false;
+        label: _("Enviar");
+        action-name: "app.telegram_enviar_mensagem";
+        tooltip-text: _("Enviar a mensagem digitada");
+
+        styles [
+          "suggested-action"
+        ]
+      }
+    }
+
+    Gtk.Box {
+      orientation: vertical;
+      hexpand: true;
+      vexpand: true;
+
+      Adw.StatusPage telegram_chat_sem_conta {
+        icon-name: "dialog-error-symbolic";
+        title: _("Telegram não vinculado");
+        description: _("Vincule sua conta nas Preferências › Comunicação / Telegram.");
+        vexpand: true;
+        valign: center;
+
+        Button {
+          label: _("Abrir Preferências");
+          action-name: "app.preferences";
+          halign: center;
+
+          styles [
+            "suggested-action",
+            "pill",
+          ]
+        }
+      }
+
+      Adw.StatusPage telegram_chat_sem_tdlib {
+        icon-name: "dialog-error-symbolic";
+        title: _("TDLib não instalada");
+        description: _("A biblioteca libtdjson não está disponível neste sistema.");
+        vexpand: true;
+        valign: center;
+      }
+
+      Adw.StatusPage telegram_chat_sem_conversa {
+        icon-name: "chat-symbolic";
+        title: _("Escolha uma conversa");
+        description: _("Selecione uma conversa na lista para começar a conversar.");
+        vexpand: true;
+        valign: center;
+      }
+
+      Gtk.Box telegram_chat_painel_principal {
+        visible: false;
+        orientation: horizontal;
+        hexpand: true;
+        vexpand: true;
+        spacing: 0;
+
+        // ── Coluna esquerda: lista de conversas ─────────────────────────
+        Adw.Clamp {
+          maximum-size: 420;
+          tightening-threshold: 360;
+
+          Gtk.ScrolledWindow {
+            hexpand: true;
+            vexpand: true;
+            hscrollbar-policy: never;
+
+            Gtk.ListBox telegram_chat_lista_conversas {
+              selection-mode: none;
+              activate-on-single-click: true;
+            }
+          }
+        }
+
+        // Separador visual
+        Gtk.Box {
+          width-request: 1;
+          hexpand: false;
+          vexpand: true;
+        }
+
+        // ── Coluna direita: painel de mensagens ─────────────────────────
+        Adw.Clamp {
+          maximum-size: 640;
+          tightening-threshold: 520;
+
+          Gtk.Box {
+            orientation: vertical;
+            hexpand: true;
+            vexpand: true;
+
+            Gtk.ScrolledWindow {
+              hexpand: true;
+              vexpand: true;
+              hscrollbar-policy: never;
+
+              Gtk.ListBox telegram_chat_lista_mensagens {
+                selection-mode: none;
+              }
+            }
+
+            Gtk.Box {
+              orientation: horizontal;
+              spacing: 6;
+              margin-top: 6;
+              margin-bottom: 6;
+              margin-start: 6;
+              margin-end: 6;
+
+              Adw.EntryRow telegram_chat_texto_entrada {
+                hexpand: true;
+                activates-default: true;
+              }
+
+              Button telegram_chat_botao_enviar {
+                label: _("Enviar");
+                action-name: "app.telegram_enviar_mensagem";
+                tooltip-text: _("Enviar a mensagem digitada");
+
+                styles [
+                  "suggested-action"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

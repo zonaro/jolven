@@ -10,6 +10,7 @@ foreach name : [
   'preferences',
   'image-picker',
   'shortcuts-dialog',
+  'telegram-chat',
   'uzdoom-mods-dialog',
   'wallpaper-picker',
   'window',

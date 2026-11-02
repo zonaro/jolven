@@ -496,6 +496,26 @@
       <summary>Streaming URL</summary>
       <description>RTMP, SRT or WHIP destination used when streaming. The URL is never logged.</description>
     </key>
+    <key name="telegram" type="b">
+      <default>false</default>
+      <summary>Ativar integração com o Telegram</summary>
+      <description>Habilita o cliente opcional de chat textual e chamadas de voz do Telegram (TDLib). Desligado por padrão: nunca é requisito para usar a biblioteca local, iniciar o Jolven ou jogar.</description>
+    </key>
+    <key name="telegram-api-id" type="s">
+      <default>""</default>
+      <summary>API ID do Telegram do Jolven</summary>
+      <description>Identificador próprio da aplicação junto à API oficial do Telegram, obtido em https://my.telegram.org. Usado somente quando a integração está ativada.</description>
+    </key>
+    <key name="telegram-api-hash" type="s">
+      <default>""</default>
+      <summary>API Hash do Telegram do Jolven</summary>
+      <description>Hash próprio da aplicação junto à API oficial do Telegram. Nunca é registrado em logs nem exposto em backups de diagnóstico.</description>
+    </key>
+    <key name="telegram-notifications" type="b">
+      <default>true</default>
+      <summary>Notificações do Telegram</summary>
+      <description>Exibe notificações de mensagens recebidas e chamadas enquanto o Jolven está em uso.</description>
+    </key>
   </schema>
 
   <schema id="@APP_ID@.State" path="@PREFIX@/State/">

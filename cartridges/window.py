@@ -47,6 +47,7 @@ from cartridges.integrations_page import IntegrationsPage
 from cartridges.lighting_page import LightingPage
 from cartridges.onscreen_keyboard import OnscreenKeyboardDialog
 from cartridges.session_history import SessionHistoryDialog
+from cartridges.telegram_chat_page import TelegramChatPage
 from cartridges.utils import agrupamento, launcher, restauracao, session_log, session_wallpaper, tarefas
 from cartridges.utils.animated_flow_box import AnimatedFlowBox
 from cartridges.utils.format_playtime import format_playtime, format_stopwatch
@@ -237,6 +238,8 @@ class CartridgesWindow(Adw.ApplicationWindow):
     news_page: Adw.NavigationPage = Gtk.Template.Child()
     news_stack: Gtk.Stack = Gtk.Template.Child()
     news_list: Gtk.ListBox = Gtk.Template.Child()
+
+    telegram_chat_page: Optional[TelegramChatPage] = None
     news_scrolledwindow: Gtk.ScrolledWindow = Gtk.Template.Child()
     news_refresh_button: Gtk.Button = Gtk.Template.Child()
     news_retry_button: Gtk.Button = Gtk.Template.Child()
@@ -1737,6 +1740,20 @@ class CartridgesWindow(Adw.ApplicationWindow):
             return
         self.lighting_page.atualizar()
         self.navigation_view.push(self.lighting_page)
+
+    def abrir_telegram_chat(self, _action: Any = None, _parameter: Any = None) -> None:
+        """Abre a página de chat do Telegram, criando-a na primeira vez."""
+        if self.telegram_chat_page is None:
+            self.telegram_chat_page = TelegramChatPage()
+        if self.navigation_view.get_visible_page() == self.telegram_chat_page:
+            return
+        self.telegram_chat_page._tentar_inicializar()
+        self.navigation_view.push(self.telegram_chat_page)
+
+    def telegram_enviar_mensagem(self) -> None:
+        """Envia a mensagem digitada na página de chat do Telegram."""
+        if self.telegram_chat_page is not None:
+            self.telegram_chat_page.enviar_mensagem()
 
     def attach_news_checker(self, checker: Any) -> None:
         self.news_checker = checker
