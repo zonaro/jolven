@@ -60,7 +60,7 @@ from cartridges.controller import (
 )
 from cartridges.game import Game
 from cartridges.importer.importer import Importer  # yo dawg
-from cartridges.importer.registry import build_sources
+from cartridges.importer.registry import build_sources, source_display_name
 from cartridges.logging.setup import log_system_info, setup_logging
 from cartridges.power import PowerManager
 from cartridges.preferences import CartridgesPreferences
@@ -803,17 +803,12 @@ class CartridgesApplication(Adw.Application):
 
     def get_source_name(self, source_id: str) -> Any:
         if source_id == "all":
-            name = _("All Games")
-        elif source_id == "imported":
-            name = _("Added")
-        elif source_id.split("_")[0] == "xcloud":
-            name = _("Xbox Cloud Gaming")
-        else:
-            try:
-                name = globals()[f"{source_id.split('_')[0].title()}Source"].name
-            except KeyError:
-                return source_id
-        return name
+            return _("All Games")
+        if source_id == "imported":
+            return _("Added")
+        if source_id.split("_")[0] == "xcloud":
+            return _("Xbox Cloud Gaming")
+        return source_display_name(source_id) or source_id
 
     def on_about_action(self, *_args: Any) -> None:
         # Get the debug info from the log files
