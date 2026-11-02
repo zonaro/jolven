@@ -64,6 +64,20 @@ SOURCE_CLASSES: tuple[type[Source], ...] = (
 )
 
 
+def source_display_name(source_id: str) -> str | None:
+    """Rótulo traduzido de uma fonte, ou ``None`` quando não é uma fonte.
+
+    Aceita o ``source_id`` puro (``"steam"``) e também a forma com sufixo
+    usada por fontes que gravam sub-origens (``"lutris_123"``). O rótulo vem
+    de ``Source.name``; nenhum identificador interno deve chegar à interface.
+    """
+    base = source_id.split("_")[0]
+    for source_class in SOURCE_CLASSES:
+        if source_class.source_id == base:
+            return source_class.name
+    return None
+
+
 def enabled_source_classes(schema) -> list[type[Source]]:
     """Classes das fontes ligadas nas preferências.
 
