@@ -198,11 +198,16 @@ conversas usam a infraestrutura oficial do Telegram.
 
 ### Armazenamento e segredos
 
-A fase atual mantém o cliente TDLib apenas em memória e encerra a sessão no
-`do_shutdown`. A persistência do banco de sessão e da chave de criptografia do
-banco no Secret Service (cofre do usuário), bem como a exclusão apenas do cache
-local ao desconectar, são deixadas para uma fase seguinte — nunca gravam tokens
-ou credenciais em GSettings, logs, backups de diagnóstico ou arquivos públicos.
+O banco e os arquivos da sessão TDLib ficam em
+`$XDG_DATA_HOME/jolven/telegram` (criado com modo `0700`). A chave de
+criptografia do banco é guardada no Secret Service (schema
+`io.github.zonaro.Jolven.telegram`) por `cartridges/integrations/telegram/sessao.py`;
+nunca vai para GSettings, logs, backups de diagnóstico ou arquivos públicos.
+
+Desconectar apaga somente a chave e a sessão local do Jolven; mensagens e conta
+no Telegram permanecem intactas. A integração compartilha **um único**
+`TelegramAdapter` e **um único** `GerenciadorChat` entre app, Preferências e
+página de chat — dois clientes TDLib sobre o mesmo banco colidem.
 
 ### Privacidade e conformidade
 
@@ -217,10 +222,13 @@ antes de expor a UI de chat em uma versão pública.
 ### Testes e verificação
 
 O adaptador vive em `cartridges/integrations/telegram/` (`adapter.py`,
-`auth.py`, `errors.py`) e é coberto por `tests/test_telegram_adapter.py` com
-mocks, sem rede nem a `libtdjson` instalada. Quando a biblioteca nativa está
-ausente, `disponivel()` retorna falso e a integração fica indisponível sem
-quebrar o app.
+`auth.py`, `chat.py`, `sessao.py`, `errors.py`); a página em
+`cartridges/telegram_chat_page.py`. A cobertura usa mocks, sem rede nem a
+`libtdjson` instalada: `tests/test_telegram_adapter.py` (máquina de estados,
+erros) e `tests/test_telegram_chat_page.py` (histórico paginado, envio,
+recepção, busca, leitura, digitação e degradação sem TDLib). Quando a biblioteca
+nativa está ausente, `disponivel()` retorna falso e a integração fica
+indisponível sem quebrar o app.
 
 ## Launchers e protocolos
 

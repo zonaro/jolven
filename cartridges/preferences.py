@@ -1934,10 +1934,29 @@ class CartridgesPreferences(Adw.PreferencesDialog):
         self._atualizar_estado_telegram()
 
     def _adaptador_telegram(self) -> Any:
-        """Cria (uma única vez) o adaptador TDLib, de forma preguiçosa."""
+        """Reutiliza o adaptador do app ou cria um único, de forma preguiçosa.
+
+        Dois clientes TDLib no mesmo diretório de banco colidem, então as
+        Preferências nunca criam um segundo adaptador: elas adotam o do app e
+        registram seus próprios callbacks de UI.
+        """
+        app = shared.win.get_application() if shared.win is not None else None
+        if app is not None:
+            do_app = getattr(app, "telegram_adapter", None)
+            if do_app is not None:
+                self._telegram_adapter = do_app
+                do_app.definir_callbacks(
+                    on_estado=self._ao_estado_telegram,
+                    on_erro=self._ao_erro_telegram,
+                )
+                return do_app
+
         if getattr(self, "_telegram_adapter", None) is None:
             from cartridges.integrations.telegram import (  # noqa: PLC0415
                 TelegramAdapter,
+            )
+            from cartridges.integrations.telegram.chat import (  # noqa: PLC0415
+                GerenciadorChat,
             )
 
             self._telegram_adapter = TelegramAdapter(
@@ -1945,6 +1964,13 @@ class CartridgesPreferences(Adw.PreferencesDialog):
                 on_atualizacao=self._ao_atualizacao_telegram,
                 on_erro=self._ao_erro_telegram,
             )
+            # O app passa a compartilhar o mesmo adaptador e o mesmo chat.
+            if app is not None:
+                app.telegram_adapter = self._telegram_adapter
+                app.telegram_chat = GerenciadorChat(self._telegram_adapter)
+                self._telegram_adapter.definir_processador_atualizacao(
+                    app.telegram_chat.processar_atualizacao
+                )
         return self._telegram_adapter
 
     def _atualizar_visibilidade_telegram(self) -> None:
@@ -1952,10 +1978,20 @@ class CartridgesPreferences(Adw.PreferencesDialog):
         self.telegram_api_id_row.set_sensitive(ativo)
         self.telegram_api_hash_row.set_sensitive(ativo)
 
+    def _atualizar_acao_chat_telegram(self, ativo: bool) -> None:
+        """Liga/desliga a entrada de chat no menu conforme a integração."""
+        app = shared.win.get_application() if shared.win is not None else None
+        if app is None:
+            return
+        acao = app.lookup_action("abrir_telegram_chat")
+        if acao is not None:
+            acao.set_enabled(bool(ativo))
+
     def ligar_telegram(self, linha: Adw.SwitchRow, *_args: Any) -> None:
         ativar = bool(linha.get_active())
         shared.schema.set_boolean("telegram", ativar)
         self._atualizar_visibilidade_telegram()
+        self._atualizar_acao_chat_telegram(ativar)
         if ativar:
             self._conectar_telegram()
 
@@ -1978,6 +2014,7 @@ class CartridgesPreferences(Adw.PreferencesDialog):
             )
             self.telegram_switch.set_active(False)
             shared.schema.set_boolean("telegram", False)
+            self._atualizar_acao_chat_telegram(False)
             return
         try:
             adaptador = self._adaptador_telegram()
@@ -1990,6 +2027,7 @@ class CartridgesPreferences(Adw.PreferencesDialog):
             )
             self.telegram_switch.set_active(False)
             shared.schema.set_boolean("telegram", False)
+            self._atualizar_acao_chat_telegram(False)
         except Exception:  # pylint: disable=broad-exception-caught
             logging.exception("Não foi possível conectar ao Telegram")
             self.telegram_estado_row.set_subtitle(
@@ -1997,6 +2035,7 @@ class CartridgesPreferences(Adw.PreferencesDialog):
             )
             self.telegram_switch.set_active(False)
             shared.schema.set_boolean("telegram", False)
+            self._atualizar_acao_chat_telegram(False)
 
     def desconectar_telegram(self, *_args: Any) -> None:
         adaptador = getattr(self, "_telegram_adapter", None)
@@ -2006,8 +2045,13 @@ class CartridgesPreferences(Adw.PreferencesDialog):
             except Exception:  # pylint: disable=broad-exception-caught
                 logging.exception("Falha ao desconectar o Telegram")
         self._telegram_adapter = None
+        app = shared.win.get_application() if shared.win is not None else None
+        if app is not None:
+            app.telegram_adapter = None
+            app.telegram_chat = None
         self.telegram_switch.set_active(False)
         shared.schema.set_boolean("telegram", False)
+        self._atualizar_acao_chat_telegram(False)
         self.telegram_estado_row.set_subtitle(_("Não vinculada"))
 
     def _atualizar_estado_telegram(self) -> None:

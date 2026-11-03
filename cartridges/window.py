@@ -145,6 +145,7 @@ class CartridgesWindow(Adw.ApplicationWindow):
     session_blocker_label: Gtk.Label = Gtk.Template.Child()
     session_blocker_button: Gtk.Button = Gtk.Template.Child()
     session_return_button: Gtk.Button = Gtk.Template.Child()
+    session_telegram_button: Gtk.Button = Gtk.Template.Child()
     gpu_screen_recorder_button: Gtk.Button = Gtk.Template.Child()
     session_blocker_notes_button: Gtk.MenuButton = Gtk.Template.Child()
     session_blocker_notes_popover: Gtk.Popover = Gtk.Template.Child()
@@ -546,6 +547,9 @@ class CartridgesWindow(Adw.ApplicationWindow):
         self.connect("notify::visible-dialog", self.botao_tarefas.reavaliar)
         self.session_blocker_button.connect("clicked", self.on_session_blocker_clicked)
         self.session_return_button.connect("clicked", self.return_to_game)
+        self.session_telegram_button.connect(
+            "clicked", self.on_session_telegram_clicked
+        )
         self.gpu_screen_recorder_button.connect(
             "clicked", self.open_gpu_screen_recorder
         )
@@ -1750,6 +1754,27 @@ class CartridgesWindow(Adw.ApplicationWindow):
         self.telegram_chat_page._tentar_inicializar()
         self.navigation_view.push(self.telegram_chat_page)
 
+    def on_session_telegram_clicked(self, *_args: Any) -> None:
+        """Abre o chat por cima do jogo, saindo temporariamente do bloqueador."""
+        if self.session_game is None:
+            return
+        self.session_blocker.set_visible(False)
+        self.navigation_view.set_sensitive(True)
+        self.abrir_telegram_chat()
+
+    def on_voltar_do_chat_action(self, *_args: Any) -> None:
+        """Ação da página de chat: volta ao bloqueador da sessão ou à biblioteca."""
+        self.voltar_do_chat()
+
+    def voltar_do_chat(self, *_args: Any) -> None:
+        """Volta do chat: para o bloqueador da sessão ou para a biblioteca."""
+        if self.navigation_view.get_visible_page() == self.telegram_chat_page:
+            self.navigation_view.pop()
+        if self.session_game is not None and shared.runtime.is_session:
+            self.show_session_blocker(self.session_game)
+        else:
+            self.open_library()
+
     def telegram_enviar_mensagem(self) -> None:
         """Envia a mensagem digitada na página de chat do Telegram."""
         if self.telegram_chat_page is not None:
@@ -2887,6 +2912,18 @@ class CartridgesWindow(Adw.ApplicationWindow):
         self.session_blocker_timer.set_label(format_stopwatch(self.session_elapsed()))
         return GLib.SOURCE_CONTINUE
 
+    def _telegram_chat_disponivel(self) -> bool:
+        """Se o botão de conversas deve aparecer no bloqueador da sessão."""
+        if not shared.schema.get_boolean("telegram"):
+            return False
+        app = self.get_application()
+        adapter = getattr(app, "telegram_adapter", None) if app is not None else None
+        return bool(
+            adapter is not None
+            and adapter.esta_disponivel()
+            and adapter.conectado
+        )
+
     def show_session_blocker(self, game: Game) -> None:
         if self.session_game is game and self.session_blocker.get_visible():
             return
@@ -2896,6 +2933,9 @@ class CartridgesWindow(Adw.ApplicationWindow):
         self.botao_tarefas.reavaliar()
         self.session_blocker_label.set_label(_("{} em execução").format(game.name))
         self.session_blocker.set_visible(True)
+        self.session_telegram_button.set_visible(
+            self._telegram_chat_disponivel()
+        )
         self.navigation_view.set_sensitive(False)
         self._sync_recorder_button()
         self.session_return_button.grab_focus()

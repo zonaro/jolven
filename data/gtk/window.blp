@@ -508,6 +508,22 @@ Adw.StatusPage zerados_notice_empty {
               ]
             }
 
+            Button session_telegram_button {
+              visible: false;
+              icon-name: "chat-symbolic";
+              tooltip-text: _("Abrir conversas do Telegram");
+              width-request: 52;
+              height-request: 52;
+
+              accessibility {
+                label: _("Abrir conversas do Telegram");
+              }
+
+              styles [
+                "circular",
+              ]
+            }
+
             Button gpu_screen_recorder_button {
               icon-name: "media-record-symbolic";
               tooltip-text: _("Iniciar a gravação. Clique com o botão direito para salvar o replay.");
@@ -1443,7 +1459,11 @@ menu primary_menu {
 
     item (_("Preferences"), "app.preferences")
     item (_("Integrações"), "app.integrations")
-    item (_("Chat Telegram"), "app.abrir_telegram_chat")
+    item {
+      label: _("Chat Telegram");
+      action: "app.abrir_telegram_chat";
+      hidden-when: "action-disabled";
+    }
     item (_("Sunshine"), "app.sunshine")
     item (_("Keyboard Shortcuts"), "app.shortcuts")
         item (_("About Jolven"), "app.about")

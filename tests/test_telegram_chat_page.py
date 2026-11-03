@@ -17,6 +17,7 @@ carregado (só disponível em tempo de execução do app), então aqui testamos:
 
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 from unittest.mock import MagicMock
 
 import unittest
@@ -61,8 +62,12 @@ class TestConsistenciaTemplate(unittest.TestCase):
             "sem_tdlib",
             "sem_conversa",
             "painel_principal",
+            "campo_busca",
             "lista_conversas",
             "lista_mensagens",
+            "scrolled_mensagens",
+            "cabecalho_conversa",
+            "botao_mais_antigas",
             "texto_entrada",
         ):
             self.assertIn(widget, py)
@@ -186,8 +191,26 @@ class TestGerenciadorChatConversas(unittest.TestCase):
         self.assertEqual(mensagem.id, 42)
         self.assertEqual(mensagem.texto, "Ola")
         self.assertFalse(mensagem.entrada)
-        self.assertEqual(c.nao_lidas, 1)
+        # A conversa está aberta: a mensagem já foi lida e não conta como nova.
+        self.assertEqual(c.nao_lidas, 0)
+        self.assertTrue(mensagem.lida)
         self.assertEqual(len(self.mensagens_recebidas), 1)
+
+    def test_nova_mensagem_em_conversa_fechada_conta_nao_lida(self):
+        outra = Conversa(id=2, titulo="Outra")
+        self.gm._conversas[2] = outra
+        self.gm._conversa_atual = Conversa(id=1, titulo="Zonaro")
+        self.gm.processar_atualizacao(
+            {
+                "@type": "updateNewMessage",
+                "message": {
+                    "id": 43,
+                    "chat_id": 2,
+                    "content": {"@type": "messageText", "text": {"text": "oi"}},
+                },
+            }
+        )
+        self.assertEqual(outra.nao_lidas, 1)
 
     def test_processar_atualizacao_nao_duplica_mensagem(self):
         c = Conversa(id=1, titulo="Zonaro")
@@ -273,6 +296,179 @@ class TestGerenciadorChatConversas(unittest.TestCase):
         with self.assertRaises(ChatIndisponivelError):
             self.gm.enviar_mensagem(1, "oi")
         self.assertEqual(len(self.adapter.enviadas), 0)
+
+
+class TestGerenciadorChatHistorico(unittest.TestCase):
+    """Histórico paginado, busca, leitura e estados de envio."""
+
+    def setUp(self):
+        self.adapter = AdapterFake(disponivel=True, conectado=True)
+        self.mensagens: list[tuple[Optional[Mensagem], Conversa]] = []
+        self.gm = GerenciadorChat(
+            self.adapter,
+            on_mensagem=lambda m, c: self.mensagens.append((m, c)),
+        )
+        self.gm._conversas[1] = Conversa(id=1, titulo="Zonaro")
+
+    def test_carregar_conversas_envia_getchats(self):
+        self.gm.carregar_conversas()
+        req = self.adapter.enviadas[-1]
+        self.assertEqual(req["@type"], "getChats")
+        self.assertEqual(req["chat_list"]["@type"], "chatListMain")
+
+    def test_carregar_historico_envia_getchathistory(self):
+        self.gm.carregar_historico(1)
+        req = self.adapter.enviadas[-1]
+        self.assertEqual(req["@type"], "getChatHistory")
+        self.assertEqual(req["chat_id"], 1)
+        self.assertEqual(req["limit"], 50)
+
+    def test_resposta_de_historico_anexa_mensagens(self):
+        extra = {"tipo": "historico", "chat_id": 1}
+        self.gm.processar_atualizacao(
+            {
+                "@type": "messages",
+                "@extra": extra,
+                "messages": [
+                    {
+                        "id": 20,
+                        "chat_id": 1,
+                        "date": 1700000000,
+                        "content": {"@type": "messageText", "text": {"text": "nova"}},
+                    },
+                    {
+                        "id": 10,
+                        "chat_id": 1,
+                        "date": 1600000000,
+                        "content": {"@type": "messageText", "text": {"text": "antiga"}},
+                    },
+                ],
+            }
+        )
+        conversa = self.gm._conversas[1]
+        self.assertEqual([m.id for m in conversa.mensagens], [10, 20])
+        self.assertTrue(conversa.historico_carregado)
+        self.assertEqual(conversa.id_mais_antiga, 10)
+
+    def test_selecionar_conversa_carrega_historico_e_marca_lida(self):
+        self.gm._conversas[1].mensagens = [
+            Mensagem(id=5, conversa_id=1, texto="oi", entrada=False)
+        ]
+        self.gm.selecionar_conversa(1)
+        tipos = [r["@type"] for r in self.adapter.enviadas]
+        self.assertIn("getChatHistory", tipos)
+        self.assertIn("viewMessages", tipos)
+
+    def test_busca_conversas_por_titulo(self):
+        self.gm._conversas[2] = Conversa(id=2, titulo="Gaming")
+        self.assertEqual([c.id for c in self.gm.buscar_conversas("gam")], [2])
+        self.assertEqual(
+            [c.id for c in self.gm.buscar_conversas("")], [1, 2]
+        )
+        self.assertEqual(self.gm.buscar_conversas("nada"), [])
+
+    def test_update_chat_last_message(self):
+        self.gm.processar_atualizacao(
+            {
+                "@type": "updateChatLastMessage",
+                "chat_id": 1,
+                "last_message": {
+                    "date": 1700000000,
+                    "content": {"@type": "messageText", "text": {"text": "última"}},
+                },
+            }
+        )
+        conversa = self.gm._conversas[1]
+        self.assertEqual(conversa.ultima_mensagem, "última")
+
+    def test_resposta_de_envio_confirma_id_otimista(self):
+        self.gm.enviar_mensagem(1, "oi")
+        conversa = self.gm._conversas[1]
+        otimista = conversa.mensagens[0]
+        extra = self.adapter.enviadas[-1]["@extra"]
+        self.gm.processar_atualizacao(
+            {
+                "@type": "message",
+                "@extra": extra,
+                "id": 777,
+                "chat_id": 1,
+                "date": 1700000000,
+                "content": {"@type": "messageText", "text": {"text": "oi"}},
+            }
+        )
+        self.assertEqual(otimista.id, 777)
+        self.assertFalse(otimista.enviando)
+        self.assertTrue(otimista.lida)
+
+    def test_update_chat_action_digitando(self):
+        self.gm.processar_atualizacao(
+            {
+                "@type": "updateChatAction",
+                "chat_id": 1,
+                "action": {"@type": "chatActionTyping"},
+            }
+        )
+        self.assertIsNotNone(self.gm._conversas[1].digitando)
+        self.gm.processar_atualizacao(
+            {
+                "@type": "updateChatAction",
+                "chat_id": 1,
+                "action": {"@type": "chatActionCancel"},
+            }
+        )
+        self.assertIsNone(self.gm._conversas[1].digitando)
+
+    def test_mensagens_apagadas_saem_da_conversa(self):
+        self.gm._conversas[1].mensagens = [
+            Mensagem(id=1, conversa_id=1, texto="a"),
+            Mensagem(id=2, conversa_id=1, texto="b"),
+        ]
+        self.gm.processar_atualizacao(
+            {
+                "@type": "updateDeleteMessages",
+                "chat_id": 1,
+                "message_ids": [1],
+            }
+        )
+        self.assertEqual([m.id for m in self.gm._conversas[1].mensagens], [2])
+
+    def test_resolve_nome_do_remetente(self):
+        self.gm.processar_atualizacao(
+            {
+                "@type": "updateNewMessage",
+                "message": {
+                    "id": 50,
+                    "chat_id": 1,
+                    "sender_user_id": 99,
+                    "content": {"@type": "messageText", "text": {"text": "oi"}},
+                },
+            }
+        )
+        pedidos = [
+            r for r in self.adapter.enviadas if r["@type"] == "getUser"
+        ]
+        self.assertEqual(len(pedidos), 1)
+        self.assertEqual(pedidos[0]["user_id"], 99)
+
+        self.gm.processar_atualizacao(
+            {
+                "@type": "user",
+                "@extra": {"tipo": "usuario", "user_id": 99},
+                "id": 99,
+                "first_name": "Ana",
+                "last_name": "Souza",
+            }
+        )
+        conversa = self.gm._conversas[1]
+        self.assertEqual(conversa.mensagens[0].remetente_nome, "Ana Souza")
+
+    def test_nao_pede_o_mesmo_usuario_duas_vezes(self):
+        for _ in range(2):
+            self.gm._pedir_usuario(99)
+        pedidos = [
+            r for r in self.adapter.enviadas if r["@type"] == "getUser"
+        ]
+        self.assertEqual(len(pedidos), 1)
 
 
 if __name__ == "__main__":

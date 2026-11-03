@@ -36,6 +36,7 @@ from cartridges.integrations.telegram.errors import (
 from cartridges.integrations.telegram.sessao import (
     apagar_sessao,
     carregar_chave_encriptacao,
+    diretorio_sessao,
     salvar_chave_encriptacao,
 )
 
@@ -425,7 +426,7 @@ class TelegramAdapter:
             "use_secret_chats": False,
             "use_file_database": True,
             "use_push_receiver_database": True,
-            "database_directory": "",
+            "database_directory": str(diretorio_sessao()),
         }
         if chave_salva:
             parametros["database_encryption_key"] = chave_salva
@@ -471,6 +472,43 @@ class TelegramAdapter:
                 "password": senha,
             }
         )
+
+    def solicitar_qr_code(self) -> None:
+        """Pede à TDLib um link de login por QR Code.
+
+        O estado ``authorizationStateWaitQrCode`` traz um ``link`` que o
+        chamador pode desenhar como QR. A TDLib renova o link sozinha enquanto
+        o estado permanecer ativo.
+        """
+        if self._cliente is None:
+            raise TelegramNetworkError("Cliente TDLib não iniciado")
+        self._enviar({"@type": "requestQrCodeAuthentication", "@extra": None})
+
+    def definir_processador_atualizacao(
+        self, fn: Optional[Callable[[dict[str, Any]], None]]
+    ) -> None:
+        """Registra quem processa as atualizações da TDLib (chat, por exemplo).
+
+        Um único processador por vez; ``None`` volta ao comportamento de apenas
+        repassar atualizações desconhecidas ao callback antigo.
+        """
+        self._on_atualizacao = fn
+
+    def definir_callbacks(
+        self,
+        *,
+        on_estado: Optional[Callable[[EstadoAutorizacao], None]] = None,
+        on_erro: Optional[Callable[[str], None]] = None,
+    ) -> None:
+        """Troca os callbacks de estado/erro quando a UI que os consome muda.
+
+        As Preferências e a página de chat compartilham o mesmo adaptador; o
+        callback ativo é sempre o da tela que está na frente.
+        """
+        if on_estado is not None:
+            self._on_estado = on_estado
+        if on_erro is not None:
+            self._on_erro = on_erro
 
     # -- helpers internos -----------------------------------------------
 

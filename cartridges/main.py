@@ -169,6 +169,9 @@ class CartridgesApplication(Adw.Application):
     # Adaptador opcional do Telegram (TDLib): criado apenas quando a
     # integração está ativada; nunca bloqueia a inicialização do Jolven.
     telegram_adapter: Any = None
+    # Gerenciador de conversas: vive no app para receber atualizações mesmo
+    # quando a página de chat ainda não foi aberta.
+    telegram_chat: Any = None
     _telegram_thread: Optional[threading.Thread] = None
 
     @GObject.Signal(name="emulate-key", arg_types=[int])
@@ -642,9 +645,18 @@ class CartridgesApplication(Adw.Application):
                 from cartridges.integrations.telegram import (  # noqa: PLC0415
                     TelegramAdapter,
                 )
+                from cartridges.integrations.telegram.chat import (  # noqa: PLC0415
+                    GerenciadorChat,
+                )
 
                 self.telegram_adapter = TelegramAdapter(
                     on_erro=self._ao_erro_telegram_app,
+                )
+                self.telegram_chat = GerenciadorChat(self.telegram_adapter)
+                # O gerenciador recebe as atualizações desde já; a página só
+                # troca os callbacks de UI quando aberta.
+                self.telegram_adapter.definir_processador_atualizacao(
+                    self.telegram_chat.processar_atualizacao
                 )
                 self._telegram_thread = threading.Thread(
                     target=self._conectar_telegram_inicial,
@@ -687,6 +699,7 @@ class CartridgesApplication(Adw.Application):
                 ("open_menu", ("F10",), shared.win),
                 ("close", ("<primary>w",), shared.win),
                 ("open_library", (), shared.win),
+                ("voltar_do_chat", (), shared.win),
                 ("open_gamepad_test", (), shared.win),
                 ("power_menu",),
                 ("continue_game",),
@@ -699,6 +712,9 @@ class CartridgesApplication(Adw.Application):
         power_action = self.lookup_action("power_menu")
         if power_action is not None:
             power_action.set_enabled(shared.runtime.is_game_mode)
+        chat_telegram = self.lookup_action("abrir_telegram_chat")
+        if chat_telegram is not None:
+            chat_telegram.set_enabled(shared.schema.get_boolean("telegram"))
         self._game_mode_setup_running = False
         self.refresh_game_mode_setup_actions()
 
@@ -1145,6 +1161,8 @@ class CartridgesApplication(Adw.Application):
         iluminacao.fechar()
         session_fita.fechar()
         # Encerra a sessão local do Telegram, se houver (não remove a conta remota).
+        if self.telegram_chat is not None:
+            self.telegram_chat.parar()
         if self.telegram_adapter is not None:
             try:
                 self.telegram_adapter.desconectar()

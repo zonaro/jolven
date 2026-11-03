@@ -14,11 +14,11 @@ template $TelegramChatPage: Adw.NavigationPage {
       Button {
         icon-name: "go-previous-symbolic";
         tooltip-text: _("Voltar");
-        action-name: "win.open_library";
+        action-name: "win.voltar_do_chat";
       }
 
       [end]
-      Button telegram_chat_botao_enviar_header {
+      Button botao_enviar_header {
         visible: false;
         label: _("Enviar");
         action-name: "app.telegram_enviar_mensagem";
@@ -35,7 +35,7 @@ template $TelegramChatPage: Adw.NavigationPage {
       hexpand: true;
       vexpand: true;
 
-      Adw.StatusPage telegram_chat_sem_conta {
+      Adw.StatusPage sem_conta {
         icon-name: "dialog-error-symbolic";
         title: _("Telegram não vinculado");
         description: _("Vincule sua conta nas Preferências › Comunicação / Telegram.");
@@ -54,7 +54,7 @@ template $TelegramChatPage: Adw.NavigationPage {
         }
       }
 
-      Adw.StatusPage telegram_chat_sem_tdlib {
+      Adw.StatusPage sem_tdlib {
         icon-name: "dialog-error-symbolic";
         title: _("TDLib não instalada");
         description: _("A biblioteca libtdjson não está disponível neste sistema.");
@@ -62,7 +62,7 @@ template $TelegramChatPage: Adw.NavigationPage {
         valign: center;
       }
 
-      Adw.StatusPage telegram_chat_sem_conversa {
+      Adw.StatusPage sem_conversa {
         icon-name: "chat-symbolic";
         title: _("Escolha uma conversa");
         description: _("Selecione uma conversa na lista para começar a conversar.");
@@ -70,7 +70,7 @@ template $TelegramChatPage: Adw.NavigationPage {
         valign: center;
       }
 
-      Gtk.Box telegram_chat_painel_principal {
+      Gtk.Box painel_principal {
         visible: false;
         orientation: horizontal;
         hexpand: true;
@@ -82,14 +82,28 @@ template $TelegramChatPage: Adw.NavigationPage {
           maximum-size: 420;
           tightening-threshold: 360;
 
-          Gtk.ScrolledWindow {
+          Gtk.Box {
+            orientation: vertical;
             hexpand: true;
             vexpand: true;
-            hscrollbar-policy: never;
 
-            Gtk.ListBox telegram_chat_lista_conversas {
-              selection-mode: none;
-              activate-on-single-click: true;
+            Gtk.SearchEntry campo_busca {
+              placeholder-text: _("Buscar conversas");
+              margin-start: 6;
+              margin-end: 6;
+              margin-top: 6;
+              margin-bottom: 6;
+            }
+
+            Gtk.ScrolledWindow {
+              hexpand: true;
+              vexpand: true;
+              hscrollbar-policy: never;
+
+              Gtk.ListBox lista_conversas {
+                selection-mode: none;
+                activate-on-single-click: true;
+              }
             }
           }
         }
@@ -111,12 +125,24 @@ template $TelegramChatPage: Adw.NavigationPage {
             hexpand: true;
             vexpand: true;
 
-            Gtk.ScrolledWindow {
+            Adw.ActionRow cabecalho_conversa {
+              visible: false;
+              activatable: false;
+            }
+
+            Button botao_mais_antigas {
+              visible: false;
+              label: _("Carregar mensagens anteriores");
+              halign: center;
+              margin-top: 6;
+            }
+
+            Gtk.ScrolledWindow scrolled_mensagens {
               hexpand: true;
               vexpand: true;
               hscrollbar-policy: never;
 
-              Gtk.ListBox telegram_chat_lista_mensagens {
+              Gtk.ListBox lista_mensagens {
                 selection-mode: none;
               }
             }
@@ -129,12 +155,13 @@ template $TelegramChatPage: Adw.NavigationPage {
               margin-start: 6;
               margin-end: 6;
 
-              Adw.EntryRow telegram_chat_texto_entrada {
+              Entry texto_entrada {
                 hexpand: true;
+                placeholder-text: _("Mensagem");
                 activates-default: true;
               }
 
-              Button telegram_chat_botao_enviar {
+              Button botao_enviar {
                 label: _("Enviar");
                 action-name: "app.telegram_enviar_mensagem";
                 tooltip-text: _("Enviar a mensagem digitada");
