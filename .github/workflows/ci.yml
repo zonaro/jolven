@@ -23,6 +23,33 @@ jobs:
           bundle: io.github.zonaro.Jolven.Devel.flatpak
           manifest-path: build-aux/flatpak/io.github.zonaro.Jolven.Devel.json
 
+  linux:
+    name: Linux - suíte de testes Python
+    runs-on: ubuntu-latest
+    env:
+      # O blueprint-compiler lê os .blp na codificação do locale.
+      PYTHONUTF8: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Instalar dependências de build e teste
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential meson ninja-build python3 python3-pip python3-gi \
+            python3-requests libgtk-4-dev libadwaita-1-dev blueprint-compiler \
+            gettext pkg-config xvfb libgl1-mesa-dri libegl1-mesa
+
+      - name: Configurar o build (meson)
+        run: meson setup build
+
+      - name: Compilar
+        run: meson compile -C build
+
+      - name: Executar a suíte de testes Python
+        run: xvfb-run meson test -C build --print-errorlogs
+
   windows:
     name: Windows
     runs-on: windows-latest
