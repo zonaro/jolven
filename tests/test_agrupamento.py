@@ -190,5 +190,50 @@ class LinhaProdutoTests(BaseAgrupamento, unittest.TestCase):
         self.assertEqual(self.ag.linha_de(make_game("Doom", "b")), "")
 
 
+class IdentidadeCanonicaTests(BaseAgrupamento, unittest.TestCase):
+    def test_chave_identidade_por_file_hash(self):
+        jogo = make_game("Doom", "a", file_hash="abc123")
+        self.assertEqual(self.ag.chave_identidade(jogo), "hash:abc123")
+
+    def test_chave_identidade_por_serial(self):
+        jogo = make_game("Doom", "a", serial="SERIE-999")
+        self.assertEqual(self.ag.chave_identidade(jogo), "serial:SERIE-999")
+
+    def test_chave_identidade_por_external_ids(self):
+        jogo = make_game("The Witcher", "a", external_ids={"steam": "12345"})
+        self.assertEqual(self.ag.chave_identidade(jogo), "ext:steam:12345")
+
+    def test_chave_identidade_none_sem_identidade(self):
+        jogo = make_game("Doom", "a")
+        self.assertIsNone(self.ag.chave_identidade(jogo))
+
+    def test_mesmo_hash_agrupa_titulos_diferentes(self):
+        jogos = [
+            make_game("Doom", "a", base_source="uzdoom", file_hash="hash-xyz"),
+            make_game("DOOM II", "b", base_source="steam", file_hash="hash-xyz"),
+        ]
+        self._use(jogos)
+        members = self.ag.membros(jogos[0])
+        self.assertEqual({g.game_id for g in members}, {"a", "b"})
+
+    def test_mesmo_serial_agrupa_titulos_diferentes(self):
+        jogos = [
+            make_game("Jogo A", "a", serial="S-1"),
+            make_game("Jogo B", "b", serial="S-1"),
+        ]
+        self._use(jogos)
+        members = self.ag.membros(jogos[0])
+        self.assertEqual({g.game_id for g in members}, {"a", "b"})
+
+    def test_mesmo_external_id_agrupa_titulos_diferentes(self):
+        jogos = [
+            make_game("The Witcher", "a", base_source="gog", external_ids={"gog": "123"}),
+            make_game("The Witcher", "b", base_source="steam", external_ids={"steam": "123"}),
+        ]
+        self._use(jogos)
+        members = self.ag.membros(jogos[0])
+        self.assertEqual({g.game_id for g in members}, {"a", "b"})
+
+
 if __name__ == "__main__":
     unittest.main()

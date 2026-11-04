@@ -105,6 +105,27 @@ def linha_de(game) -> str:
     return LINHAS_PRODUTO.get(base, "")
 
 
+def chave_identidade(game) -> Optional[str]:
+    """Chave de identidade canônica, quando disponível.
+
+    Jogos do mesmo ficheiro (``file_hash``), mesmo número de série
+    (``serial``) ou mesmos IDs externos (``external_ids``) são o mesmo jogo,
+    mesmo que o título difira entre fontes. Retorna ``None`` quando não há
+    identidade suficiente para confiar.
+    """
+    file_hash = getattr(game, "file_hash", None) or ""
+    serial = getattr(game, "serial", None) or ""
+    if file_hash:
+        return "hash:" + file_hash
+    if serial:
+        return "serial:" + serial
+    external_ids = getattr(game, "external_ids", None) or {}
+    for sistema, identidade in external_ids.items():
+        if sistema and identidade:
+            return f"ext:{sistema}:{identidade}"
+    return None
+
+
 def elegivel(game) -> bool:
     return bool(
         ativo()
@@ -126,6 +147,7 @@ def atualizar(game) -> str:
         game._grupo_nome = nome
         game._grupo_linha = linha
         limpar_indice()
+    game._grupo_identidade = chave_identidade(game)
     return game._grupo_chave
 
 
@@ -137,6 +159,7 @@ def limpar_indice() -> None:
 
 def construir_indice(jogos, *, agrupar: bool = True) -> dict[str, list]:
     grupos: dict[str, list] = {}
+    identidade_para_chave: dict[str, str] = {}
     for outro in jogos:
         if not agrupar or not elegivel(outro):
             continue
@@ -144,6 +167,16 @@ def construir_indice(jogos, *, agrupar: bool = True) -> dict[str, list]:
         if desagrupada(chave):
             continue
         grupos.setdefault(chave, []).append(outro)
+        identidade = getattr(outro, "_grupo_identidade", None)
+        if identidade:
+            # Jogos com a mesma identidade canônica (mesmo ficheiro, série ou
+            # IDs externos) são o mesmo jogo, mesmo que o título difira.
+            # Mescla o grupo de título com o grupo já associado à identidade.
+            existente = identidade_para_chave.get(identidade)
+            if existente is not None and existente != chave:
+                grupos[existente].extend(grupos.pop(chave))
+                chave = existente
+            identidade_para_chave[identidade] = chave
     return grupos
 
 
