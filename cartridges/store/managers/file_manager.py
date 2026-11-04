@@ -101,6 +101,9 @@ class FileManager(AsyncManager):
             "fundo_biblioteca",
             "uzdoom_mods",
             "rgb_profile_id",
+            "file_hash",
+            "serial",
+            "external_ids",
         )
 
         json.dump(

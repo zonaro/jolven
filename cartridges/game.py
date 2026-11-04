@@ -192,6 +192,12 @@ class Game(Gtk.Box):
     # Opt-in per game: start the global recorder automatically when this game
     # launches. Only honoured while the recorder is enabled in Preferences.
     auto_record: bool = False
+    # Identidade canônica (Taiga F1): hash do ficheiro de instalação, número
+    # de série e IDs externos (IGDB, Steam, GOG, …). Usados para reconhecer o
+    # mesmo jogo vindo de fontes diferentes, mesmo que o título mude.
+    file_hash: Optional[str] = None
+    serial: Optional[str] = None
+    external_ids: dict[str, str] = {}
     # Fundo manual da biblioteca (nome do arquivo em `wallpapers_dir`,
     # ex: "<game_id>-fundo.jpg"). None é automático (IGDB → TGDB → wallhaven).
     fundo_biblioteca: Optional[str] = None

@@ -48,6 +48,7 @@ from cartridges.utils.appimage_scan import (
     find_sibling_icon,
     is_launcher_name,
 )
+from cartridges.utils.file_hash import sha256_of_file
 
 # O launcher roda ``gettext.install`` antes de importar qualquer módulo do
 # app; o fallback mantém este módulo importável em testes e ferramentas sem
@@ -97,6 +98,7 @@ class AppimageSourceIterable(SourceIterable):
                 "name": name,
                 "game_id": game_id,
                 "executable": self.source.make_executable(appimage),
+                "file_hash": sha256_of_file(appimage),
                 # An AppImage expects to run from the folder it lives in: it
                 # keeps its data and its saves next to itself.
                 "launch_working_directory": str(appimage.parent),
