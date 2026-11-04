@@ -462,6 +462,10 @@ class CartridgesPreferences(Adw.PreferencesDialog):
     appimage_location_file_chooser_button: Gtk.Button = Gtk.Template.Child()
     appimage_import_launchers_switch: Adw.SwitchRow = Gtk.Template.Child()
 
+    rom_expander_row: Adw.ExpanderRow = Gtk.Template.Child()
+    rom_location_action_row: Adw.ActionRow = Gtk.Template.Child()
+    rom_location_file_chooser_button: Gtk.Button = Gtk.Template.Child()
+
     desktop_switch: Adw.SwitchRow = Gtk.Template.Child()
 
     sgdb_key_group: Adw.PreferencesGroup = Gtk.Template.Child()
@@ -674,6 +678,7 @@ class CartridgesPreferences(Adw.PreferencesDialog):
             self.desktop_switch.set_visible(False)
 
         self.setup_appimage_location_row()
+        self.setup_rom_location_row()
 
         # SteamGridDB
         def sgdb_key_changed(*_args: Any) -> None:
@@ -4187,6 +4192,34 @@ class CartridgesPreferences(Adw.PreferencesDialog):
         else:
             subtitle = _("None")
         self.appimage_location_action_row.set_subtitle(subtitle)
+
+    def setup_rom_location_row(self) -> None:
+        """Wire the ROM folders of the ROM source."""
+
+        def set_dir(_widget: Any, result: Gio.Task, _data: Any = None) -> None:
+            """Callback called when a folder picker button is clicked"""
+            try:
+                path = Path(self.file_chooser.select_folder_finish(result).get_path())
+            except GLib.Error:
+                return
+
+            shared.schema.set_string("rom-location", str(path))
+            self.update_rom_location_subtitle()
+            logging.debug("User-set value for rom-location is %s", path)
+
+        self.rom_location_file_chooser_button.connect(
+            "clicked", lambda widget: self.choose_folder(widget, set_dir)
+        )
+        self.update_rom_location_subtitle()
+
+    def update_rom_location_subtitle(self) -> None:
+        """Show the ROM folders of the ROM source in its row."""
+        subtitle = shared.schema.get_string("rom-location").strip()
+        if subtitle:
+            subtitle = re.sub(f"^{str(shared.home)}", "~", subtitle)
+        else:
+            subtitle = _("None")
+        self.rom_location_action_row.set_subtitle(subtitle)
 
     def init_source_row(self, source: Source) -> None:
         """Initialize a preference row for a source class"""

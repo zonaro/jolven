@@ -1665,6 +1665,36 @@ template $CartridgesPreferences: Adw.PreferencesDialog {
         }
       }
 
+      Adw.ExpanderRow rom_expander_row {
+        title: _("ROMs");
+        show-enable-switch: true;
+
+        [prefix]
+        Image {
+          icon-name: "applications-games-symbolic";
+        }
+
+        Adw.ActionRow rom_location_action_row {
+          // Folders where the user keeps ROM files. Each one is scanned
+          // recursively and every recognised ROM becomes a game entry.
+          title: _("ROM Folders");
+          subtitle: _("Folders scanned for ROM files");
+
+          Button rom_location_file_chooser_button {
+            icon-name: "folder-symbolic";
+            valign: center;
+
+            styles [
+              "flat"
+            ]
+          }
+
+          styles [
+            "property"
+          ]
+        }
+      }
+
       Adw.SwitchRow desktop_switch {
         title: _("Desktop Entries");
 

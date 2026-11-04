@@ -30,6 +30,7 @@ from cartridges.importer.legendary_source import LegendarySource
 from cartridges.importer.lutris_source import LutrisSource
 from cartridges.importer.quiver_source import QuiverSource
 from cartridges.importer.retroarch_source import RetroarchSource
+from cartridges.importer.rom_source import RomSource
 from cartridges.importer.shortcuts_source import ShortcutsSource
 from cartridges.importer.source import Source
 from cartridges.importer.steam_source import SteamSource
@@ -55,6 +56,7 @@ SOURCE_CLASSES: tuple[type[Source], ...] = (
     LutrisSource,
     QuiverSource,
     RetroarchSource,
+    RomSource,
     ShortcutsSource,
     SteamSource,
     TwintailSource,

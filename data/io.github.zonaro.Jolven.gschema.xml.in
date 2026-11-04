@@ -173,6 +173,12 @@
     <key name="appimage-location" type="s">
       <default>""</default>
     </key>
+    <key name="rom" type="b">
+      <default>false</default>
+    </key>
+    <key name="rom-location" type="s">
+      <default>""</default>
+    </key>
     <key name="sgdb-key" type="s">
       <default>""</default>
     </key>
