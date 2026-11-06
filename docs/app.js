@@ -187,10 +187,12 @@ document.getElementById("copy-command").addEventListener("click", event => {
   }
 });
 
-const linkedLanguage = decodeURIComponent(location.hash.slice(1));
+const linkedLanguage = location.hash.slice(1);
 setLanguage(
   (supported.includes(linkedLanguage) && linkedLanguage) ||
-  localStorage.getItem("jolven-language") ||
-  localStorage.getItem("cartridges-language") ||
-  normalizeLanguage(navigator.language)
+  normalizeLanguage(
+    localStorage.getItem("jolven-language") ||
+    localStorage.getItem("cartridges-language") ||
+    navigator.language
+  )
 );
