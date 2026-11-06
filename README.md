@@ -29,11 +29,11 @@ Jolven is **not** a Linux distribution, **not** an operating system and **not** 
 
 ## Recommended Linux distributions
 
-**Fedora Workstation** is our primary recommendation for users who want a general-purpose desktop alongside Jolven: its GNOME/Wayland environment and the Jolven Session installer are the project's current Fedora-focused path.
+**[Fedora Workstation](https://fedoraproject.org/workstation/)** is our primary recommendation for users who want a general-purpose desktop alongside Jolven: its GNOME/Wayland environment and the Jolven Session installer are the project's current Fedora-focused path.
 
-**Nobara** is an attractive gaming-focused Fedora derivative for users who prefer a system with gaming and multimedia tooling already configured. It is a recommendation, **not a claim of official validation or guaranteed compatibility**: test the Jolven Session, Gamescope, drivers and optional capture tools on your Nobara release.
+**[Nobara](https://nobaraproject.org/)** is an attractive gaming-focused Fedora derivative for users who prefer a system with gaming and multimedia tooling already configured. It is a recommendation, **not a claim of official validation or guaranteed compatibility**: test the Jolven Session, Gamescope, drivers and optional capture tools on your Nobara release.
 
-Jolven remains distribution-independent in principle. The desktop application can work on other compatible Linux distributions; automated Jolven Session dependency installation is currently documented for Fedora, and other distributions may require manual setup. Neither Fedora nor Nobara is affiliated with or endorses Jolven.
+Jolven's desktop application is designed for compatible Linux distributions, not just the two recommendations; automated Jolven Session dependency installation is currently documented for Fedora, and other distributions may require manual setup. Neither Fedora nor Nobara is affiliated with or endorses Jolven.
 
 ## Why Jolven?
 
