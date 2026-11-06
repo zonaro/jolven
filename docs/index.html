@@ -287,12 +287,33 @@
         </div>
       </section>
 
-      <section class="section distro" id="distro">
+      <section class="section distro" id="distro" aria-labelledby="distro-title">
         <div class="section-heading">
-          <span class="eyebrow" data-i18n="distroEyebrow">Não é distro, não é SO</span>
-          <h2 data-i18n="distroTitle">Seu Linux continua seu Linux.</h2>
-          <p data-i18n="distroLead">O Jolven não substitui sua distribuição. Mantenha Fedora, Ubuntu, Arch — o Linux que você já usa — e transforme o PC em console quando quiser. O Jolven complementa seu Linux; nunca compete com ele.</p>
+          <span class="eyebrow" data-i18n="distroEyebrow">Distribuições recomendadas</span>
+          <h2 id="distro-title" data-i18n="distroTitle">Seu Linux. Seu console.</h2>
+          <p data-i18n="distroLead">O Jolven não substitui seu sistema. Estas são duas ótimas opções para começar, mas você continua livre para usar outra distribuição Linux compatível.</p>
         </div>
+        <div class="distro-grid">
+          <article class="distro-card distro-card-fedora">
+            <div class="distro-card-head">
+              <span class="distro-mark" aria-hidden="true">F</span>
+              <span class="distro-tag" data-i18n="distroFedoraTag">Recomendação principal</span>
+            </div>
+            <h3>Fedora Workstation</h3>
+            <p data-i18n="distroFedoraText">Para usar o PC no dia a dia e também jogar. O Fedora oferece GNOME e Wayland, e é o foco atual da automação de instalação da Jolven Session.</p>
+            <a class="distro-link" href="https://fedoraproject.org/workstation/" target="_blank" rel="noopener noreferrer" data-i18n="distroFedoraLink">Conhecer o Fedora Workstation ↗</a>
+          </article>
+          <article class="distro-card distro-card-nobara">
+            <div class="distro-card-head">
+              <span class="distro-mark" aria-hidden="true">N</span>
+              <span class="distro-tag" data-i18n="distroNobaraTag">Foco em jogos e criação</span>
+            </div>
+            <h3>Nobara Linux</h3>
+            <p data-i18n="distroNobaraText">Uma alternativa baseada no Fedora, com ferramentas de jogos, drivers e multimídia pré-configurados. A Jolven Session no Nobara ainda precisa de validação específica.</p>
+            <a class="distro-link" href="https://nobaraproject.org/" target="_blank" rel="noopener noreferrer" data-i18n="distroNobaraLink">Conhecer o Nobara ↗</a>
+          </article>
+        </div>
+        <p class="distro-note" data-i18n="distroNote">O aplicativo também pode funcionar em outras distribuições Linux compatíveis. Fora do Fedora, a Jolven Session e dependências opcionais podem exigir configuração manual. O Jolven é independente dos projetos Fedora e Nobara.</p>
       </section>
 
       <section class="section gallery" aria-labelledby="gallery-title">
@@ -348,7 +369,7 @@
           <details><summary data-i18n="faqThreeQ">Posso usar o Jolven sem a sessão dedicada?</summary><p data-i18n="faqThreeA">Sim. O Jolven funciona como aplicativo desktop normal dentro do GNOME, KDE ou outro ambiente gráfico.</p></details>
           <details><summary data-i18n="faqFourQ">Posso voltar ao GNOME ou KDE?</summary><p data-i18n="faqFourA">Sim. A Jolven Session dedicada é opcional. Ao sair dela você volta ao display manager, com seu desktop intacto.</p></details>
           <details><summary data-i18n="faqFiveQ">Vou perder minha biblioteca ao migrar do fork Cartridges?</summary><p data-i18n="faqFiveA">Não. Na primeira execução, o Jolven copia sua biblioteca, capas, ajustes e metadados para as próprias pastas. Seus dados originais nunca são apagados.</p></details>
-          <details><summary data-i18n="faqSixQ">Quais sistemas são suportados?</summary><p data-i18n="faqSixA">O app mira desktops Linux. A instalação da Jolven Session dedicada está preparada atualmente para Fedora.</p></details>
+          <details><summary data-i18n="faqSixQ">Quais sistemas são suportados?</summary><p data-i18n="faqSixA">O Jolven é desenvolvido para Linux. Recomendamos Fedora Workstation e Nobara para começar. O aplicativo pode funcionar em outras distribuições compatíveis; a instalação automatizada da Jolven Session é preparada para Fedora.</p></details>
           <details><summary data-i18n="faqSevenQ">Como funciona o Xbox Cloud Gaming?</summary><p data-i18n="faqSevenA">O catálogo do Xbox Cloud Gaming aparece na biblioteca e, ao apertar Play, o jogo abre no navegador que você escolher, numa janela em tela cheia (modo quiosque). Escolha o navegador nas Preferências — o Jolven detecta os instalados, incluindo Flatpak. O login da Microsoft acontece no próprio navegador, nunca dentro do Jolven. A nuvem exige Game Pass Ultimate; streaming do seu console em casa também funciona. Recurso experimental.</p></details>
           <details><summary data-i18n="faqEightQ">Como funciona a integração com o Sunshine?</summary><p data-i18n="faqEightA">No menu de cada jogo, use Adicionar ao Sunshine — ou ligue a sincronização automática nas Preferências para exportar tudo de uma vez. O Jolven escreve no apps.json do Sunshine local, sem conta e sem rede. Depois é só abrir o Moonlight em outro aparelho e jogar.</p></details>
         </div>
