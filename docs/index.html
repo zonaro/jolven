@@ -287,12 +287,33 @@
         </div>
       </section>
 
-      <section class="section distro" id="distro">
+      <section class="section distro" id="distro" aria-labelledby="distro-title">
         <div class="section-heading">
-          <span class="eyebrow" data-i18n="distroEyebrow">Não é distro, não é SO</span>
-          <h2 data-i18n="distroTitle">Seu Linux continua seu Linux.</h2>
-          <p data-i18n="distroLead">O Jolven não substitui sua distribuição. Mantenha Fedora, Ubuntu, Arch — o Linux que você já usa — e transforme o PC em console quando quiser. Para começar, recomendamos Fedora Workstation; Nobara é uma alternativa focada em jogos. Outras distribuições Linux compatíveis também podem executar o aplicativo. A instalação automática da Jolven Session é preparada para Fedora; no Nobara e em outras distros, confirme as dependências e a compatibilidade.</p>
+          <span class="eyebrow" data-i18n="distroEyebrow">Distribuições recomendadas</span>
+          <h2 id="distro-title" data-i18n="distroTitle">Seu Linux. Seu console.</h2>
+          <p data-i18n="distroLead">O Jolven não substitui seu sistema. Estas são duas ótimas opções para começar, mas você continua livre para usar outra distribuição Linux compatível.</p>
         </div>
+        <div class="distro-grid">
+          <article class="distro-card distro-card-fedora">
+            <div class="distro-card-head">
+              <span class="distro-mark" aria-hidden="true">F</span>
+              <span class="distro-tag" data-i18n="distroFedoraTag">Recomendação principal</span>
+            </div>
+            <h3>Fedora Workstation</h3>
+            <p data-i18n="distroFedoraText">Para usar o PC no dia a dia e também jogar. O Fedora oferece GNOME e Wayland, e é o foco atual da automação de instalação da Jolven Session.</p>
+            <a class="distro-link" href="https://fedoraproject.org/workstation/" target="_blank" rel="noopener noreferrer" data-i18n="distroFedoraLink">Conhecer o Fedora Workstation ↗</a>
+          </article>
+          <article class="distro-card distro-card-nobara">
+            <div class="distro-card-head">
+              <span class="distro-mark" aria-hidden="true">N</span>
+              <span class="distro-tag" data-i18n="distroNobaraTag">Foco em jogos e criação</span>
+            </div>
+            <h3>Nobara Linux</h3>
+            <p data-i18n="distroNobaraText">Uma alternativa baseada no Fedora, com ferramentas de jogos, drivers e multimídia pré-configurados. A Jolven Session no Nobara ainda precisa de validação específica.</p>
+            <a class="distro-link" href="https://nobaraproject.org/" target="_blank" rel="noopener noreferrer" data-i18n="distroNobaraLink">Conhecer o Nobara ↗</a>
+          </article>
+        </div>
+        <p class="distro-note" data-i18n="distroNote">O aplicativo também pode funcionar em outras distribuições Linux compatíveis. Fora do Fedora, a Jolven Session e dependências opcionais podem exigir configuração manual. Fedora e Nobara são projetos independentes e não endossam o Jolven.</p>
       </section>
 
       <section class="section gallery" aria-labelledby="gallery-title">
