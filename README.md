@@ -27,6 +27,14 @@ Jolven is **not** a Linux distribution, **not** an operating system and **not** 
 
 > Install Jolven on your existing Linux distribution and turn your PC into a console whenever you want.
 
+## Recommended Linux distributions
+
+**Fedora Workstation** is our primary recommendation for users who want a general-purpose desktop alongside Jolven: its GNOME/Wayland environment and the Jolven Session installer are the project's current Fedora-focused path.
+
+**Nobara** is an attractive gaming-focused Fedora derivative for users who prefer a system with gaming and multimedia tooling already configured. It is a recommendation, **not a claim of official validation or guaranteed compatibility**: test the Jolven Session, Gamescope, drivers and optional capture tools on your Nobara release.
+
+Jolven remains distribution-independent in principle. The desktop application can work on other compatible Linux distributions; automated Jolven Session dependency installation is currently documented for Fedora, and other distributions may require manual setup. Neither Fedora nor Nobara is affiliated with or endorses Jolven.
+
 ## Why Jolven?
 
 > Linux already has excellent gaming infrastructure. Jolven focuses on the missing piece: a unified, controller-first experience that can make a regular Linux PC feel like a console without replacing the operating system.
