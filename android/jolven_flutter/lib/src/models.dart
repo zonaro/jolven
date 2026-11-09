@@ -104,6 +104,14 @@ class GameCollection {
   bool contains(String ref) => refs.contains(ref);
 }
 
+class GamepadInfo {
+  const GamepadInfo({required this.id, required this.name});
+  final String id;
+  final String name;
+  factory GamepadInfo.fromMap(Map<dynamic, dynamic> data) => GamepadInfo(
+        id: data['id'] as String, name: data['name'] as String);
+}
+
 class RemoteClient {
   const RemoteClient({
     required this.id,

@@ -93,6 +93,12 @@ void main() {
         .confirmedGameStarted, false);
   });
 
+  test('native gamepad discovery returns an identifiable device', () {
+    final gamepad = GamepadInfo.fromMap({'id': '5', 'name': 'Xbox Wireless Controller'});
+    expect(gamepad.id, '5');
+    expect(gamepad.name, contains('Xbox'));
+  });
+
   test('native app identity is the actual package name', () {
     final game = AndroidGame.fromMap({
       'packageName': 'org.example.game',

@@ -8,6 +8,7 @@ import java.util.Locale
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
+import android.view.InputDevice
 import java.util.concurrent.Executors
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -81,6 +82,8 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
+                    "listGamepads" -> result.success(listGamepads())
+                    "openRetroArchGuide" -> result.success(openRetroArchGuide())
                     "listEmulators" -> result.success(emulators.map { e ->
                         mapOf(
                             "id" to e.id, "name" to e.name,
@@ -264,6 +267,28 @@ class MainActivity : FlutterActivity() {
         packageManager.getPackageInfo(packageName, 0).versionName
     } catch (_: Exception) {
         null
+    }
+
+    private fun listGamepads(): List<Map<String, String>> =
+        InputDevice.getDeviceIds().mapNotNull { InputDevice.getDevice(it) }
+            .filter { device ->
+                (device.sources and InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD ||
+                    (device.sources and InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK ||
+                    (device.sources and InputDevice.SOURCE_DPAD) == InputDevice.SOURCE_DPAD
+            }
+            .distinctBy { it.id }
+            .map { device ->
+                mapOf("id" to device.id.toString(), "name" to device.name)
+            }
+
+    private fun openRetroArchGuide(): Map<String, String> {
+        val link = Uri.parse("https://docs.libretro.com/guides/install-android/")
+        return try {
+            startActivity(Intent(Intent.ACTION_VIEW, link))
+            mapOf("status" to "guide_requested")
+        } catch (error: Exception) {
+            mapOf("status" to "unsupported", "detail" to (error.message ?: ""))
+        }
     }
 
     private fun isInstalled(packageName: String): Boolean = try {

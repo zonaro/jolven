@@ -110,6 +110,16 @@ class AndroidBridge {
     }
   }
 
+  Future<List<GamepadInfo>> listGamepads() async {
+    final rows = await _channel.invokeMethod<List<dynamic>>('listGamepads') ?? [];
+    return rows.map((row) => GamepadInfo.fromMap(row as Map)).toList();
+  }
+
+  Future<LaunchOutcome> openRetroArchGuide() async {
+    final row = await _channel.invokeMethod<Map<dynamic, dynamic>>('openRetroArchGuide');
+    return LaunchOutcome.fromMap(row ?? {});
+  }
+
   Future<List<RemoteClient>> listRemoteClients() async {
     final rows = await _channel.invokeMethod<List<dynamic>>('listRemoteClients') ?? [];
     return rows.map((row) => RemoteClient.fromMap(row as Map)).toList();

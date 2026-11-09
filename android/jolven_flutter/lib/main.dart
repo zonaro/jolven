@@ -68,6 +68,12 @@ const _strings = <String, Map<String, String>>{
     'select': 'Escolha um emulador instalado',
     'experimental': 'Tentar abrir ROM (experimental)',
     'documented': 'Abertura documentada (confirmar no emulador)',
+    'retroGuide': 'Configurar RetroArch externo',
+    'retroGuideBody': 'Instale o RetroArch por um canal oficial e selecione os cores dentro dele. O Jolven não consegue confirmar se o core está instalado nem lê arquivos privados.',
+    'coreUnverified': 'Core não verificado',
+    'openGuide': 'Abrir guia oficial',
+    'gamepads': 'Controles conectados',
+    'noGamepads': 'Nenhum gamepad detectado',
     'note': 'O Jolven não inclui emuladores, cores, jogos ou BIOS.',
   },
   'en': {
@@ -128,6 +134,12 @@ const _strings = <String, Map<String, String>>{
     'select': 'Choose an installed emulator',
     'experimental': 'Try opening ROM (experimental)',
     'documented': 'Documented launch (verify in emulator)',
+    'retroGuide': 'Set up external RetroArch',
+    'retroGuideBody': 'Install RetroArch from an official source and choose cores inside it. Jolven cannot verify installed cores or read private app files.',
+    'coreUnverified': 'Core not verified',
+    'openGuide': 'Open official guide',
+    'gamepads': 'Connected gamepads',
+    'noGamepads': 'No gamepad detected',
     'note': 'Jolven does not include emulators, cores, games or BIOS.',
   },
   'es': {
@@ -188,6 +200,12 @@ const _strings = <String, Map<String, String>>{
     'select': 'Elige un emulador instalado',
     'experimental': 'Intentar abrir ROM (experimental)',
     'documented': 'Inicio documentado (comprobar en emulador)',
+    'retroGuide': 'Configurar RetroArch externo',
+    'retroGuideBody': 'Instala RetroArch desde una fuente oficial y elige los cores dentro de la aplicación. Jolven no puede verificar los cores ni leer archivos privados.',
+    'coreUnverified': 'Core sin verificar',
+    'openGuide': 'Abrir guía oficial',
+    'gamepads': 'Mandos conectados',
+    'noGamepads': 'No se detectaron mandos',
     'note': 'Jolven no incluye emuladores, núcleos, juegos ni BIOS.',
   },
 };
@@ -228,6 +246,7 @@ class _JolvenHomeState extends State<JolvenHome> {
   List<AndroidGame> _androidGames = [];
   List<RemoteClient> _remoteClients = [];
   List<GameCollection> _collections = [];
+  List<GamepadInfo> _gamepads = [];
   String? _activeCollectionId;
   bool _loading = false;
   bool _favoritesOnly = false;
@@ -253,6 +272,7 @@ class _JolvenHomeState extends State<JolvenHome> {
       final androidGames = await _bridge.listAndroidGames();
       final remoteClients = await _bridge.listRemoteClients();
       final collections = await _bridge.listCollections();
+      final gamepads = await _bridge.listGamepads();
       if (!mounted) return;
       setState(() {
         _emulators = emulators;
@@ -260,6 +280,7 @@ class _JolvenHomeState extends State<JolvenHome> {
         _androidGames = androidGames;
         _remoteClients = remoteClients;
         _collections = collections;
+        _gamepads = gamepads;
       });
     } catch (error) {
       if (mounted) _message('${_t('error')}: $error');
@@ -437,6 +458,32 @@ class _JolvenHomeState extends State<JolvenHome> {
     } catch (error) {
       if (mounted) _message('${_t('error')}: $error');
     }
+  }
+
+  Future<void> _openRetroArchGuide() async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(_t('retroGuide')),
+        content: Text(_t('retroGuideBody')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext),
+            child: Text(_t('cancel'))),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              try {
+                final outcome = await _bridge.openRetroArchGuide();
+                if (mounted && outcome.status != 'guide_requested') _message(_t('unsupported'));
+              } catch (error) {
+                if (mounted) _message('${_t('error')}: $error');
+              }
+            },
+            child: Text(_t('openGuide')),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _openEmulator(EmulatorInfo emulator) async {
@@ -877,7 +924,22 @@ class _JolvenHomeState extends State<JolvenHome> {
                 ),
               ),
             const SizedBox(height: 20),
+            Text(_t('gamepads'), style: Theme.of(context).textTheme.titleLarge),
+            if (_gamepads.isEmpty) ListTile(title: Text(_t('noGamepads'))),
+            for (final gamepad in _gamepads)
+              ListTile(
+                leading: const Icon(Icons.gamepad),
+                title: Text(gamepad.name),
+              ),
+            const SizedBox(height: 20),
             Text(_t('emulators'), style: Theme.of(context).textTheme.titleLarge),
+            ListTile(
+              leading: const Icon(Icons.info_outline),
+              title: Text(_t('retroGuide')),
+              subtitle: Text(_t('coreUnverified')),
+              trailing: TextButton(onPressed: _openRetroArchGuide,
+                child: Text(_t('openGuide'))),
+            ),
             if (installed.isEmpty) ListTile(title: Text(_t('none'))),
             for (final emulator in installed)
               ListTile(
