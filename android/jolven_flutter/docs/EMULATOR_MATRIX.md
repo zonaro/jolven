@@ -8,7 +8,7 @@
 | org.ppsspp.ppssppgold | ACTION_VIEW with explicit org.ppsspp.ppsspp.PpssppActivity | PPSSPP official docs | Documented protocol; **needs device test** |
 | org.ppsspp.ppsspplegacy | Same explicit Activity and content URI | PPSSPP official docs | Documented protocol; **needs device test** |
 | org.dolphinemu.dolphinemu | ACTION_VIEW with package/URI | Kwiq Gaming legacy configuration, no version contract proven | **Experimental/unverified** |
-| com.retroarch / com.retroarch.aarch64 / com.retroarch.ra32 | Open app only; ROM launch needs full ROM path + core path extras in RetroActivityFuture | Libretro official Android CLI docs; issue #17433 | **Manual only** until explicit user-authorized path/core flow and physical validation |
+| com.retroarch / com.retroarch.aarch64 / com.retroarch.ra32 | Default: open app only. Opt-in advanced user-entered ROM absolute path and LIBRETRO full .so path sent to RetroActivityFuture | Libretro official Android CLI docs; issues #17433, #19357 | **Experimental opt-in**, still requires hardware verification; incorrect paths may black-screen |
 | org.mupen64plusae.v3.fzurita | Open app only | Kwiq legacy references variants/activities | Manual |
 | org.duckstation.android | Open app only | Kwiq legacy `bootPath` (not revalidated) | Manual |
 | org.azahar_emu.azahar | Open app only | Requires own contract | Manual |
@@ -26,3 +26,7 @@ References:
 - https://github.com/zonaro/Kwiq/blob/main/app/src/main/java/br/com/redclaw/kwiq/emulator/EmulatorConfig.kt
 
 **Physical test ledger (not yet executed):** test Android 11/13/15, PPSSPP Free+Gold at a pinned version, homebrew `.iso` via SAF, URI permission revoked, missing package, core missing, return to hub. Record actual results and device names before upgrading any item to tested.
+
+## Opt-in advanced RetroArch launch (not a default)
+
+The ROM's action menu now offers `RetroArch: advanced paths`. The user types an absolute ROM path readable by the **external RetroArch** and the exact installed core full `.so` path copied from that app's settings. Jolven validates only simple path syntax and then passes official `ROM`/`LIBRETRO` intent extras. It does **not** read/verify the other app's core directory, convert arbitrary SAF URIs into guessed filesystem paths, install a core, or claim successful play. The normal safe default remains to open RetroArch and let the user browse their ROM there. Do not advertise this advanced path as broadly compatible before on-device tests.

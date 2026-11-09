@@ -34,6 +34,12 @@ const _strings = <String, Map<String, String>>{
     'favorite': 'Adicionar aos favoritos',
     'unfavorite': 'Remover dos favoritos',
     'preferred': 'Emulador preferido',
+    'retroAdvanced': 'RetroArch: caminhos avançados',
+    'retroWarning': 'Use apenas caminhos obtidos na configuração do RetroArch. Não é possível verificar os cores de outro app; um caminho errado pode causar tela preta.',
+    'retroCore': 'Caminho absoluto do core (.so)',
+    'retroRom': 'Caminho absoluto da ROM acessível ao RetroArch',
+    'retroReady': 'Tentativa de abertura por intent (não verificada)',
+
     'unknownPlatform': 'Console ainda não selecionado',
     'favoritesOnly': 'Somente favoritos',
     'collections': 'Coleções',
@@ -88,6 +94,12 @@ const _strings = <String, Map<String, String>>{
     'favorite': 'Add to favorites',
     'unfavorite': 'Remove from favorites',
     'preferred': 'Preferred emulator',
+    'retroAdvanced': 'RetroArch: advanced paths',
+    'retroWarning': 'Use paths found inside RetroArch settings. Jolven cannot check another app’s cores; wrong paths may cause a black screen.',
+    'retroCore': 'Absolute core path (.so)',
+    'retroRom': 'Absolute ROM path readable by RetroArch',
+    'retroReady': 'Attempt launch via intent (unverified)',
+
     'unknownPlatform': 'Console not selected',
     'favoritesOnly': 'Favorites only',
     'collections': 'Collections',
@@ -142,6 +154,12 @@ const _strings = <String, Map<String, String>>{
     'favorite': 'Agregar a favoritos',
     'unfavorite': 'Quitar de favoritos',
     'preferred': 'Emulador preferido',
+    'retroAdvanced': 'RetroArch: rutas avanzadas',
+    'retroWarning': 'Usa las rutas indicadas en RetroArch. Jolven no puede comprobar los cores de otra app; una ruta incorrecta puede mostrar una pantalla negra.',
+    'retroCore': 'Ruta absoluta del core (.so)',
+    'retroRom': 'Ruta absoluta de la ROM legible por RetroArch',
+    'retroReady': 'Intentar iniciar mediante intent (sin verificar)',
+
     'unknownPlatform': 'Consola sin seleccionar',
     'favoritesOnly': 'Solo favoritos',
     'collections': 'Colecciones',
@@ -328,6 +346,50 @@ class _JolvenHomeState extends State<JolvenHome> {
       if (mounted) await _refresh();
     } catch (error) {
       if (mounted) _message('${_t('error')}: $error');
+    }
+  }
+
+  Future<void> _configureRetroArch(RomItem rom) async {
+    final core = TextEditingController(text: rom.retroCorePath ?? '');
+    final path = TextEditingController(text: rom.retroRomPath ?? '');
+    try {
+      final save = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(_t('retroAdvanced')),
+          content: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Text(_t('retroWarning')),
+              TextField(
+                controller: core,
+                decoration: InputDecoration(labelText: _t('retroCore')),
+              ),
+              TextField(
+                controller: path,
+                decoration: InputDecoration(labelText: _t('retroRom')),
+              ),
+            ]),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(_t('cancel'))),
+            TextButton(onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(_t('save'))),
+          ],
+        ),
+      );
+      if (save != true) return;
+      await _bridge.updateRom(
+        rom,
+        retroCorePath: core.text.trim(),
+        retroRomPath: path.text.trim(),
+      );
+      if (mounted) await _refresh();
+    } catch (error) {
+      if (mounted) _message('${_t('error')}: $error');
+    } finally {
+      core.dispose();
+      path.dispose();
     }
   }
 
@@ -593,7 +655,11 @@ class _JolvenHomeState extends State<JolvenHome> {
               ListTile(
                 leading: const Icon(Icons.sports_esports_outlined),
                 title: Text(e.name),
-                subtitle: Text(e.documentedIntegration ? _t('documented') : (e.canAttemptView ? _t('experimental') : _t('manual'))),
+                subtitle: Text(e.id.startsWith('retroarch') &&
+                        rom.retroCorePath != null && rom.retroRomPath != null
+                    ? _t('retroReady')
+                    : (e.documentedIntegration ? _t('documented') :
+                        (e.canAttemptView ? _t('experimental') : _t('manual')))),
                 onTap: () => Navigator.pop(sheetContext, e),
               ),
           ],
@@ -781,6 +847,7 @@ class _JolvenHomeState extends State<JolvenHome> {
                       if (value == 'play') _chooseEmulator(rom);
                       if (value == 'platform') _setPlatform(rom);
                       if (value == 'preferred') _setPreferred(rom);
+                      if (value == 'retroAdvanced') _configureRetroArch(rom);
                       if (value == 'favorite') _toggleFavorite(rom);
                       if (value == 'cover') _selectArtwork(rom, 'cover');
                       if (value == 'label') _selectArtwork(rom, 'label');
@@ -793,6 +860,7 @@ class _JolvenHomeState extends State<JolvenHome> {
                       PopupMenuItem(value: 'play', child: Text(_t('play'))),
                       PopupMenuItem(value: 'platform', child: Text(_t('platform'))),
                       PopupMenuItem(value: 'preferred', child: Text(_t('preferred'))),
+                      PopupMenuItem(value: 'retroAdvanced', child: Text(_t('retroAdvanced'))),
                       PopupMenuItem(value: 'favorite', child: Text(
                         _t(rom.favorite ? 'unfavorite' : 'favorite'))),
                       PopupMenuItem(value: 'cover', child: Text(_t('setCover'))),

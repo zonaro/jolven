@@ -41,6 +41,8 @@ class RomItem {
     this.favorite = false,
     this.coverPath,
     this.labelPath,
+    this.retroCorePath,
+    this.retroRomPath,
   });
 
   final String uri;
@@ -50,6 +52,8 @@ class RomItem {
   final bool favorite;
   final String? coverPath;
   final String? labelPath;
+  final String? retroCorePath;
+  final String? retroRomPath;
 
   factory RomItem.fromMap(Map<dynamic, dynamic> data) => RomItem(
         uri: data['uri'] as String,
@@ -61,6 +65,10 @@ class RomItem {
             ? null : data['coverPath'] as String?,
         labelPath: (data['labelPath'] as String?)?.isEmpty == true
             ? null : data['labelPath'] as String?,
+        retroCorePath: (data['retroCorePath'] as String?)?.isEmpty == true
+            ? null : data['retroCorePath'] as String?,
+        retroRomPath: (data['retroRomPath'] as String?)?.isEmpty == true
+            ? null : data['retroRomPath'] as String?,
       );
 }
 

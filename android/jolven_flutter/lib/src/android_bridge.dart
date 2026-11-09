@@ -38,12 +38,16 @@ class AndroidBridge {
     String? platformId,
     String? emulatorPackage,
     bool? favorite,
+    String? retroCorePath,
+    String? retroRomPath,
   }) async {
     await _channel.invokeMethod<void>('updateRom', {
       'uri': rom.uri,
       if (platformId != null) 'platformId': platformId,
       if (emulatorPackage != null) 'emulatorPackage': emulatorPackage,
       if (favorite != null) 'favorite': favorite,
+      if (retroCorePath != null) 'retroCorePath': retroCorePath,
+      if (retroRomPath != null) 'retroRomPath': retroRomPath,
     });
   }
 
@@ -132,6 +136,8 @@ class AndroidBridge {
     final row = await _channel.invokeMethod<Map<dynamic, dynamic>>('launchRom', {
       'uri': rom.uri,
       'packageName': emulator.packageName,
+      if (rom.retroCorePath != null) 'retroCorePath': rom.retroCorePath,
+      if (rom.retroRomPath != null) 'retroRomPath': rom.retroRomPath,
     });
     return LaunchOutcome.fromMap(row ?? {});
   }

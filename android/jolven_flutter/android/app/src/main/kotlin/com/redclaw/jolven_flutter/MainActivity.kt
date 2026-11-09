@@ -167,7 +167,9 @@ class MainActivity : FlutterActivity() {
                         result.success(
                             launchRom(
                                 call.argument("uri"),
-                                call.argument("packageName")
+                                call.argument("packageName"),
+                                call.argument("retroCorePath"),
+                                call.argument("retroRomPath")
                             )
                         )
                     }
@@ -290,7 +292,9 @@ class MainActivity : FlutterActivity() {
                     "emulatorPackage" to value.optString("emulatorPackage"),
                     "favorite" to value.optString("favorite", "false"),
                     "coverPath" to value.optString("coverPath"),
-                    "labelPath" to value.optString("labelPath")
+                    "labelPath" to value.optString("labelPath"),
+                    "retroCorePath" to value.optString("retroCorePath"),
+                    "retroRomPath" to value.optString("retroRomPath")
                 )
             )
         }
@@ -333,6 +337,18 @@ class MainActivity : FlutterActivity() {
         val platform = call.argument<String>("platformId")
         val emulator = call.argument<String>("emulatorPackage")
         val favorite = call.argument<Boolean>("favorite")
+        val retroCore = call.argument<String>("retroCorePath")
+        val retroRom = call.argument<String>("retroRomPath")
+        if (retroCore != null && retroCore.isNotBlank() &&
+            !validAbsolutePath(retroCore, true)) {
+            result.error("INVALID_CORE_PATH", "Expected absolute .so core path", null)
+            return
+        }
+        if (retroRom != null && retroRom.isNotBlank() &&
+            !validAbsolutePath(retroRom, false)) {
+            result.error("INVALID_ROM_PATH", "Expected absolute ROM path", null)
+            return
+        }
         if (platform != null && !platform.matches(Regex("[a-z0-9_-]{1,32}"))) {
             result.error("INVALID_PLATFORM", "Invalid platform ID", null)
             return
@@ -347,6 +363,8 @@ class MainActivity : FlutterActivity() {
                     if (platform != null) put("platformId", platform)
                     if (emulator != null) put("emulatorPackage", emulator)
                     if (favorite != null) put("favorite", favorite.toString())
+                    if (retroCore != null) put("retroCorePath", retroCore)
+                    if (retroRom != null) put("retroRomPath", retroRom)
                 }
             }
         }
@@ -569,10 +587,40 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun launchRom(uriText: String?, packageName: String?): Map<String, String> {
+    private fun validAbsolutePath(value: String, core: Boolean): Boolean {
+        if (value.length !in 2..2048 || !value.startsWith("/")) return false
+        if (value.any { it == '\u0000' || it == '\n' || it == '\r' }) return false
+        return !core || value.endsWith(".so")
+    }
+
+    private fun launchRom(
+        uriText: String?, packageName: String?,
+        retroCorePath: String? = null, retroRomPath: String? = null
+    ): Map<String, String> {
         val emulator = emulators.firstOrNull { it.packageName == packageName }
             ?: return mapOf("status" to "missing")
         if (!isInstalled(emulator.packageName)) return mapOf("status" to "missing")
+        if (emulator.id.startsWith("retroarch")) {
+            if (retroCorePath.isNullOrBlank() || retroRomPath.isNullOrBlank() ||
+                !validAbsolutePath(retroCorePath, true) ||
+                !validAbsolutePath(retroRomPath, false)) {
+                return mapOf("status" to "manual_only")
+            }
+            val intent = Intent().apply {
+                setClassName(
+                    emulator.packageName,
+                    "com.retroarch.browser.retroactivity.RetroActivityFuture"
+                )
+                putExtra("ROM", retroRomPath)
+                putExtra("LIBRETRO", retroCorePath)
+            }
+            return try {
+                startActivity(intent)
+                mapOf("status" to "handoff_requested_unverified")
+            } catch (error: Exception) {
+                mapOf("status" to "unsupported", "detail" to (error.message ?: ""))
+            }
+        }
         if (emulator.romLaunch != "view_unverified" &&
             emulator.romLaunch != "view_documented") {
             return mapOf("status" to "manual_only")

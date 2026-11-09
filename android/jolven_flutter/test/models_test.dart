@@ -81,6 +81,18 @@ void main() {
     }).coverPath, null);
   });
 
+  test('advanced RetroArch fields do not imply a verified launch', () {
+    final rom = RomItem.fromMap({
+      'uri': 'content://rom/123', 'name': 'Homebrew.nes',
+      'retroCorePath': '/data/data/com.retroarch/cores/test_libretro_android.so',
+      'retroRomPath': '/storage/emulated/0/Roms/Homebrew.nes',
+    });
+    expect(rom.retroCorePath, endsWith('.so'));
+    expect(rom.retroRomPath, startsWith('/'));
+    expect(LaunchOutcome.fromMap({'status': 'handoff_requested_unverified'})
+        .confirmedGameStarted, false);
+  });
+
   test('native app identity is the actual package name', () {
     final game = AndroidGame.fromMap({
       'packageName': 'org.example.game',
