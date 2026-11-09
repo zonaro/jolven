@@ -283,7 +283,7 @@ class MainActivity : FlutterActivity() {
     private fun listGamepads(): List<Map<String, String>> {
         val manager = getSystemService(android.hardware.input.InputManager::class.java)
             ?: return emptyList()
-        return manager.inputDeviceIds.mapNotNull { id -> manager.getInputDevice(id) }
+        return manager.inputDeviceIds.toList().mapNotNull { id -> manager.getInputDevice(id) }
             .filter { device ->
                 (device.sources and InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD ||
                     (device.sources and InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK ||
