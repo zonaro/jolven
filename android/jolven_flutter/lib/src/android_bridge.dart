@@ -24,6 +24,29 @@ class AndroidBridge {
     return row == null ? null : RomItem.fromMap(row);
   }
 
+  Future<List<RomItem>> importRoms() async {
+    final rows = await _channel.invokeMethod<List<dynamic>>('importRoms') ?? [];
+    return rows.map((row) => RomItem.fromMap(row as Map)).toList();
+  }
+
+  Future<List<RomItem>> importFolder() async {
+    final rows = await _channel.invokeMethod<List<dynamic>>('importFolder') ?? [];
+    return rows.map((row) => RomItem.fromMap(row as Map)).toList();
+  }
+
+  Future<void> updateRom(RomItem rom, {
+    String? platformId,
+    String? emulatorPackage,
+    bool? favorite,
+  }) async {
+    await _channel.invokeMethod<void>('updateRom', {
+      'uri': rom.uri,
+      if (platformId != null) 'platformId': platformId,
+      if (emulatorPackage != null) 'emulatorPackage': emulatorPackage,
+      if (favorite != null) 'favorite': favorite,
+    });
+  }
+
   Future<List<AndroidGame>> listAndroidGames() async {
     final rows = await _channel.invokeMethod<List<dynamic>>('listAndroidGames') ?? [];
     return rows.map((row) => AndroidGame.fromMap(row as Map)).toList();

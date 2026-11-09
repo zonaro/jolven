@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'src/android_bridge.dart';
 import 'src/models.dart';
+import 'src/platform_catalog.dart';
 
 void main() => runApp(const JolvenApp());
 
@@ -16,6 +17,16 @@ const _strings = <String, Map<String, String>>{
     'noGames': 'Nenhum jogo Android detectado (a classificação do sistema pode omitir alguns).',
     'openGame': 'Abrir jogo',
     'import': 'Importar ROM',
+    'importFiles': 'Selecionar arquivos',
+    'importFolder': 'Importar pasta',
+    'platform': 'Definir console',
+    'favorite': 'Adicionar aos favoritos',
+    'unfavorite': 'Remover dos favoritos',
+    'preferred': 'Emulador preferido',
+    'unknownPlatform': 'Console ainda não selecionado',
+    'favoritesOnly': 'Somente favoritos',
+    'allGames': 'Todos',
+    'imported': 'Arquivos adicionados à biblioteca',
     'refresh': 'Atualizar',
     'empty': 'Importe uma ROM de sua propriedade para começar.',
     'none': 'Nenhum emulador compatível detectado. Instale um separadamente.',
@@ -42,6 +53,16 @@ const _strings = <String, Map<String, String>>{
     'noGames': 'No Android games found (system classification may omit some).',
     'openGame': 'Open game',
     'import': 'Import ROM',
+    'importFiles': 'Select files',
+    'importFolder': 'Import folder',
+    'platform': 'Set console',
+    'favorite': 'Add to favorites',
+    'unfavorite': 'Remove from favorites',
+    'preferred': 'Preferred emulator',
+    'unknownPlatform': 'Console not selected',
+    'favoritesOnly': 'Favorites only',
+    'allGames': 'All',
+    'imported': 'Files added to library',
     'refresh': 'Refresh',
     'empty': 'Import a ROM you own to get started.',
     'none': 'No compatible emulator found. Install one separately.',
@@ -68,6 +89,16 @@ const _strings = <String, Map<String, String>>{
     'noGames': 'No se encontraron juegos Android (la clasificación puede omitir algunos).',
     'openGame': 'Abrir juego',
     'import': 'Importar ROM',
+    'importFiles': 'Seleccionar archivos',
+    'importFolder': 'Importar carpeta',
+    'platform': 'Elegir consola',
+    'favorite': 'Agregar a favoritos',
+    'unfavorite': 'Quitar de favoritos',
+    'preferred': 'Emulador preferido',
+    'unknownPlatform': 'Consola sin seleccionar',
+    'favoritesOnly': 'Solo favoritos',
+    'allGames': 'Todos',
+    'imported': 'Archivos añadidos a biblioteca',
     'refresh': 'Actualizar',
     'empty': 'Importa una ROM propia para comenzar.',
     'none': 'No hay emuladores compatibles. Instala uno por separado.',
@@ -122,6 +153,7 @@ class _JolvenHomeState extends State<JolvenHome> {
   List<RomItem> _roms = [];
   List<AndroidGame> _androidGames = [];
   bool _loading = false;
+  bool _favoritesOnly = false;
 
   String _t(String key) {
     final language = Localizations.localeOf(context).languageCode;
@@ -161,9 +193,94 @@ class _JolvenHomeState extends State<JolvenHome> {
   }
 
   Future<void> _import() async {
+    final mode = await showModalBottomSheet<String>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(
+            leading: const Icon(Icons.file_open),
+            title: Text(_t('importFiles')),
+            onTap: () => Navigator.pop(sheetContext, 'files'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.folder_open),
+            title: Text(_t('importFolder')),
+            onTap: () => Navigator.pop(sheetContext, 'folder'),
+          ),
+        ]),
+      ),
+    );
+    if (mode == null) return;
     try {
-      final selected = await _bridge.importRom();
-      if (selected != null) await _refresh();
+      final selected = mode == 'folder'
+          ? await _bridge.importFolder()
+          : await _bridge.importRoms();
+      if (selected.isNotEmpty && mounted) _message('${_t('imported')}: ${selected.length}');
+      if (mounted) await _refresh();
+    } catch (error) {
+      if (mounted) _message('${_t('error')}: $error');
+    }
+  }
+
+  Future<void> _setPlatform(RomItem rom) async {
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        child: SizedBox(
+          height: MediaQuery.sizeOf(context).height * 0.7,
+          child: ListView(children: [
+            ListTile(title: Text(_t('platform'))),
+            for (final platform in platforms)
+              ListTile(
+                title: Text(platform.label),
+                onTap: () => Navigator.pop(sheetContext, platform.id),
+              ),
+          ]),
+        ),
+      ),
+    );
+    if (selected == null) return;
+    try {
+      await _bridge.updateRom(rom, platformId: selected);
+      if (mounted) await _refresh();
+    } catch (error) {
+      if (mounted) _message('${_t('error')}: $error');
+    }
+  }
+
+  Future<void> _setPreferred(RomItem rom) async {
+    final installed = _emulators.where((e) => e.installed).toList();
+    if (installed.isEmpty) {
+      _message(_t('none'));
+      return;
+    }
+    final selected = await showModalBottomSheet<EmulatorInfo>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: ListView(shrinkWrap: true, children: [
+          ListTile(title: Text(_t('preferred'))),
+          for (final emulator in installed)
+            ListTile(
+              title: Text(emulator.name),
+              onTap: () => Navigator.pop(sheetContext, emulator),
+            ),
+        ]),
+      ),
+    );
+    if (selected == null) return;
+    try {
+      await _bridge.updateRom(rom, emulatorPackage: selected.packageName);
+      if (mounted) await _refresh();
+    } catch (error) {
+      if (mounted) _message('${_t('error')}: $error');
+    }
+  }
+
+  Future<void> _toggleFavorite(RomItem rom) async {
+    try {
+      await _bridge.updateRom(rom, favorite: !rom.favorite);
+      if (mounted) await _refresh();
     } catch (error) {
       if (mounted) _message('${_t('error')}: $error');
     }
@@ -198,7 +315,12 @@ class _JolvenHomeState extends State<JolvenHome> {
   }
 
   Future<void> _chooseEmulator(RomItem rom) async {
-    final installed = _emulators.where((e) => e.installed).toList();
+    final installed = _emulators.where((e) => e.installed).toList()
+      ..sort((a, b) {
+        final aPreferred = a.packageName == rom.emulatorPackage ? 0 : 1;
+        final bPreferred = b.packageName == rom.emulatorPackage ? 0 : 1;
+        return aPreferred.compareTo(bPreferred);
+      });
     if (installed.isEmpty) {
       _message(_t('none'));
       return;
@@ -284,20 +406,40 @@ class _JolvenHomeState extends State<JolvenHome> {
             const SizedBox(height: 24),
             Text(_t('roms'), style: Theme.of(context).textTheme.titleLarge),
             if (_roms.isEmpty) ListTile(title: Text(_t('empty'))),
-            for (final rom in _roms)
+            SwitchListTile(
+              title: Text(_t('favoritesOnly')),
+              value: _favoritesOnly,
+              onChanged: (checked) => setState(() => _favoritesOnly = checked),
+            ),
+            for (final rom in _roms.where((rom) => !_favoritesOnly || rom.favorite))
               Card(
                 child: ListTile(
-                  leading: const Icon(Icons.videogame_asset),
+                  leading: Icon(rom.favorite ? Icons.favorite : Icons.videogame_asset),
                   title: Text(rom.name),
-                  subtitle: Text(rom.uri, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  subtitle: Text(
+                    rom.platformId == null
+                        ? (identifyPlatform(rom.name).confidentId == null
+                            ? _t('unknownPlatform')
+                            : platformLabel(identifyPlatform(rom.name).confidentId))
+                        : platformLabel(rom.platformId),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   onTap: () => _chooseEmulator(rom),
                   trailing: PopupMenuButton<String>(
                     onSelected: (value) {
                       if (value == 'play') _chooseEmulator(rom);
+                      if (value == 'platform') _setPlatform(rom);
+                      if (value == 'preferred') _setPreferred(rom);
+                      if (value == 'favorite') _toggleFavorite(rom);
                       if (value == 'remove') _remove(rom);
                     },
                     itemBuilder: (context) => [
                       PopupMenuItem(value: 'play', child: Text(_t('play'))),
+                      PopupMenuItem(value: 'platform', child: Text(_t('platform'))),
+                      PopupMenuItem(value: 'preferred', child: Text(_t('preferred'))),
+                      PopupMenuItem(value: 'favorite', child: Text(
+                        _t(rom.favorite ? 'unfavorite' : 'favorite'))),
                       PopupMenuItem(value: 'remove', child: Text(_t('remove'))),
                     ],
                   ),

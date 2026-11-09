@@ -28,14 +28,26 @@ class EmulatorInfo {
 }
 
 class RomItem {
-  const RomItem({required this.uri, required this.name});
+  const RomItem({
+    required this.uri,
+    required this.name,
+    this.platformId,
+    this.emulatorPackage,
+    this.favorite = false,
+  });
 
   final String uri;
   final String name;
+  final String? platformId;
+  final String? emulatorPackage;
+  final bool favorite;
 
   factory RomItem.fromMap(Map<dynamic, dynamic> data) => RomItem(
         uri: data['uri'] as String,
         name: data['name'] as String,
+        platformId: data['platformId'] as String?,
+        emulatorPackage: data['emulatorPackage'] as String?,
+        favorite: data['favorite'] == true || data['favorite'] == 'true',
       );
 }
 

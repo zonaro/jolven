@@ -8,6 +8,7 @@ import java.util.Locale
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
+import java.util.concurrent.Executors
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -21,7 +22,10 @@ import org.json.JSONObject
 class MainActivity : FlutterActivity() {
     private val channelName = "jolven/external_emulators"
     private val selectRomRequest = 4083
+    private val selectFolderRequest = 4084
+    private val scanner = Executors.newSingleThreadExecutor()
     private var pendingImport: MethodChannel.Result? = null
+    private var importMultiple = false
 
     private data class Emulator(
         val id: String,
@@ -65,6 +69,9 @@ class MainActivity : FlutterActivity() {
                         openAndroidGame(call.argument("packageName"))
                     )
                     "importRom" -> selectRom(result)
+                    "importRoms" -> selectRom(result, multiple = true)
+                    "importFolder" -> selectFolder(result)
+                    "updateRom" -> updateRom(call, result)
                     "removeRom" -> {
                         val uri = call.argument<String>("uri")
                         if (uri.isNullOrBlank()) {
@@ -143,8 +150,15 @@ class MainActivity : FlutterActivity() {
             val value = data.optJSONObject(index) ?: continue
             val uri = value.optString("uri")
             if (!uri.startsWith("content://")) continue
-            val name = value.optString("name").ifBlank { "ROM" }
-            result.add(mapOf("uri" to uri, "name" to name))
+            result.add(
+                mapOf(
+                    "uri" to uri,
+                    "name" to value.optString("name").ifBlank { "ROM" },
+                    "platformId" to value.optString("platformId"),
+                    "emulatorPackage" to value.optString("emulatorPackage"),
+                    "favorite" to value.optString("favorite", "false")
+                )
+            )
         }
         return result
     }
@@ -152,25 +166,99 @@ class MainActivity : FlutterActivity() {
     private fun writeRoms(roms: List<Map<String, String>>) {
         val json = JSONArray()
         for (rom in roms) {
-            json.put(JSONObject().put("uri", rom["uri"]).put("name", rom["name"]))
+            val record = JSONObject()
+            for ((key, value) in rom) record.put(key, value)
+            json.put(record)
         }
         prefs.edit().putString("roms", json.toString()).apply()
     }
 
-    private fun selectRom(result: MethodChannel.Result) {
+    @Synchronized
+    private fun mergeRoms(selected: List<Map<String, String>>): List<Map<String, String>> {
+        val old = readRoms()
+        val existing = old.mapNotNull { it["uri"] }.toMutableSet()
+        val added = selected.filter { row ->
+            val uri = row["uri"] ?: return@filter false
+            uri.startsWith("content://") && existing.add(uri)
+        }
+        if (added.isNotEmpty()) writeRoms(old + added)
+        return added
+    }
+
+    private fun updateRom(call: io.flutter.plugin.common.MethodCall, result: MethodChannel.Result) {
+        val uri = call.argument<String>("uri")
+        if (uri.isNullOrBlank()) {
+            result.error("INVALID_URI", "ROM URI is missing", null)
+            return
+        }
+        val old = readRoms()
+        if (old.none { it["uri"] == uri }) {
+            result.error("NOT_FOUND", "ROM is no longer in the catalog", null)
+            return
+        }
+        val platform = call.argument<String>("platformId")
+        val emulator = call.argument<String>("emulatorPackage")
+        val favorite = call.argument<Boolean>("favorite")
+        if (platform != null && !platform.matches(Regex("[a-z0-9_-]{1,32}"))) {
+            result.error("INVALID_PLATFORM", "Invalid platform ID", null)
+            return
+        }
+        if (emulator != null && emulators.none { it.packageName == emulator }) {
+            result.error("INVALID_EMULATOR", "Unknown emulator package", null)
+            return
+        }
+        val updated = old.map { rom ->
+            if (rom["uri"] != uri) rom else {
+                rom.toMutableMap().apply {
+                    if (platform != null) put("platformId", platform)
+                    if (emulator != null) put("emulatorPackage", emulator)
+                    if (favorite != null) put("favorite", favorite.toString())
+                }
+            }
+        }
+        writeRoms(updated)
+        result.success(null)
+    }
+
+    private fun selectRom(result: MethodChannel.Result, multiple: Boolean = false) {
         if (pendingImport != null) {
             result.error("BUSY", "Another file picker is already open", null)
             return
         }
         pendingImport = result
+        importMultiple = multiple
         try {
             val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                 addCategory(Intent.CATEGORY_OPENABLE)
                 type = "*/*"
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                    Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+                putExtra(Intent.EXTRA_ALLOW_MULTIPLE, multiple)
+                addFlags(
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                        Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+                )
             }
             startActivityForResult(intent, selectRomRequest)
+        } catch (error: Exception) {
+            pendingImport = null
+            result.error("PICKER_UNAVAILABLE", error.message, null)
+        }
+    }
+
+    private fun selectFolder(result: MethodChannel.Result) {
+        if (pendingImport != null) {
+            result.error("BUSY", "Another file picker is already open", null)
+            return
+        }
+        pendingImport = result
+        importMultiple = true
+        try {
+            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+                addFlags(
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                        Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+                )
+            }
+            startActivityForResult(intent, selectFolderRequest)
         } catch (error: Exception) {
             pendingImport = null
             result.error("PICKER_UNAVAILABLE", error.message, null)
@@ -180,32 +268,66 @@ class MainActivity : FlutterActivity() {
     @Deprecated("Using startActivityForResult for compatibility with FlutterActivity")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode != selectRomRequest) return
+        if (requestCode != selectRomRequest && requestCode != selectFolderRequest) return
         val result = pendingImport ?: return
         pendingImport = null
-        val uri = data?.data
-        if (resultCode != Activity.RESULT_OK || uri == null) {
-            result.success(null)
+        val multiple = importMultiple
+        importMultiple = false
+
+        if (resultCode != Activity.RESULT_OK || data == null) {
+            result.success(if (multiple) emptyList<Map<String, String>>() else null)
             return
         }
-        try {
-            if (uri.scheme != "content") {
-                result.error("UNSUPPORTED_URI", "Only SAF document URIs are accepted", null)
+
+        if (requestCode == selectFolderRequest) {
+            val treeUri = data.data
+            if (treeUri == null || treeUri.scheme != "content") {
+                result.error("INVALID_FOLDER", "No valid SAF tree was selected", null)
                 return
             }
-            contentResolver.takePersistableUriPermission(
-                uri, Intent.FLAG_GRANT_READ_URI_PERMISSION
-            )
-            val name = documentName(uri)
-            val record = mapOf("uri" to uri.toString(), "name" to name)
-            val previous = readRoms()
-            if (previous.none { it["uri"] == uri.toString() }) {
-                writeRoms(previous + record)
+            try {
+                contentResolver.takePersistableUriPermission(
+                    treeUri, Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (error: Exception) {
+                result.error("URI_PERMISSION", error.message, null)
+                return
             }
-            result.success(record)
-        } catch (error: Exception) {
-            result.error("URI_PERMISSION", error.message, null)
+            scanner.execute {
+                try {
+                    val selected = SafRomScanner.scan(contentResolver, treeUri)
+                    val added = mergeRoms(selected)
+                    runOnUiThread { result.success(added) }
+                } catch (error: Exception) {
+                    runOnUiThread {
+                        result.error("FOLDER_SCAN_FAILED", error.message, null)
+                    }
+                }
+            }
+            return
         }
+
+        val picked = mutableListOf<Uri>()
+        data.data?.let(picked::add)
+        data.clipData?.let { clip ->
+            for (index in 0 until clip.itemCount.coerceAtMost(250)) {
+                clip.getItemAt(index).uri?.let(picked::add)
+            }
+        }
+        val imported = mutableListOf<Map<String, String>>()
+        for (uri in picked.distinctBy { it.toString() }.take(250)) {
+            if (uri.scheme != "content") continue
+            try {
+                contentResolver.takePersistableUriPermission(
+                    uri, Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+                imported.add(mapOf("uri" to uri.toString(), "name" to documentName(uri)))
+            } catch (_: Exception) {
+                // Skip documents whose grant was revoked or can't persist.
+            }
+        }
+        val added = mergeRoms(imported)
+        result.success(if (multiple) added else added.firstOrNull())
     }
 
     private fun documentName(uri: Uri): String {
@@ -274,6 +396,7 @@ class MainActivity : FlutterActivity() {
     override fun onDestroy() {
         pendingImport?.error("ACTIVITY_DESTROYED", "File selection cancelled", null)
         pendingImport = null
+        scanner.shutdown()
         super.onDestroy()
     }
 }
