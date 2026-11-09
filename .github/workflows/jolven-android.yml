@@ -42,3 +42,10 @@ jobs:
       - name: Build debug APK
         working-directory: android/jolven_flutter
         run: flutter build apk --debug
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: jolven-android-debug
+          path: android/jolven_flutter/build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 7
+          if-no-files-found: error
