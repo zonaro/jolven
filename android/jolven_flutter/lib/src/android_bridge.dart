@@ -24,6 +24,15 @@ class AndroidBridge {
     return row == null ? null : RomItem.fromMap(row);
   }
 
+  Future<String?> pickPatchFile() =>
+      _channel.invokeMethod<String>('pickPatchFile');
+
+  Future<LaunchOutcome> exportPatchedRom(RomItem rom, String patchUri) async {
+    final row = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'exportPatchedRom', {'romUri': rom.uri, 'patchUri': patchUri});
+    return LaunchOutcome.fromMap(row ?? {});
+  }
+
   Future<List<RomItem>> importRoms() async {
     final rows = await _channel.invokeMethod<List<dynamic>>('importRoms') ?? [];
     return rows.map((row) => RomItem.fromMap(row as Map)).toList();

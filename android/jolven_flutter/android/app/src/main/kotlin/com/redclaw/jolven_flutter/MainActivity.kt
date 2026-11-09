@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
 import android.view.InputDevice
+import com.redclaw.jolven_flutter.rompatcher.SafRomPatchWorkflow
 import java.util.concurrent.Executors
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -25,11 +26,15 @@ class MainActivity : FlutterActivity() {
     private val selectRomRequest = 4083
     private val selectFolderRequest = 4084
     private val selectArtworkRequest = 4085
+    private val pickPatchRequest = 4086
+    private val savePatchRequest = 4087
     private val scanner = Executors.newSingleThreadExecutor()
     private var pendingImport: MethodChannel.Result? = null
     private var importMultiple = false
     private var artworkRomUri: String? = null
     private var artworkKind: String? = null
+    private var patchRomUri: String? = null
+    private var patchFileUri: String? = null
 
     private data class Emulator(
         val id: String,
@@ -122,6 +127,12 @@ class MainActivity : FlutterActivity() {
                     )
                     "clearArtwork" -> result.success(
                         clearArtwork(call.argument("uri"), call.argument("kind"))
+                    )
+                    "pickPatchFile" -> pickPatchFile(result)
+                    "exportPatchedRom" -> exportPatchedRom(
+                        call.argument("romUri"),
+                        call.argument("patchUri"),
+                        result
                     )
                     "updateRom" -> updateRom(call, result)
                     "listCollections" -> result.success(collections.all())
@@ -445,6 +456,64 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    private fun pickPatchFile(result: MethodChannel.Result) {
+        if (pendingImport != null) {
+            result.error("BUSY", "A file picker is already open", null)
+            return
+        }
+        pendingImport = result
+        try {
+            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "*/*"
+                addFlags(
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                        Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+                )
+            }
+            startActivityForResult(intent, pickPatchRequest)
+        } catch (error: Exception) {
+            pendingImport = null
+            result.error("PATCH_PICKER", error.message, null)
+        }
+    }
+
+    private fun exportPatchedRom(
+        romUri: String?, patchUri: String?, result: MethodChannel.Result
+    ) {
+        if (pendingImport != null) {
+            result.error("BUSY", "A file picker is already open", null)
+            return
+        }
+        val rom = readRoms().firstOrNull { it["uri"] == romUri }
+        if (rom == null || patchUri.isNullOrBlank() || !patchUri.startsWith("content://")) {
+            result.error("PATCH_INPUT", "Select a library ROM and a patch document", null)
+            return
+        }
+        patchRomUri = romUri
+        patchFileUri = patchUri
+        pendingImport = result
+        val baseName = rom["name"].orEmpty()
+            .replace(Regex("[^a-zA-Z0-9._ ()-]"), "_")
+            .take(90)
+            .ifBlank { "rom.bin" }
+        val stem = baseName.substringBeforeLast('.', baseName)
+        val ext = baseName.substringAfterLast('.', "bin")
+        try {
+            val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "application/octet-stream"
+                putExtra(Intent.EXTRA_TITLE, "$stem (patched).$ext")
+            }
+            startActivityForResult(intent, savePatchRequest)
+        } catch (error: Exception) {
+            pendingImport = null
+            patchRomUri = null
+            patchFileUri = null
+            result.error("PATCH_DESTINATION", error.message, null)
+        }
+    }
+
     private fun pickArtwork(
         romUri: String?, kind: String?, result: MethodChannel.Result
     ) {
@@ -490,11 +559,59 @@ class MainActivity : FlutterActivity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode != selectRomRequest &&
             requestCode != selectFolderRequest &&
-            requestCode != selectArtworkRequest) return
+            requestCode != selectArtworkRequest &&
+            requestCode != pickPatchRequest &&
+            requestCode != savePatchRequest) return
         val result = pendingImport ?: return
         pendingImport = null
         val multiple = importMultiple
         importMultiple = false
+
+        if (requestCode == pickPatchRequest) {
+            val selected = data?.data
+            if (resultCode != Activity.RESULT_OK || selected?.scheme != "content") {
+                result.success(null)
+                return
+            }
+            try {
+                contentResolver.takePersistableUriPermission(
+                    selected, Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+                result.success(selected.toString())
+            } catch (error: Exception) {
+                result.error("PATCH_READ", error.message, null)
+            }
+            return
+        }
+        if (requestCode == savePatchRequest) {
+            val rom = patchRomUri
+            val patch = patchFileUri
+            val target = data?.data
+            patchRomUri = null
+            patchFileUri = null
+            if (resultCode != Activity.RESULT_OK || target == null) {
+                result.success(mapOf("status" to "cancelled"))
+                return
+            }
+            if (rom == null || patch == null) {
+                result.error("PATCH_INPUT", "Missing patch source", null)
+                return
+            }
+            scanner.execute {
+                try {
+                    val report = SafRomPatchWorkflow.apply(
+                        contentResolver, cacheDir, Uri.parse(rom),
+                        Uri.parse(patch), target
+                    )
+                    runOnUiThread { result.success(report) }
+                } catch (error: Exception) {
+                    runOnUiThread {
+                        result.error("PATCH_FAILED", error.message, null)
+                    }
+                }
+            }
+            return
+        }
 
         if (requestCode == selectArtworkRequest) {
             val romUri = artworkRomUri

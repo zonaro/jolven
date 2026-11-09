@@ -6,6 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'src/android_bridge.dart';
 import 'src/models.dart';
 import 'src/platform_catalog.dart';
+import 'src/patcher_page.dart';
 
 void main() => runApp(const JolvenApp());
 
@@ -850,6 +851,15 @@ class _JolvenHomeState extends State<JolvenHome> {
       appBar: AppBar(
         title: Text(_t('title')),
         actions: [
+          IconButton(
+            tooltip: 'ROM Patcher',
+            icon: const Icon(Icons.auto_fix_high),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (context) => const RomPatcherPage(),
+              ),
+            ),
+          ),
           IconButton(
             tooltip: _t('refresh'),
             onPressed: _loading ? null : _refresh,
