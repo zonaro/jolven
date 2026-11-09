@@ -52,6 +52,30 @@ class AndroidBridge {
     return rows.map((row) => AndroidGame.fromMap(row as Map)).toList();
   }
 
+  Future<List<AndroidGame>> listLaunchableApps() async {
+    final rows = await _channel.invokeMethod<List<dynamic>>('listLaunchableApps') ?? [];
+    return rows.map((row) => AndroidGame.fromMap(row as Map)).toList();
+  }
+
+  Future<void> addAndroidGame(AndroidGame game) async {
+    final result = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'addAndroidGame', {'packageName': game.packageName});
+    if (result?['status'] != 'added') {
+      throw PlatformException(code: 'GAME_NOT_FOUND', message: game.packageName);
+    }
+  }
+
+  Future<List<RemoteClient>> listRemoteClients() async {
+    final rows = await _channel.invokeMethod<List<dynamic>>('listRemoteClients') ?? [];
+    return rows.map((row) => RemoteClient.fromMap(row as Map)).toList();
+  }
+
+  Future<LaunchOutcome> openRemoteClient(RemoteClient client) async {
+    final result = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'openRemoteClient', {'packageName': client.packageName});
+    return LaunchOutcome.fromMap(result ?? {});
+  }
+
   Future<LaunchOutcome> openAndroidGame(AndroidGame game) async {
     final row = await _channel.invokeMethod<Map<dynamic, dynamic>>(
       'openAndroidGame', {'packageName': game.packageName});

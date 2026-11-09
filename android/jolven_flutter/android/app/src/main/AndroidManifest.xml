@@ -10,6 +10,14 @@
         <package android:name="org.mupen64plusae.v3.fzurita" />
         <package android:name="org.duckstation.android" />
         <package android:name="org.azahar_emu.azahar" />
+        <package android:name="com.limelight" />
+        <package android:name="com.limelight.unofficial" />
+        <package android:name="com.limelight.noir" />
+        <package android:name="com.valvesoftware.steamlink" />
+        <package android:name="tv.parsec.client" />
+        <package android:name="com.playstation.remoteplay" />
+        <package android:name="com.metallic.chiaki" />
+        <package android:name="com.nvidia.geforcenow" />
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />

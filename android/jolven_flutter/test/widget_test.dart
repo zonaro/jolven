@@ -13,6 +13,7 @@ void main() {
       switch (call.method) {
         case 'listEmulators':
         case 'listAndroidGames':
+        case 'listRemoteClients':
         case 'listRoms':
           return <Map<String, Object?>>[];
         default:

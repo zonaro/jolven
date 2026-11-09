@@ -14,6 +14,10 @@ const _strings = <String, Map<String, String>>{
     'roms': 'Minhas ROMs',
     'emulators': 'Emuladores instalados',
     'androidGames': 'Jogos Android',
+    'addAndroid': 'Adicionar app instalado',
+    'remote': 'Remote Play',
+    'noRemote': 'Instale Moonlight, Steam Link ou outro cliente de streaming.',
+    'openRemote': 'Abrir cliente',
     'noGames': 'Nenhum jogo Android detectado (a classificação do sistema pode omitir alguns).',
     'openGame': 'Abrir jogo',
     'import': 'Importar ROM',
@@ -50,6 +54,10 @@ const _strings = <String, Map<String, String>>{
     'roms': 'My ROMs',
     'emulators': 'Installed emulators',
     'androidGames': 'Android games',
+    'addAndroid': 'Add installed app',
+    'remote': 'Remote Play',
+    'noRemote': 'Install Moonlight, Steam Link or another streaming client.',
+    'openRemote': 'Open client',
     'noGames': 'No Android games found (system classification may omit some).',
     'openGame': 'Open game',
     'import': 'Import ROM',
@@ -86,6 +94,10 @@ const _strings = <String, Map<String, String>>{
     'roms': 'Mis ROMs',
     'emulators': 'Emuladores instalados',
     'androidGames': 'Juegos Android',
+    'addAndroid': 'Agregar app instalada',
+    'remote': 'Juego remoto',
+    'noRemote': 'Instala Moonlight, Steam Link u otro cliente de streaming.',
+    'openRemote': 'Abrir cliente',
     'noGames': 'No se encontraron juegos Android (la clasificación puede omitir algunos).',
     'openGame': 'Abrir juego',
     'import': 'Importar ROM',
@@ -152,6 +164,7 @@ class _JolvenHomeState extends State<JolvenHome> {
   List<EmulatorInfo> _emulators = [];
   List<RomItem> _roms = [];
   List<AndroidGame> _androidGames = [];
+  List<RemoteClient> _remoteClients = [];
   bool _loading = false;
   bool _favoritesOnly = false;
 
@@ -173,11 +186,13 @@ class _JolvenHomeState extends State<JolvenHome> {
       final emulators = await _bridge.listEmulators();
       final roms = await _bridge.listRoms();
       final androidGames = await _bridge.listAndroidGames();
+      final remoteClients = await _bridge.listRemoteClients();
       if (!mounted) return;
       setState(() {
         _emulators = emulators;
         _roms = roms;
         _androidGames = androidGames;
+        _remoteClients = remoteClients;
       });
     } catch (error) {
       if (mounted) _message('${_t('error')}: $error');
@@ -305,6 +320,46 @@ class _JolvenHomeState extends State<JolvenHome> {
     }
   }
 
+  Future<void> _addAndroidApp() async {
+    try {
+      final apps = await _bridge.listLaunchableApps();
+      if (!mounted) return;
+      final selected = await showModalBottomSheet<AndroidGame>(
+        context: context,
+        isScrollControlled: true,
+        builder: (sheetContext) => SafeArea(
+          child: SizedBox(
+            height: MediaQuery.sizeOf(context).height * 0.65,
+            child: ListView(children: [
+              ListTile(title: Text(_t('addAndroid'))),
+              for (final app in apps)
+                ListTile(
+                  leading: const Icon(Icons.apps),
+                  title: Text(app.name),
+                  subtitle: Text(app.packageName),
+                  onTap: () => Navigator.pop(sheetContext, app),
+                ),
+            ]),
+          ),
+        ),
+      );
+      if (selected == null) return;
+      await _bridge.addAndroidGame(selected);
+      if (mounted) await _refresh();
+    } catch (error) {
+      if (mounted) _message('${_t('error')}: $error');
+    }
+  }
+
+  Future<void> _openRemoteClient(RemoteClient client) async {
+    try {
+      final outcome = await _bridge.openRemoteClient(client);
+      if (mounted && outcome.status != 'client_opened') _message(_t('missing'));
+    } catch (error) {
+      if (mounted) _message('${_t('error')}: $error');
+    }
+  }
+
   Future<void> _openAndroidGame(AndroidGame game) async {
     try {
       final result = await _bridge.openAndroidGame(game);
@@ -392,6 +447,13 @@ class _JolvenHomeState extends State<JolvenHome> {
             if (_loading) const LinearProgressIndicator(),
             const SizedBox(height: 24),
             Text(_t('androidGames'), style: Theme.of(context).textTheme.titleLarge),
+            Row(children: [
+              Expanded(child: TextButton.icon(
+                onPressed: _addAndroidApp,
+                icon: const Icon(Icons.add_circle_outline),
+                label: Text(_t('addAndroid')),
+              )),
+            ]),
             if (_androidGames.isEmpty) ListTile(title: Text(_t('noGames'))),
             for (final game in _androidGames)
               ListTile(
@@ -401,6 +463,19 @@ class _JolvenHomeState extends State<JolvenHome> {
                 trailing: TextButton(
                   onPressed: () => _openAndroidGame(game),
                   child: Text(_t('openGame')),
+                ),
+              ),
+            const SizedBox(height: 24),
+            Text(_t('remote'), style: Theme.of(context).textTheme.titleLarge),
+            if (!_remoteClients.any((client) => client.installed))
+              ListTile(title: Text(_t('noRemote'))),
+            for (final client in _remoteClients.where((client) => client.installed))
+              ListTile(
+                leading: const Icon(Icons.cast_connected),
+                title: Text(client.name),
+                trailing: TextButton(
+                  onPressed: () => _openRemoteClient(client),
+                  child: Text(_t('openRemote')),
                 ),
               ),
             const SizedBox(height: 24),

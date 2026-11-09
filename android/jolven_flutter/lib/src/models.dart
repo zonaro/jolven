@@ -63,6 +63,27 @@ class AndroidGame {
       );
 }
 
+class RemoteClient {
+  const RemoteClient({
+    required this.id,
+    required this.name,
+    required this.packageName,
+    required this.installed,
+  });
+
+  final String id;
+  final String name;
+  final String packageName;
+  final bool installed;
+
+  factory RemoteClient.fromMap(Map<dynamic, dynamic> data) => RemoteClient(
+        id: data['id'] as String,
+        name: data['name'] as String,
+        packageName: data['packageName'] as String,
+        installed: data['installed'] == true,
+      );
+}
+
 class LaunchOutcome {
   const LaunchOutcome({required this.status, this.detail});
 

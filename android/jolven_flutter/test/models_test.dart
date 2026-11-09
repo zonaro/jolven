@@ -47,6 +47,17 @@ void main() {
     expect(rom.emulatorPackage, null);
   });
 
+  test('remote-play client presence does not imply host discovery', () {
+    final client = RemoteClient.fromMap({
+      'id': 'moonlight',
+      'name': 'Moonlight',
+      'packageName': 'com.limelight',
+      'installed': true,
+    });
+    expect(client.installed, true);
+    expect(client.packageName, 'com.limelight');
+  });
+
   test('native app identity is the actual package name', () {
     final game = AndroidGame.fromMap({
       'packageName': 'org.example.game',

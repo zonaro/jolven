@@ -50,6 +50,26 @@ class MainActivity : FlutterActivity() {
 
     private val prefs by lazy { getSharedPreferences("jolven_rom_catalog", MODE_PRIVATE) }
 
+    private data class RemoteClient(
+        val id: String, val name: String, val packageName: String
+    )
+    // Adapted from Kwiq MoonlightIntegration's known apps; no access to private
+    // host list, shortcut APIs or streaming credentials.
+    private val remoteClients = listOf(
+        RemoteClient("moonlight", "Moonlight", "com.limelight"),
+        RemoteClient("moonlight-unofficial", "Moonlight (Unofficial)", "com.limelight.unofficial"),
+        RemoteClient("moonlight-noir", "Moonlight Noir", "com.limelight.noir"),
+        RemoteClient("steamlink", "Steam Link", "com.valvesoftware.steamlink"),
+        RemoteClient("parsec", "Parsec", "tv.parsec.client"),
+        RemoteClient("psremote", "PS Remote Play", "com.playstation.remoteplay"),
+        RemoteClient("chiaki", "Chiaki", "com.metallic.chiaki"),
+        RemoteClient("geforce", "GeForce NOW", "com.nvidia.geforcenow")
+    )
+
+    private fun manuallyIncludedAndroidGames(): Set<String> =
+        prefs.getStringSet("manual_android_games", emptySet())?.toSet() ?: emptySet()
+
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName)
@@ -65,6 +85,22 @@ class MainActivity : FlutterActivity() {
                     })
                     "listRoms" -> result.success(readRoms())
                     "listAndroidGames" -> result.success(listAndroidGames())
+                    "listLaunchableApps" -> result.success(listLaunchableApps())
+                    "addAndroidGame" -> {
+                        val pkg = call.argument<String>("packageName")
+                        result.success(addAndroidGame(pkg))
+                    }
+                    "listRemoteClients" -> result.success(remoteClients.map { client ->
+                        mapOf(
+                            "id" to client.id,
+                            "name" to client.name,
+                            "packageName" to client.packageName,
+                            "installed" to isInstalled(client.packageName)
+                        )
+                    })
+                    "openRemoteClient" -> result.success(
+                        openRemoteClient(call.argument("packageName"))
+                    )
                     "openAndroidGame" -> result.success(
                         openAndroidGame(call.argument("packageName"))
                     )
@@ -97,17 +133,37 @@ class MainActivity : FlutterActivity() {
             }
     }
 
+    private fun allLaunchable() =
+        packageManager.queryIntentActivities(
+            Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0
+        ).distinctBy { it.activityInfo.packageName }
+
+    private fun listLaunchableApps(): List<Map<String, String>> {
+        val reserved = (emulators.map { it.packageName } +
+            remoteClients.map { it.packageName } + packageName).toSet()
+        return allLaunchable()
+            .filter { it.activityInfo.packageName !in reserved }
+            .sortedBy { it.loadLabel(packageManager).toString().lowercase(Locale.getDefault()) }
+            .map { resolved -> mapOf(
+                "packageName" to resolved.activityInfo.packageName,
+                "name" to resolved.loadLabel(packageManager).toString()
+            ) }
+    }
+
     private fun listAndroidGames(): List<Map<String, String>> {
-        // Android package visibility is intentionally limited to launchable apps.
-        // Some games don't declare CATEGORY_GAME; this is a conservative list.
-        val launchable = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-        return packageManager.queryIntentActivities(launchable, 0)
+        val reserved = (emulators.map { it.packageName } +
+            remoteClients.map { it.packageName } + packageName).toSet()
+        val manual = manuallyIncludedAndroidGames()
+        return allLaunchable()
             .filter { resolved ->
                 val info = resolved.activityInfo.applicationInfo
-                info.category == ApplicationInfo.CATEGORY_GAME ||
-                    (info.flags and ApplicationInfo.FLAG_IS_GAME) != 0
+                resolved.activityInfo.packageName !in reserved &&
+                    (
+                        resolved.activityInfo.packageName in manual ||
+                        info.category == ApplicationInfo.CATEGORY_GAME ||
+                        (info.flags and ApplicationInfo.FLAG_IS_GAME) != 0
+                    )
             }
-            .distinctBy { it.activityInfo.packageName }
             .sortedBy { it.loadLabel(packageManager).toString().lowercase(Locale.getDefault()) }
             .map { resolved ->
                 mapOf(
@@ -115,6 +171,33 @@ class MainActivity : FlutterActivity() {
                     "name" to resolved.loadLabel(packageManager).toString()
                 )
             }
+    }
+
+    private fun addAndroidGame(packageName: String?): Map<String, String> {
+        if (packageName.isNullOrBlank() ||
+            listLaunchableApps().none { it["packageName"] == packageName }) {
+            return mapOf("status" to "missing")
+        }
+        val changed = manuallyIncludedAndroidGames() + packageName
+        prefs.edit().putStringSet("manual_android_games", changed).apply()
+        return mapOf("status" to "added")
+    }
+
+    private fun openRemoteClient(packageName: String?): Map<String, String> {
+        if (remoteClients.none { it.packageName == packageName }) {
+            return mapOf("status" to "missing")
+        }
+        if (packageName == null || !isInstalled(packageName)) {
+            return mapOf("status" to "missing")
+        }
+        return try {
+            val intent = packageManager.getLaunchIntentForPackage(packageName)
+                ?: return mapOf("status" to "unsupported")
+            startActivity(intent)
+            mapOf("status" to "client_opened")
+        } catch (error: Exception) {
+            mapOf("status" to "unsupported", "detail" to (error.message ?: ""))
+        }
     }
 
     private fun openAndroidGame(packageName: String?): Map<String, String> {
