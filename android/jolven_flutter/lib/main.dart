@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
@@ -24,6 +26,11 @@ const _strings = <String, Map<String, String>>{
     'importFiles': 'Selecionar arquivos',
     'importFolder': 'Importar pasta',
     'platform': 'Definir console',
+    'setCover': 'Escolher capa local',
+    'setLabel': 'Escolher etiqueta de cartucho',
+    'clearCover': 'Remover capa',
+    'clearLabel': 'Remover etiqueta',
+    'useLabels': 'Exibir etiquetas',
     'favorite': 'Adicionar aos favoritos',
     'unfavorite': 'Remover dos favoritos',
     'preferred': 'Emulador preferido',
@@ -73,6 +80,11 @@ const _strings = <String, Map<String, String>>{
     'importFiles': 'Select files',
     'importFolder': 'Import folder',
     'platform': 'Set console',
+    'setCover': 'Choose local cover',
+    'setLabel': 'Choose cartridge label',
+    'clearCover': 'Remove cover',
+    'clearLabel': 'Remove label',
+    'useLabels': 'Show labels',
     'favorite': 'Add to favorites',
     'unfavorite': 'Remove from favorites',
     'preferred': 'Preferred emulator',
@@ -122,6 +134,11 @@ const _strings = <String, Map<String, String>>{
     'importFiles': 'Seleccionar archivos',
     'importFolder': 'Importar carpeta',
     'platform': 'Elegir consola',
+    'setCover': 'Elegir portada local',
+    'setLabel': 'Elegir etiqueta de cartucho',
+    'clearCover': 'Quitar portada',
+    'clearLabel': 'Quitar etiqueta',
+    'useLabels': 'Mostrar etiquetas',
     'favorite': 'Agregar a favoritos',
     'unfavorite': 'Quitar de favoritos',
     'preferred': 'Emulador preferido',
@@ -196,6 +213,7 @@ class _JolvenHomeState extends State<JolvenHome> {
   String? _activeCollectionId;
   bool _loading = false;
   bool _favoritesOnly = false;
+  bool _showLabels = false;
 
   String _t(String key) {
     final language = Localizations.localeOf(context).languageCode;
@@ -262,6 +280,24 @@ class _JolvenHomeState extends State<JolvenHome> {
           ? await _bridge.importFolder()
           : await _bridge.importRoms();
       if (selected.isNotEmpty && mounted) _message('${_t('imported')}: ${selected.length}');
+      if (mounted) await _refresh();
+    } catch (error) {
+      if (mounted) _message('${_t('error')}: $error');
+    }
+  }
+
+  Future<void> _selectArtwork(RomItem rom, String kind) async {
+    try {
+      await _bridge.pickArtwork(rom, kind);
+      if (mounted) await _refresh();
+    } catch (error) {
+      if (mounted) _message('${_t('error')}: $error');
+    }
+  }
+
+  Future<void> _clearArtwork(RomItem rom, String kind) async {
+    try {
+      await _bridge.clearArtwork(rom, kind);
       if (mounted) await _refresh();
     } catch (error) {
       if (mounted) _message('${_t('error')}: $error');
@@ -704,12 +740,31 @@ class _JolvenHomeState extends State<JolvenHome> {
               value: _favoritesOnly,
               onChanged: (checked) => setState(() => _favoritesOnly = checked),
             ),
+            SwitchListTile(
+              title: Text(_t('useLabels')),
+              value: _showLabels,
+              onChanged: (checked) => setState(() => _showLabels = checked),
+            ),
             for (final rom in _roms.where((rom) =>
               (!_favoritesOnly || rom.favorite) &&
               (activeCollection == null || activeCollection.contains('rom:${rom.uri}'))))
               Card(
                 child: ListTile(
-                  leading: Icon(rom.favorite ? Icons.favorite : Icons.videogame_asset),
+                  leading: Builder(builder: (context) {
+                    final artwork = _showLabels ? rom.labelPath : rom.coverPath;
+                    if (artwork == null) {
+                      return Icon(rom.favorite
+                          ? Icons.favorite : Icons.videogame_asset);
+                    }
+                    return Image.file(
+                      File(artwork),
+                      width: 52,
+                      height: 68,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, trace) =>
+                          const Icon(Icons.broken_image_outlined),
+                    );
+                  }),
                   title: Text(rom.name),
                   subtitle: Text(
                     rom.platformId == null
@@ -727,6 +782,10 @@ class _JolvenHomeState extends State<JolvenHome> {
                       if (value == 'platform') _setPlatform(rom);
                       if (value == 'preferred') _setPreferred(rom);
                       if (value == 'favorite') _toggleFavorite(rom);
+                      if (value == 'cover') _selectArtwork(rom, 'cover');
+                      if (value == 'label') _selectArtwork(rom, 'label');
+                      if (value == 'clearCover') _clearArtwork(rom, 'cover');
+                      if (value == 'clearLabel') _clearArtwork(rom, 'label');
                       if (value == 'collection') _toggleCollection('rom:${rom.uri}');
                       if (value == 'remove') _remove(rom);
                     },
@@ -736,6 +795,12 @@ class _JolvenHomeState extends State<JolvenHome> {
                       PopupMenuItem(value: 'preferred', child: Text(_t('preferred'))),
                       PopupMenuItem(value: 'favorite', child: Text(
                         _t(rom.favorite ? 'unfavorite' : 'favorite'))),
+                      PopupMenuItem(value: 'cover', child: Text(_t('setCover'))),
+                      PopupMenuItem(value: 'label', child: Text(_t('setLabel'))),
+                      if (rom.coverPath != null)
+                        PopupMenuItem(value: 'clearCover', child: Text(_t('clearCover'))),
+                      if (rom.labelPath != null)
+                        PopupMenuItem(value: 'clearLabel', child: Text(_t('clearLabel'))),
                       PopupMenuItem(value: 'collection',
                         child: Text(_t('addToCollection'))),
                       PopupMenuItem(value: 'remove', child: Text(_t('remove'))),

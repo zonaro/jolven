@@ -47,6 +47,18 @@ class AndroidBridge {
     });
   }
 
+  Future<String?> pickArtwork(RomItem rom, String kind) async {
+    return _channel.invokeMethod<String>('pickArtwork', {
+      'uri': rom.uri, 'kind': kind,
+    });
+  }
+
+  Future<bool> clearArtwork(RomItem rom, String kind) async {
+    return await _channel.invokeMethod<bool>('clearArtwork', {
+      'uri': rom.uri, 'kind': kind,
+    }) ?? false;
+  }
+
   Future<List<GameCollection>> listCollections() async {
     final rows = await _channel.invokeMethod<List<dynamic>>('listCollections') ?? [];
     return rows.map((row) => GameCollection.fromMap(row as Map)).toList();

@@ -68,6 +68,19 @@ void main() {
     expect(collection.contains('remote:com.limelight'), false);
   });
 
+  test('local covers and cartridge labels are independent', () {
+    final rom = RomItem.fromMap({
+      'uri': 'content://a/b', 'name': 'Homebrew.gba',
+      'coverPath': '/data/user/0/jolven/files/artwork/a-cover.png',
+      'labelPath': '/data/user/0/jolven/files/artwork/a-label.webp',
+    });
+    expect(rom.coverPath, isNot(equals(rom.labelPath)));
+    expect(RomItem.fromMap({
+      'uri': 'content://a/b', 'name': 'Homebrew.gba',
+      'coverPath': '', 'labelPath': ''
+    }).coverPath, null);
+  });
+
   test('native app identity is the actual package name', () {
     final game = AndroidGame.fromMap({
       'packageName': 'org.example.game',

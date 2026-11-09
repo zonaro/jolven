@@ -23,9 +23,12 @@ class MainActivity : FlutterActivity() {
     private val channelName = "jolven/external_emulators"
     private val selectRomRequest = 4083
     private val selectFolderRequest = 4084
+    private val selectArtworkRequest = 4085
     private val scanner = Executors.newSingleThreadExecutor()
     private var pendingImport: MethodChannel.Result? = null
     private var importMultiple = false
+    private var artworkRomUri: String? = null
+    private var artworkKind: String? = null
 
     private data class Emulator(
         val id: String,
@@ -51,6 +54,7 @@ class MainActivity : FlutterActivity() {
 
     private val prefs by lazy { getSharedPreferences("jolven_rom_catalog", MODE_PRIVATE) }
     private val collections by lazy { JolvenCollections(this) }
+    private val artworkStore by lazy { JolvenArtworkStore(filesDir) }
 
     private data class RemoteClient(
         val id: String, val name: String, val packageName: String
@@ -110,6 +114,12 @@ class MainActivity : FlutterActivity() {
                     "importRom" -> selectRom(result)
                     "importRoms" -> selectRom(result, multiple = true)
                     "importFolder" -> selectFolder(result)
+                    "pickArtwork" -> pickArtwork(
+                        call.argument("uri"), call.argument("kind"), result
+                    )
+                    "clearArtwork" -> result.success(
+                        clearArtwork(call.argument("uri"), call.argument("kind"))
+                    )
                     "updateRom" -> updateRom(call, result)
                     "listCollections" -> result.success(collections.all())
                     "createCollection" -> {
@@ -140,7 +150,13 @@ class MainActivity : FlutterActivity() {
                         if (uri.isNullOrBlank()) {
                             result.error("INVALID_URI", "Missing catalog URI", null)
                         } else {
-                            writeRoms(readRoms().filterNot { it["uri"] == uri })
+                            val entries = readRoms()
+                            val removing = entries.filter { it["uri"] == uri }
+                            writeRoms(entries.filterNot { it["uri"] == uri })
+                            for (record in removing) {
+                                artworkStore.deleteIfOwned(record["coverPath"])
+                                artworkStore.deleteIfOwned(record["labelPath"])
+                            }
                             result.success(null)
                         }
                     }
@@ -272,7 +288,9 @@ class MainActivity : FlutterActivity() {
                     "name" to value.optString("name").ifBlank { "ROM" },
                     "platformId" to value.optString("platformId"),
                     "emulatorPackage" to value.optString("emulatorPackage"),
-                    "favorite" to value.optString("favorite", "false")
+                    "favorite" to value.optString("favorite", "false"),
+                    "coverPath" to value.optString("coverPath"),
+                    "labelPath" to value.optString("labelPath")
                 )
             )
         }
@@ -381,14 +399,93 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    private fun pickArtwork(
+        romUri: String?, kind: String?, result: MethodChannel.Result
+    ) {
+        if (pendingImport != null) {
+            result.error("BUSY", "File picker is open", null)
+            return
+        }
+        if (romUri.isNullOrBlank() || readRoms().none { it["uri"] == romUri } ||
+            (kind != "cover" && kind != "label")) {
+            result.error("INVALID_ARTWORK", "ROM or artwork kind is invalid", null)
+            return
+        }
+        pendingImport = result
+        artworkRomUri = romUri
+        artworkKind = kind
+        try {
+            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "image/*"
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivityForResult(intent, selectArtworkRequest)
+        } catch (error: Exception) {
+            pendingImport = null
+            artworkRomUri = null
+            artworkKind = null
+            result.error("IMAGE_PICKER", error.message, null)
+        }
+    }
+
+    private fun clearArtwork(romUri: String?, kind: String?): Boolean {
+        if (romUri.isNullOrBlank() || (kind != "cover" && kind != "label")) return false
+        val key = if (kind == "cover") "coverPath" else "labelPath"
+        val entries = readRoms()
+        val target = entries.firstOrNull { it["uri"] == romUri } ?: return false
+        writeRoms(entries.map { if (it["uri"] == romUri) it + (key to "") else it })
+        artworkStore.deleteIfOwned(target[key])
+        return true
+    }
+
     @Deprecated("Using startActivityForResult for compatibility with FlutterActivity")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode != selectRomRequest && requestCode != selectFolderRequest) return
+        if (requestCode != selectRomRequest &&
+            requestCode != selectFolderRequest &&
+            requestCode != selectArtworkRequest) return
         val result = pendingImport ?: return
         pendingImport = null
         val multiple = importMultiple
         importMultiple = false
+
+        if (requestCode == selectArtworkRequest) {
+            val romUri = artworkRomUri
+            val kind = artworkKind
+            artworkRomUri = null
+            artworkKind = null
+            val selectedImage = data?.data
+            if (resultCode != Activity.RESULT_OK || selectedImage == null) {
+                result.success(null)
+                return
+            }
+            if (romUri.isNullOrBlank() || kind.isNullOrBlank()) {
+                result.error("INVALID_ARTWORK", "Selection expired", null)
+                return
+            }
+            scanner.execute {
+                try {
+                    val saved = artworkStore.save(contentResolver, selectedImage, romUri, kind)
+                    val key = if (kind == "cover") "coverPath" else "labelPath"
+                    val entries = readRoms()
+                    val previous = entries.firstOrNull { it["uri"] == romUri }
+                    if (previous == null) {
+                        artworkStore.deleteIfOwned(saved)
+                        runOnUiThread {
+                            result.error("ROM_REMOVED", "ROM was removed during selection", null)
+                        }
+                    } else {
+                        writeRoms(entries.map { if (it["uri"] == romUri) it + (key to saved) else it })
+                        if (previous[key] != saved) artworkStore.deleteIfOwned(previous[key])
+                        runOnUiThread { result.success(saved) }
+                    }
+                } catch (error: Exception) {
+                    runOnUiThread { result.error("ARTWORK_FAILED", error.message, null) }
+                }
+            }
+            return
+        }
 
         if (resultCode != Activity.RESULT_OK || data == null) {
             result.success(if (multiple) emptyList<Map<String, String>>() else null)
