@@ -58,8 +58,10 @@ class RomItem {
   factory RomItem.fromMap(Map<dynamic, dynamic> data) => RomItem(
         uri: data['uri'] as String,
         name: data['name'] as String,
-        platformId: data['platformId'] as String?,
-        emulatorPackage: data['emulatorPackage'] as String?,
+        platformId: (data['platformId'] as String?)?.isEmpty == true
+            ? null : data['platformId'] as String?,
+        emulatorPackage: (data['emulatorPackage'] as String?)?.isEmpty == true
+            ? null : data['emulatorPackage'] as String?,
         favorite: data['favorite'] == true || data['favorite'] == 'true',
         coverPath: (data['coverPath'] as String?)?.isEmpty == true
             ? null : data['coverPath'] as String?,

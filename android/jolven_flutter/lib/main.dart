@@ -72,6 +72,11 @@ const _strings = <String, Map<String, String>>{
     'retroGuideBody': 'Instale o RetroArch por um canal oficial e selecione os cores dentro dele. O Jolven não consegue confirmar se o core está instalado nem lê arquivos privados.',
     'coreUnverified': 'Core não verificado',
     'openGuide': 'Abrir guia oficial',
+    'search': 'Buscar jogos',
+    'allPlatforms': 'Todos os consoles',
+    'viewList': 'Lista',
+    'viewCover': 'Capas',
+    'viewLabel': 'Cartuchos',
     'gamepads': 'Controles conectados',
     'noGamepads': 'Nenhum gamepad detectado',
     'note': 'O Jolven não inclui emuladores, cores, jogos ou BIOS.',
@@ -138,6 +143,11 @@ const _strings = <String, Map<String, String>>{
     'retroGuideBody': 'Install RetroArch from an official source and choose cores inside it. Jolven cannot verify installed cores or read private app files.',
     'coreUnverified': 'Core not verified',
     'openGuide': 'Open official guide',
+    'search': 'Search games',
+    'allPlatforms': 'All consoles',
+    'viewList': 'List',
+    'viewCover': 'Covers',
+    'viewLabel': 'Cartridges',
     'gamepads': 'Connected gamepads',
     'noGamepads': 'No gamepad detected',
     'note': 'Jolven does not include emulators, cores, games or BIOS.',
@@ -204,6 +214,11 @@ const _strings = <String, Map<String, String>>{
     'retroGuideBody': 'Instala RetroArch desde una fuente oficial y elige los cores dentro de la aplicación. Jolven no puede verificar los cores ni leer archivos privados.',
     'coreUnverified': 'Core sin verificar',
     'openGuide': 'Abrir guía oficial',
+    'search': 'Buscar juegos',
+    'allPlatforms': 'Todas las consolas',
+    'viewList': 'Lista',
+    'viewCover': 'Portadas',
+    'viewLabel': 'Cartuchos',
     'gamepads': 'Mandos conectados',
     'noGamepads': 'No se detectaron mandos',
     'note': 'Jolven no incluye emuladores, núcleos, juegos ni BIOS.',
@@ -251,6 +266,9 @@ class _JolvenHomeState extends State<JolvenHome> {
   bool _loading = false;
   bool _favoritesOnly = false;
   bool _showLabels = false;
+  String _query = '';
+  String? _platformFilter;
+  String _romView = 'list';
 
   String _t(String key) {
     final language = Localizations.localeOf(context).languageCode;
@@ -733,10 +751,101 @@ class _JolvenHomeState extends State<JolvenHome> {
     }
   }
 
+  String _romConsole(RomItem rom) {
+    final system = rom.platformId ?? identifyPlatform(rom.name).confidentId;
+    return system == null ? _t('unknownPlatform') : platformLabel(system);
+  }
+
+  Widget _romArtwork(RomItem rom, {double width = 52, double height = 68}) {
+    final path = (_romView == 'label' || _showLabels)
+        ? rom.labelPath : rom.coverPath;
+    if (path == null) {
+      return Icon(rom.favorite ? Icons.favorite : Icons.videogame_asset, size: 36);
+    }
+    return Image.file(
+      File(path),
+      width: width, height: height,
+      fit: BoxFit.contain,
+      errorBuilder: (context, error, stack) =>
+          const Icon(Icons.broken_image_outlined),
+    );
+  }
+
+  Widget _romMenu(RomItem rom) => PopupMenuButton<String>(
+    onSelected: (value) {
+      if (value == 'play') _chooseEmulator(rom);
+      if (value == 'platform') _setPlatform(rom);
+      if (value == 'preferred') _setPreferred(rom);
+      if (value == 'retroAdvanced') _configureRetroArch(rom);
+      if (value == 'favorite') _toggleFavorite(rom);
+      if (value == 'cover') _selectArtwork(rom, 'cover');
+      if (value == 'label') _selectArtwork(rom, 'label');
+      if (value == 'clearCover') _clearArtwork(rom, 'cover');
+      if (value == 'clearLabel') _clearArtwork(rom, 'label');
+      if (value == 'collection') _toggleCollection('rom:${rom.uri}');
+      if (value == 'remove') _remove(rom);
+    },
+    itemBuilder: (context) => [
+      PopupMenuItem(value: 'play', child: Text(_t('play'))),
+      PopupMenuItem(value: 'platform', child: Text(_t('platform'))),
+      PopupMenuItem(value: 'preferred', child: Text(_t('preferred'))),
+      PopupMenuItem(value: 'retroAdvanced', child: Text(_t('retroAdvanced'))),
+      PopupMenuItem(value: 'favorite', child: Text(
+        _t(rom.favorite ? 'unfavorite' : 'favorite'))),
+      PopupMenuItem(value: 'cover', child: Text(_t('setCover'))),
+      PopupMenuItem(value: 'label', child: Text(_t('setLabel'))),
+      if (rom.coverPath != null)
+        PopupMenuItem(value: 'clearCover', child: Text(_t('clearCover'))),
+      if (rom.labelPath != null)
+        PopupMenuItem(value: 'clearLabel', child: Text(_t('clearLabel'))),
+      PopupMenuItem(value: 'collection', child: Text(_t('addToCollection'))),
+      PopupMenuItem(value: 'remove', child: Text(_t('remove'))),
+    ],
+  );
+
+  Widget _romListItem(RomItem rom) => Card(
+    child: ListTile(
+      leading: _romArtwork(rom),
+      title: Text(rom.name),
+      subtitle: Text(_romConsole(rom), maxLines: 1,
+        overflow: TextOverflow.ellipsis),
+      onTap: () => _chooseEmulator(rom),
+      trailing: _romMenu(rom),
+    ),
+  );
+
+  Widget _romGridItem(RomItem rom) => Card(
+    clipBehavior: Clip.antiAlias,
+    child: InkWell(
+      onTap: () => _chooseEmulator(rom),
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Column(children: [
+          Expanded(child: Center(child: _romArtwork(rom, width: 140, height: 150))),
+          Text(rom.name, maxLines: 2, overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center),
+          Row(children: [
+            Expanded(child: Text(_romConsole(rom), maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 10))),
+            _romMenu(rom),
+          ]),
+        ]),
+      ),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final installed = _emulators.where((e) => e.installed).toList();
     final activeCollection = _selectedCollection;
+    final visibleRoms = _roms.where((rom) =>
+      (!_favoritesOnly || rom.favorite) &&
+      (activeCollection == null || activeCollection.contains('rom:${rom.uri}')) &&
+      (_platformFilter == null ||
+        (rom.platformId ?? identifyPlatform(rom.name).confidentId) == _platformFilter) &&
+      (rom.name.toLowerCase().contains(_query.toLowerCase()))).toList()
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     return Scaffold(
       appBar: AppBar(
         title: Text(_t('title')),
@@ -796,6 +905,14 @@ class _JolvenHomeState extends State<JolvenHome> {
                     () => _activeCollectionId = collection.id),
                 ),
             ]),
+            const SizedBox(height: 12),
+            TextField(
+              decoration: InputDecoration(
+                labelText: _t('search'),
+                prefixIcon: const Icon(Icons.search),
+              ),
+              onChanged: (value) => setState(() => _query = value),
+            ),
             const SizedBox(height: 24),
             Text(_t('androidGames'), style: Theme.of(context).textTheme.titleLarge),
             Row(children: [
@@ -807,8 +924,9 @@ class _JolvenHomeState extends State<JolvenHome> {
             ]),
             if (_androidGames.isEmpty) ListTile(title: Text(_t('noGames'))),
             for (final game in _androidGames.where(
-              (game) => activeCollection == null ||
-                  activeCollection.contains('android:${game.packageName}')))
+              (game) => (activeCollection == null ||
+                  activeCollection.contains('android:${game.packageName}')) &&
+                  game.name.toLowerCase().contains(_query.toLowerCase())))
               ListTile(
                 leading: const Icon(Icons.smartphone),
                 title: Text(game.name),
@@ -830,7 +948,8 @@ class _JolvenHomeState extends State<JolvenHome> {
               ListTile(title: Text(_t('noRemote'))),
             for (final client in _remoteClients.where((client) =>
               client.installed && (activeCollection == null ||
-                  activeCollection.contains('remote:${client.packageName}'))))
+                  activeCollection.contains('remote:${client.packageName}')) &&
+                  client.name.toLowerCase().contains(_query.toLowerCase())))
               ListTile(
                 leading: const Icon(Icons.cast_connected),
                 title: Text(client.name),
@@ -858,71 +977,48 @@ class _JolvenHomeState extends State<JolvenHome> {
               value: _showLabels,
               onChanged: (checked) => setState(() => _showLabels = checked),
             ),
-            for (final rom in _roms.where((rom) =>
-              (!_favoritesOnly || rom.favorite) &&
-              (activeCollection == null || activeCollection.contains('rom:${rom.uri}'))))
-              Card(
-                child: ListTile(
-                  leading: Builder(builder: (context) {
-                    final artwork = _showLabels ? rom.labelPath : rom.coverPath;
-                    if (artwork == null) {
-                      return Icon(rom.favorite
-                          ? Icons.favorite : Icons.videogame_asset);
-                    }
-                    return Image.file(
-                      File(artwork),
-                      width: 52,
-                      height: 68,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, trace) =>
-                          const Icon(Icons.broken_image_outlined),
-                    );
-                  }),
-                  title: Text(rom.name),
-                  subtitle: Text(
-                    rom.platformId == null
-                        ? (identifyPlatform(rom.name).confidentId == null
-                            ? _t('unknownPlatform')
-                            : platformLabel(identifyPlatform(rom.name).confidentId))
-                        : platformLabel(rom.platformId),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  onTap: () => _chooseEmulator(rom),
-                  trailing: PopupMenuButton<String>(
-                    onSelected: (value) {
-                      if (value == 'play') _chooseEmulator(rom);
-                      if (value == 'platform') _setPlatform(rom);
-                      if (value == 'preferred') _setPreferred(rom);
-                      if (value == 'retroAdvanced') _configureRetroArch(rom);
-                      if (value == 'favorite') _toggleFavorite(rom);
-                      if (value == 'cover') _selectArtwork(rom, 'cover');
-                      if (value == 'label') _selectArtwork(rom, 'label');
-                      if (value == 'clearCover') _clearArtwork(rom, 'cover');
-                      if (value == 'clearLabel') _clearArtwork(rom, 'label');
-                      if (value == 'collection') _toggleCollection('rom:${rom.uri}');
-                      if (value == 'remove') _remove(rom);
-                    },
-                    itemBuilder: (context) => [
-                      PopupMenuItem(value: 'play', child: Text(_t('play'))),
-                      PopupMenuItem(value: 'platform', child: Text(_t('platform'))),
-                      PopupMenuItem(value: 'preferred', child: Text(_t('preferred'))),
-                      PopupMenuItem(value: 'retroAdvanced', child: Text(_t('retroAdvanced'))),
-                      PopupMenuItem(value: 'favorite', child: Text(
-                        _t(rom.favorite ? 'unfavorite' : 'favorite'))),
-                      PopupMenuItem(value: 'cover', child: Text(_t('setCover'))),
-                      PopupMenuItem(value: 'label', child: Text(_t('setLabel'))),
-                      if (rom.coverPath != null)
-                        PopupMenuItem(value: 'clearCover', child: Text(_t('clearCover'))),
-                      if (rom.labelPath != null)
-                        PopupMenuItem(value: 'clearLabel', child: Text(_t('clearLabel'))),
-                      PopupMenuItem(value: 'collection',
-                        child: Text(_t('addToCollection'))),
-                      PopupMenuItem(value: 'remove', child: Text(_t('remove'))),
-                    ],
-                  ),
-                ),
+            DropdownButton<String?>(
+              isExpanded: true,
+              value: _platformFilter,
+              items: [
+                DropdownMenuItem<String?>(value: null, child: Text(_t('allPlatforms'))),
+                for (final system in platforms)
+                  DropdownMenuItem<String?>(value: system.id, child: Text(system.label)),
+              ],
+              onChanged: (value) => setState(() => _platformFilter = value),
+            ),
+            Wrap(spacing: 8, children: [
+              ChoiceChip(
+                label: Text(_t('viewList')),
+                selected: _romView == 'list',
+                onSelected: (_) => setState(() => _romView = 'list'),
               ),
+              ChoiceChip(
+                label: Text(_t('viewCover')),
+                selected: _romView == 'cover',
+                onSelected: (_) => setState(() => _romView = 'cover'),
+              ),
+              ChoiceChip(
+                label: Text(_t('viewLabel')),
+                selected: _romView == 'label',
+                onSelected: (_) => setState(() => _romView = 'label'),
+              ),
+            ]),
+            if (_romView == 'list')
+              for (final rom in visibleRoms) _romListItem(rom),
+            if (_romView != 'list')
+              LayoutBuilder(builder: (context, constraints) => GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: constraints.maxWidth < 500 ? 175 : 220,
+                  childAspectRatio: 0.74,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                ),
+                itemCount: visibleRoms.length,
+                itemBuilder: (context, index) => _romGridItem(visibleRoms[index]),
+              )),
             const SizedBox(height: 20),
             Text(_t('gamepads'), style: Theme.of(context).textTheme.titleLarge),
             if (_gamepads.isEmpty) ListTile(title: Text(_t('noGamepads'))),
