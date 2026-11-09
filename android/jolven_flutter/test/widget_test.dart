@@ -14,6 +14,7 @@ void main() {
         case 'listEmulators':
         case 'listAndroidGames':
         case 'listRemoteClients':
+        case 'listCollections':
         case 'listRoms':
           return <Map<String, Object?>>[];
         default:

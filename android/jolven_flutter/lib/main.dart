@@ -29,6 +29,14 @@ const _strings = <String, Map<String, String>>{
     'preferred': 'Emulador preferido',
     'unknownPlatform': 'Console ainda não selecionado',
     'favoritesOnly': 'Somente favoritos',
+    'collections': 'Coleções',
+    'newCollection': 'Nova coleção',
+    'renameCollection': 'Renomear coleção',
+    'deleteCollection': 'Excluir coleção',
+    'addToCollection': 'Adicionar/remover da coleção',
+    'collectionName': 'Nome da coleção',
+    'save': 'Salvar',
+    'delete': 'Excluir',
     'allGames': 'Todos',
     'imported': 'Arquivos adicionados à biblioteca',
     'refresh': 'Atualizar',
@@ -69,6 +77,14 @@ const _strings = <String, Map<String, String>>{
     'preferred': 'Preferred emulator',
     'unknownPlatform': 'Console not selected',
     'favoritesOnly': 'Favorites only',
+    'collections': 'Collections',
+    'newCollection': 'New collection',
+    'renameCollection': 'Rename collection',
+    'deleteCollection': 'Delete collection',
+    'addToCollection': 'Add/remove from collection',
+    'collectionName': 'Collection name',
+    'save': 'Save',
+    'delete': 'Delete',
     'allGames': 'All',
     'imported': 'Files added to library',
     'refresh': 'Refresh',
@@ -109,6 +125,14 @@ const _strings = <String, Map<String, String>>{
     'preferred': 'Emulador preferido',
     'unknownPlatform': 'Consola sin seleccionar',
     'favoritesOnly': 'Solo favoritos',
+    'collections': 'Colecciones',
+    'newCollection': 'Nueva colección',
+    'renameCollection': 'Renombrar colección',
+    'deleteCollection': 'Borrar colección',
+    'addToCollection': 'Agregar/quitar de colección',
+    'collectionName': 'Nombre de colección',
+    'save': 'Guardar',
+    'delete': 'Borrar',
     'allGames': 'Todos',
     'imported': 'Archivos añadidos a biblioteca',
     'refresh': 'Actualizar',
@@ -165,6 +189,8 @@ class _JolvenHomeState extends State<JolvenHome> {
   List<RomItem> _roms = [];
   List<AndroidGame> _androidGames = [];
   List<RemoteClient> _remoteClients = [];
+  List<GameCollection> _collections = [];
+  String? _activeCollectionId;
   bool _loading = false;
   bool _favoritesOnly = false;
 
@@ -187,12 +213,14 @@ class _JolvenHomeState extends State<JolvenHome> {
       final roms = await _bridge.listRoms();
       final androidGames = await _bridge.listAndroidGames();
       final remoteClients = await _bridge.listRemoteClients();
+      final collections = await _bridge.listCollections();
       if (!mounted) return;
       setState(() {
         _emulators = emulators;
         _roms = roms;
         _androidGames = androidGames;
         _remoteClients = remoteClients;
+        _collections = collections;
       });
     } catch (error) {
       if (mounted) _message('${_t('error')}: $error');
@@ -320,6 +348,141 @@ class _JolvenHomeState extends State<JolvenHome> {
     }
   }
 
+  GameCollection? get _selectedCollection {
+    for (final collection in _collections) {
+      if (collection.id == _activeCollectionId) return collection;
+    }
+    return null;
+  }
+
+  Future<void> _createCollection() async {
+    var name = '';
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(_t('newCollection')),
+        content: TextField(
+          autofocus: true,
+          maxLength: 72,
+          decoration: InputDecoration(labelText: _t('collectionName')),
+          onChanged: (value) => name = value.trim(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(_t('cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, name),
+            child: Text(_t('save')),
+          ),
+        ],
+      ),
+    );
+    if (selected == null || selected.isEmpty) return;
+    try {
+      final collection = await _bridge.createCollection(selected);
+      if (mounted) {
+        await _refresh();
+        setState(() => _activeCollectionId = collection.id);
+      }
+    } catch (error) {
+      if (mounted) _message('${_t('error')}: $error');
+    }
+  }
+
+  Future<void> _renameCollection(GameCollection collection) async {
+    var title = collection.title;
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(_t('renameCollection')),
+        content: TextField(
+          autofocus: true,
+          maxLength: 72,
+          controller: TextEditingController(text: collection.title),
+          onChanged: (value) => title = value.trim(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(_t('cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, title),
+            child: Text(_t('save')),
+          ),
+        ],
+      ),
+    );
+    if (selected == null || selected.isEmpty) return;
+    try {
+      await _bridge.renameCollection(collection, selected);
+      if (mounted) await _refresh();
+    } catch (error) {
+      if (mounted) _message('${_t('error')}: $error');
+    }
+  }
+
+  Future<void> _deleteCollection(GameCollection collection) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(_t('deleteCollection')),
+        content: Text(collection.title),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(_t('cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(_t('delete')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await _bridge.deleteCollection(collection);
+      if (mounted) {
+        setState(() => _activeCollectionId = null);
+        await _refresh();
+      }
+    } catch (error) {
+      if (mounted) _message('${_t('error')}: $error');
+    }
+  }
+
+  Future<void> _toggleCollection(String ref) async {
+    if (_collections.isEmpty) {
+      await _createCollection();
+      return;
+    }
+    final selected = await showModalBottomSheet<GameCollection>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: ListView(shrinkWrap: true, children: [
+          ListTile(title: Text(_t('addToCollection'))),
+          for (final collection in _collections)
+            ListTile(
+              leading: Icon(collection.contains(ref)
+                  ? Icons.check_box : Icons.check_box_outline_blank),
+              title: Text(collection.title),
+              onTap: () => Navigator.pop(sheetContext, collection),
+            ),
+        ]),
+      ),
+    );
+    if (selected == null) return;
+    try {
+      await _bridge.toggleCollectionMember(selected, ref);
+      if (mounted) await _refresh();
+    } catch (error) {
+      if (mounted) _message('${_t('error')}: $error');
+    }
+  }
+
   Future<void> _addAndroidApp() async {
     try {
       final apps = await _bridge.listLaunchableApps();
@@ -421,6 +584,7 @@ class _JolvenHomeState extends State<JolvenHome> {
   @override
   Widget build(BuildContext context) {
     final installed = _emulators.where((e) => e.installed).toList();
+    final activeCollection = _selectedCollection;
     return Scaffold(
       appBar: AppBar(
         title: Text(_t('title')),
@@ -445,6 +609,41 @@ class _JolvenHomeState extends State<JolvenHome> {
             const SizedBox(height: 8),
             Text(_t('note'), style: Theme.of(context).textTheme.bodySmall),
             if (_loading) const LinearProgressIndicator(),
+            const SizedBox(height: 20),
+            Row(children: [
+              Expanded(child: Text(_t('collections'),
+                  style: Theme.of(context).textTheme.titleLarge)),
+              IconButton(
+                tooltip: _t('newCollection'),
+                icon: const Icon(Icons.playlist_add),
+                onPressed: _createCollection,
+              ),
+              if (activeCollection != null)
+                PopupMenuButton<String>(
+                  onSelected: (choice) {
+                    if (choice == 'rename') _renameCollection(activeCollection);
+                    if (choice == 'delete') _deleteCollection(activeCollection);
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(value: 'rename', child: Text(_t('renameCollection'))),
+                    PopupMenuItem(value: 'delete', child: Text(_t('deleteCollection'))),
+                  ],
+                ),
+            ]),
+            Wrap(spacing: 8, children: [
+              ChoiceChip(
+                label: Text(_t('allGames')),
+                selected: activeCollection == null,
+                onSelected: (_) => setState(() => _activeCollectionId = null),
+              ),
+              for (final collection in _collections)
+                ChoiceChip(
+                  label: Text(collection.title),
+                  selected: activeCollection?.id == collection.id,
+                  onSelected: (_) => setState(
+                    () => _activeCollectionId = collection.id),
+                ),
+            ]),
             const SizedBox(height: 24),
             Text(_t('androidGames'), style: Theme.of(context).textTheme.titleLarge),
             Row(children: [
@@ -455,27 +654,43 @@ class _JolvenHomeState extends State<JolvenHome> {
               )),
             ]),
             if (_androidGames.isEmpty) ListTile(title: Text(_t('noGames'))),
-            for (final game in _androidGames)
+            for (final game in _androidGames.where(
+              (game) => activeCollection == null ||
+                  activeCollection.contains('android:${game.packageName}')))
               ListTile(
                 leading: const Icon(Icons.smartphone),
                 title: Text(game.name),
                 subtitle: Text(game.packageName),
-                trailing: TextButton(
-                  onPressed: () => _openAndroidGame(game),
-                  child: Text(_t('openGame')),
+                trailing: PopupMenuButton<String>(
+                  onSelected: (value) {
+                    if (value == 'open') _openAndroidGame(game);
+                    if (value == 'collection') _toggleCollection('android:${game.packageName}');
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(value: 'open', child: Text(_t('openGame'))),
+                    PopupMenuItem(value: 'collection', child: Text(_t('addToCollection'))),
+                  ],
                 ),
               ),
             const SizedBox(height: 24),
             Text(_t('remote'), style: Theme.of(context).textTheme.titleLarge),
             if (!_remoteClients.any((client) => client.installed))
               ListTile(title: Text(_t('noRemote'))),
-            for (final client in _remoteClients.where((client) => client.installed))
+            for (final client in _remoteClients.where((client) =>
+              client.installed && (activeCollection == null ||
+                  activeCollection.contains('remote:${client.packageName}'))))
               ListTile(
                 leading: const Icon(Icons.cast_connected),
                 title: Text(client.name),
-                trailing: TextButton(
-                  onPressed: () => _openRemoteClient(client),
-                  child: Text(_t('openRemote')),
+                trailing: PopupMenuButton<String>(
+                  onSelected: (value) {
+                    if (value == 'open') _openRemoteClient(client);
+                    if (value == 'collection') _toggleCollection('remote:${client.packageName}');
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(value: 'open', child: Text(_t('openRemote'))),
+                    PopupMenuItem(value: 'collection', child: Text(_t('addToCollection'))),
+                  ],
                 ),
               ),
             const SizedBox(height: 24),
@@ -486,7 +701,9 @@ class _JolvenHomeState extends State<JolvenHome> {
               value: _favoritesOnly,
               onChanged: (checked) => setState(() => _favoritesOnly = checked),
             ),
-            for (final rom in _roms.where((rom) => !_favoritesOnly || rom.favorite))
+            for (final rom in _roms.where((rom) =>
+              (!_favoritesOnly || rom.favorite) &&
+              (activeCollection == null || activeCollection.contains('rom:${rom.uri}'))))
               Card(
                 child: ListTile(
                   leading: Icon(rom.favorite ? Icons.favorite : Icons.videogame_asset),
@@ -507,6 +724,7 @@ class _JolvenHomeState extends State<JolvenHome> {
                       if (value == 'platform') _setPlatform(rom);
                       if (value == 'preferred') _setPreferred(rom);
                       if (value == 'favorite') _toggleFavorite(rom);
+                      if (value == 'collection') _toggleCollection('rom:${rom.uri}');
                       if (value == 'remove') _remove(rom);
                     },
                     itemBuilder: (context) => [
@@ -515,6 +733,8 @@ class _JolvenHomeState extends State<JolvenHome> {
                       PopupMenuItem(value: 'preferred', child: Text(_t('preferred'))),
                       PopupMenuItem(value: 'favorite', child: Text(
                         _t(rom.favorite ? 'unfavorite' : 'favorite'))),
+                      PopupMenuItem(value: 'collection',
+                        child: Text(_t('addToCollection'))),
                       PopupMenuItem(value: 'remove', child: Text(_t('remove'))),
                     ],
                   ),

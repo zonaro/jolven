@@ -49,6 +49,7 @@ class MainActivity : FlutterActivity() {
     )
 
     private val prefs by lazy { getSharedPreferences("jolven_rom_catalog", MODE_PRIVATE) }
+    private val collections by lazy { JolvenCollections(this) }
 
     private data class RemoteClient(
         val id: String, val name: String, val packageName: String
@@ -108,6 +109,30 @@ class MainActivity : FlutterActivity() {
                     "importRoms" -> selectRom(result, multiple = true)
                     "importFolder" -> selectFolder(result)
                     "updateRom" -> updateRom(call, result)
+                    "listCollections" -> result.success(collections.all())
+                    "createCollection" -> {
+                        val name = call.argument<String>("title").orEmpty()
+                        val created = collections.create(name)
+                        if (created == null) result.error("INVALID_COLLECTION", "Invalid title or limit reached", null)
+                        else result.success(created)
+                    }
+                    "renameCollection" -> result.success(
+                        collections.rename(
+                            call.argument<String>("id").orEmpty(),
+                            call.argument<String>("title").orEmpty()
+                        )
+                    )
+                    "deleteCollection" -> result.success(
+                        collections.delete(call.argument<String>("id").orEmpty())
+                    )
+                    "toggleCollectionMember" -> {
+                        val state = collections.toggle(
+                            call.argument<String>("id").orEmpty(),
+                            call.argument<String>("ref").orEmpty()
+                        )
+                        if (state == null) result.error("INVALID_MEMBER", "Invalid collection/member", null)
+                        else result.success(state)
+                    }
                     "removeRom" -> {
                         val uri = call.argument<String>("uri")
                         if (uri.isNullOrBlank()) {

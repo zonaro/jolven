@@ -47,6 +47,35 @@ class AndroidBridge {
     });
   }
 
+  Future<List<GameCollection>> listCollections() async {
+    final rows = await _channel.invokeMethod<List<dynamic>>('listCollections') ?? [];
+    return rows.map((row) => GameCollection.fromMap(row as Map)).toList();
+  }
+
+  Future<GameCollection> createCollection(String title) async {
+    final data = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'createCollection', {'title': title});
+    return GameCollection.fromMap(data!);
+  }
+
+  Future<void> renameCollection(GameCollection collection, String title) async {
+    final ok = await _channel.invokeMethod<bool>(
+      'renameCollection', {'id': collection.id, 'title': title});
+    if (ok != true) throw StateError('Could not rename collection');
+  }
+
+  Future<void> deleteCollection(GameCollection collection) async {
+    final ok = await _channel.invokeMethod<bool>(
+      'deleteCollection', {'id': collection.id});
+    if (ok != true) throw StateError('Could not delete collection');
+  }
+
+  Future<bool> toggleCollectionMember(GameCollection collection, String ref) async {
+    return await _channel.invokeMethod<bool>(
+          'toggleCollectionMember', {'id': collection.id, 'ref': ref}) ??
+        false;
+  }
+
   Future<List<AndroidGame>> listAndroidGames() async {
     final rows = await _channel.invokeMethod<List<dynamic>>('listAndroidGames') ?? [];
     return rows.map((row) => AndroidGame.fromMap(row as Map)).toList();

@@ -63,6 +63,26 @@ class AndroidGame {
       );
 }
 
+class GameCollection {
+  const GameCollection({
+    required this.id,
+    required this.title,
+    required this.refs,
+  });
+
+  final String id;
+  final String title;
+  final List<String> refs;
+
+  factory GameCollection.fromMap(Map<dynamic, dynamic> data) => GameCollection(
+        id: data['id'] as String,
+        title: data['title'] as String,
+        refs: (data['refs'] as List<dynamic>).cast<String>(),
+      );
+
+  bool contains(String ref) => refs.contains(ref);
+}
+
 class RemoteClient {
   const RemoteClient({
     required this.id,

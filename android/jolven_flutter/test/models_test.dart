@@ -58,6 +58,16 @@ void main() {
     expect(client.packageName, 'com.limelight');
   });
 
+  test('collection membership uses stable scoped identifiers', () {
+    final collection = GameCollection.fromMap({
+      'id': 'collection-123',
+      'title': 'Retro',
+      'refs': ['rom:content://provider/document/123', 'android:org.example.game'],
+    });
+    expect(collection.contains('rom:content://provider/document/123'), true);
+    expect(collection.contains('remote:com.limelight'), false);
+  });
+
   test('native app identity is the actual package name', () {
     final game = AndroidGame.fromMap({
       'packageName': 'org.example.game',
