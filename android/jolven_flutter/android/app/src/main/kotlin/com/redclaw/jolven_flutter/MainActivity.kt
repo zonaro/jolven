@@ -269,8 +269,10 @@ class MainActivity : FlutterActivity() {
         null
     }
 
-    private fun listGamepads(): List<Map<String, String>> =
-        InputDevice.getDeviceIds().mapNotNull { InputDevice.getDevice(it) }
+    private fun listGamepads(): List<Map<String, String>> {
+        val manager = getSystemService(android.hardware.input.InputManager::class.java)
+            ?: return emptyList()
+        return manager.inputDeviceIds.mapNotNull { id -> manager.getInputDevice(id) }
             .filter { device ->
                 (device.sources and InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD ||
                     (device.sources and InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK ||
@@ -280,6 +282,7 @@ class MainActivity : FlutterActivity() {
             .map { device ->
                 mapOf("id" to device.id.toString(), "name" to device.name)
             }
+    }
 
     private fun openRetroArchGuide(): Map<String, String> {
         val link = Uri.parse("https://docs.libretro.com/guides/install-android/")
