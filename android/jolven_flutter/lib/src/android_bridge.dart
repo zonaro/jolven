@@ -24,6 +24,17 @@ class AndroidBridge {
     return row == null ? null : RomItem.fromMap(row);
   }
 
+  Future<List<AndroidGame>> listAndroidGames() async {
+    final rows = await _channel.invokeMethod<List<dynamic>>('listAndroidGames') ?? [];
+    return rows.map((row) => AndroidGame.fromMap(row as Map)).toList();
+  }
+
+  Future<LaunchOutcome> openAndroidGame(AndroidGame game) async {
+    final row = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'openAndroidGame', {'packageName': game.packageName});
+    return LaunchOutcome.fromMap(row ?? {});
+  }
+
   Future<void> removeRom(RomItem rom) async {
     // Removes only Jolven's catalog entry, never the original user file.
     await _channel.invokeMethod<void>('removeRom', {'uri': rom.uri});

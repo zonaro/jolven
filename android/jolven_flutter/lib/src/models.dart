@@ -39,6 +39,18 @@ class RomItem {
       );
 }
 
+class AndroidGame {
+  const AndroidGame({required this.packageName, required this.name});
+
+  final String packageName;
+  final String name;
+
+  factory AndroidGame.fromMap(Map<dynamic, dynamic> data) => AndroidGame(
+        packageName: data['packageName'] as String,
+        name: data['name'] as String,
+      );
+}
+
 class LaunchOutcome {
   const LaunchOutcome({required this.status, this.detail});
 

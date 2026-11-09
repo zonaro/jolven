@@ -50,3 +50,6 @@ Package is com.redclaw.jolven_flutter. Do not change package name without updati
 
 The OpenEmux Android project is a **UX reference**, not an SDK dependency:
 https://github.com/guilhermefeitosa66/openemux-android
+
+## Native Android games (first iteration)
+The hub also detects installed launchable apps that Android categorizes as games, via package visibility for MAIN/LAUNCHER. Some games are not tagged CATEGORY_GAME and may not appear; manual app addition and a richer catalog remain pending #82. Opening an Android game uses the OS launch intent, not a custom launcher or accessibility service.

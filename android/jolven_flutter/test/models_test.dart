@@ -29,6 +29,14 @@ void main() {
     expect(handoff.confirmedGameStarted, isFalse);
   });
 
+  test('installed Android game has its own package identifier', () {
+    final game = AndroidGame.fromMap({
+      'packageName': 'org.example.game',
+      'name': 'My game',
+    });
+    expect(game.packageName, 'org.example.game');
+  });
+
   test('ROM model stores only a user-granted document URI', () {
     final rom = RomItem.fromMap({
       'uri': 'content://provider/document/123',

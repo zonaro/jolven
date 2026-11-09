@@ -12,6 +12,9 @@ const _strings = <String, Map<String, String>>{
     'subtitle': 'Biblioteca e emuladores externos',
     'roms': 'Minhas ROMs',
     'emulators': 'Emuladores instalados',
+    'androidGames': 'Jogos Android',
+    'noGames': 'Nenhum jogo Android detectado (a classificação do sistema pode omitir alguns).',
+    'openGame': 'Abrir jogo',
     'import': 'Importar ROM',
     'refresh': 'Atualizar',
     'empty': 'Importe uma ROM de sua propriedade para começar.',
@@ -35,6 +38,9 @@ const _strings = <String, Map<String, String>>{
     'subtitle': 'Library and external emulators',
     'roms': 'My ROMs',
     'emulators': 'Installed emulators',
+    'androidGames': 'Android games',
+    'noGames': 'No Android games found (system classification may omit some).',
+    'openGame': 'Open game',
     'import': 'Import ROM',
     'refresh': 'Refresh',
     'empty': 'Import a ROM you own to get started.',
@@ -58,6 +64,9 @@ const _strings = <String, Map<String, String>>{
     'subtitle': 'Biblioteca y emuladores externos',
     'roms': 'Mis ROMs',
     'emulators': 'Emuladores instalados',
+    'androidGames': 'Juegos Android',
+    'noGames': 'No se encontraron juegos Android (la clasificación puede omitir algunos).',
+    'openGame': 'Abrir juego',
     'import': 'Importar ROM',
     'refresh': 'Actualizar',
     'empty': 'Importa una ROM propia para comenzar.',
@@ -111,6 +120,7 @@ class _JolvenHomeState extends State<JolvenHome> {
   final _bridge = const AndroidBridge();
   List<EmulatorInfo> _emulators = [];
   List<RomItem> _roms = [];
+  List<AndroidGame> _androidGames = [];
   bool _loading = false;
 
   String _t(String key) {
@@ -130,10 +140,12 @@ class _JolvenHomeState extends State<JolvenHome> {
     try {
       final emulators = await _bridge.listEmulators();
       final roms = await _bridge.listRoms();
+      final androidGames = await _bridge.listAndroidGames();
       if (!mounted) return;
       setState(() {
         _emulators = emulators;
         _roms = roms;
+        _androidGames = androidGames;
       });
     } catch (error) {
       if (mounted) _message('${_t('error')}: $error');
@@ -171,6 +183,15 @@ class _JolvenHomeState extends State<JolvenHome> {
       final outcome = await _bridge.openEmulator(emulator);
       if (!mounted) return;
       _message(outcome.status == 'emulator_opened' ? _t('manual') : _t('missing'));
+    } catch (error) {
+      if (mounted) _message('${_t('error')}: $error');
+    }
+  }
+
+  Future<void> _openAndroidGame(AndroidGame game) async {
+    try {
+      final result = await _bridge.openAndroidGame(game);
+      if (mounted && result.status != 'game_opened') _message(_t('missing'));
     } catch (error) {
       if (mounted) _message('${_t('error')}: $error');
     }
@@ -247,6 +268,19 @@ class _JolvenHomeState extends State<JolvenHome> {
             const SizedBox(height: 8),
             Text(_t('note'), style: Theme.of(context).textTheme.bodySmall),
             if (_loading) const LinearProgressIndicator(),
+            const SizedBox(height: 24),
+            Text(_t('androidGames'), style: Theme.of(context).textTheme.titleLarge),
+            if (_androidGames.isEmpty) ListTile(title: Text(_t('noGames'))),
+            for (final game in _androidGames)
+              ListTile(
+                leading: const Icon(Icons.smartphone),
+                title: Text(game.name),
+                subtitle: Text(game.packageName),
+                trailing: TextButton(
+                  onPressed: () => _openAndroidGame(game),
+                  child: Text(_t('openGame')),
+                ),
+              ),
             const SizedBox(height: 24),
             Text(_t('roms'), style: Theme.of(context).textTheme.titleLarge),
             if (_roms.isEmpty) ListTile(title: Text(_t('empty'))),

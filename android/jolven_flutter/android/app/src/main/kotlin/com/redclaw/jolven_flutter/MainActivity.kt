@@ -3,6 +3,8 @@ package com.redclaw.jolven_flutter
 import android.app.Activity
 import android.content.ClipData
 import android.content.Intent
+import android.content.pm.ApplicationInfo
+import java.util.Locale
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
@@ -58,6 +60,10 @@ class MainActivity : FlutterActivity() {
                         )
                     })
                     "listRoms" -> result.success(readRoms())
+                    "listAndroidGames" -> result.success(listAndroidGames())
+                    "openAndroidGame" -> result.success(
+                        openAndroidGame(call.argument("packageName"))
+                    )
                     "importRom" -> selectRom(result)
                     "removeRom" -> {
                         val uri = call.argument<String>("uri")
@@ -82,6 +88,41 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    private fun listAndroidGames(): List<Map<String, String>> {
+        // Android package visibility is intentionally limited to launchable apps.
+        // Some games don't declare CATEGORY_GAME; this is a conservative list.
+        val launchable = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        return packageManager.queryIntentActivities(launchable, 0)
+            .filter { resolved ->
+                val info = resolved.activityInfo.applicationInfo
+                info.category == ApplicationInfo.CATEGORY_GAME ||
+                    (info.flags and ApplicationInfo.FLAG_IS_GAME) != 0
+            }
+            .distinctBy { it.activityInfo.packageName }
+            .sortedBy { it.loadLabel(packageManager).toString().lowercase(Locale.getDefault()) }
+            .map { resolved ->
+                mapOf(
+                    "packageName" to resolved.activityInfo.packageName,
+                    "name" to resolved.loadLabel(packageManager).toString()
+                )
+            }
+    }
+
+    private fun openAndroidGame(packageName: String?): Map<String, String> {
+        if (packageName.isNullOrBlank() ||
+            listAndroidGames().none { it["packageName"] == packageName }) {
+            return mapOf("status" to "missing")
+        }
+        return try {
+            val launch = packageManager.getLaunchIntentForPackage(packageName)
+                ?: return mapOf("status" to "missing")
+            startActivity(launch)
+            mapOf("status" to "game_opened")
+        } catch (error: Exception) {
+            mapOf("status" to "missing", "detail" to (error.message ?: ""))
+        }
     }
 
     private fun isInstalled(packageName: String): Boolean = try {
