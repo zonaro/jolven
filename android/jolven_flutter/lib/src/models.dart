@@ -6,6 +6,7 @@ class EmulatorInfo {
     required this.packageName,
     required this.installed,
     required this.romLaunch,
+    this.versionName,
   });
 
   final String id;
@@ -15,6 +16,7 @@ class EmulatorInfo {
 
   /// One of manual, view_unverified. Never infer core support from package name.
   final String romLaunch;
+  final String? versionName;
 
   factory EmulatorInfo.fromMap(Map<dynamic, dynamic> data) => EmulatorInfo(
         id: data['id'] as String,
@@ -22,9 +24,12 @@ class EmulatorInfo {
         packageName: data['packageName'] as String,
         installed: data['installed'] == true,
         romLaunch: data['romLaunch'] as String? ?? 'manual',
+        versionName: data['versionName'] as String?,
       );
 
-  bool get canAttemptView => installed && romLaunch == 'view_unverified';
+  bool get canAttemptView =>
+      installed && (romLaunch == 'view_unverified' || romLaunch == 'view_documented');
+  bool get documentedIntegration => romLaunch == 'view_documented';
 }
 
 class RomItem {

@@ -54,6 +54,7 @@ const _strings = <String, Map<String, String>>{
     'error': 'Falha na operação',
     'select': 'Escolha um emulador instalado',
     'experimental': 'Tentar abrir ROM (experimental)',
+    'documented': 'Abertura documentada (confirmar no emulador)',
     'note': 'O Jolven não inclui emuladores, cores, jogos ou BIOS.',
   },
   'en': {
@@ -102,6 +103,7 @@ const _strings = <String, Map<String, String>>{
     'error': 'Operation failed',
     'select': 'Choose an installed emulator',
     'experimental': 'Try opening ROM (experimental)',
+    'documented': 'Documented launch (verify in emulator)',
     'note': 'Jolven does not include emulators, cores, games or BIOS.',
   },
   'es': {
@@ -150,6 +152,7 @@ const _strings = <String, Map<String, String>>{
     'error': 'Error en la operación',
     'select': 'Elige un emulador instalado',
     'experimental': 'Intentar abrir ROM (experimental)',
+    'documented': 'Inicio documentado (comprobar en emulador)',
     'note': 'Jolven no incluye emuladores, núcleos, juegos ni BIOS.',
   },
 };
@@ -554,7 +557,7 @@ class _JolvenHomeState extends State<JolvenHome> {
               ListTile(
                 leading: const Icon(Icons.sports_esports_outlined),
                 title: Text(e.name),
-                subtitle: Text(e.canAttemptView ? _t('experimental') : _t('manual')),
+                subtitle: Text(e.documentedIntegration ? _t('documented') : (e.canAttemptView ? _t('experimental') : _t('manual'))),
                 onTap: () => Navigator.pop(sheetContext, e),
               ),
           ],
@@ -747,7 +750,7 @@ class _JolvenHomeState extends State<JolvenHome> {
               ListTile(
                 leading: const Icon(Icons.gamepad_outlined),
                 title: Text(emulator.name),
-                subtitle: Text(emulator.packageName),
+                subtitle: Text('\${emulator.packageName} · \${emulator.versionName ?? ''}'),
                 trailing: TextButton(
                   onPressed: () => _openEmulator(emulator),
                   child: Text(_t('open')),

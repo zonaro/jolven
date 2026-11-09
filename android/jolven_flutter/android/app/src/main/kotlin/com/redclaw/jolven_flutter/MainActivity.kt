@@ -40,8 +40,9 @@ class MainActivity : FlutterActivity() {
         Emulator("retroarch64", "RetroArch 64", "com.retroarch.aarch64"),
         Emulator("retroarch32", "RetroArch 32", "com.retroarch.ra32"),
         Emulator("retroarch", "RetroArch", "com.retroarch"),
-        Emulator("ppsspp", "PPSSPP", "org.ppsspp.ppsspp", "view_unverified"),
-        Emulator("ppssppgold", "PPSSPP Gold", "org.ppsspp.ppssppgold", "view_unverified"),
+        Emulator("ppsspp", "PPSSPP", "org.ppsspp.ppsspp", "view_documented"),
+        Emulator("ppsspp-legacy", "PPSSPP Legacy", "org.ppsspp.ppsspplegacy", "view_documented"),
+        Emulator("ppssppgold", "PPSSPP Gold", "org.ppsspp.ppssppgold", "view_documented"),
         Emulator("dolphin", "Dolphin", "org.dolphinemu.dolphinemu", "view_unverified"),
         Emulator("mupen64", "Mupen64Plus FZ", "org.mupen64plusae.v3.fzurita"),
         Emulator("duckstation", "DuckStation", "org.duckstation.android"),
@@ -81,7 +82,8 @@ class MainActivity : FlutterActivity() {
                             "id" to e.id, "name" to e.name,
                             "packageName" to e.packageName,
                             "romLaunch" to e.romLaunch,
-                            "installed" to isInstalled(e.packageName)
+                            "installed" to isInstalled(e.packageName),
+                            "versionName" to (emulatorVersion(e.packageName) ?: "")
                         )
                     })
                     "listRoms" -> result.success(readRoms())
@@ -238,6 +240,12 @@ class MainActivity : FlutterActivity() {
         } catch (error: Exception) {
             mapOf("status" to "missing", "detail" to (error.message ?: ""))
         }
+    }
+
+    private fun emulatorVersion(packageName: String): String? = try {
+        packageManager.getPackageInfo(packageName, 0).versionName
+    } catch (_: Exception) {
+        null
     }
 
     private fun isInstalled(packageName: String): Boolean = try {
@@ -468,7 +476,8 @@ class MainActivity : FlutterActivity() {
         val emulator = emulators.firstOrNull { it.packageName == packageName }
             ?: return mapOf("status" to "missing")
         if (!isInstalled(emulator.packageName)) return mapOf("status" to "missing")
-        if (emulator.romLaunch != "view_unverified") {
+        if (emulator.romLaunch != "view_unverified" &&
+            emulator.romLaunch != "view_documented") {
             return mapOf("status" to "manual_only")
         }
         if (uriText == null || readRoms().none { it["uri"] == uriText }) {
@@ -485,7 +494,11 @@ class MainActivity : FlutterActivity() {
         // proof that the emulator opened the ROM or supports that file format.
         val intent = Intent(Intent.ACTION_VIEW).apply {
             data = uri
-            setPackage(emulator.packageName)
+            if (emulator.id.startsWith("ppsspp")) {
+                setClassName(emulator.packageName, "org.ppsspp.ppsspp.PpssppActivity")
+            } else {
+                setPackage(emulator.packageName)
+            }
             clipData = ClipData.newRawUri("rom", uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }

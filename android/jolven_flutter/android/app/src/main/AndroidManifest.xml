@@ -6,6 +6,7 @@
         <package android:name="com.retroarch.ra32" />
         <package android:name="org.ppsspp.ppsspp" />
         <package android:name="org.ppsspp.ppssppgold" />
+        <package android:name="org.ppsspp.ppsspplegacy" />
         <package android:name="org.dolphinemu.dolphinemu" />
         <package android:name="org.mupen64plusae.v3.fzurita" />
         <package android:name="org.duckstation.android" />
