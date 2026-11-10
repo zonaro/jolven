@@ -641,6 +641,7 @@ class CartridgesApplication(Adw.Application):
                 ("edit_game",),
                 ("add_to_sunshine",),
                 ("add_game", ("<primary>n",)),
+                ("import_rom", ("<primary><shift>r",)),
                 ("import", ("<primary>i",)),
                 ("remove_game_details_view", ("Delete",)),
                 ("remove_game",),
@@ -1026,6 +1027,13 @@ class CartridgesApplication(Adw.Application):
             return
 
         DetailsDialog().present(shared.win)
+
+    def on_import_rom_action(self, *_args: Any) -> None:
+        # The picker hands off to the existing DetailsDialog and Store, never
+        # creates a second game database.
+        from cartridges.importer.manual_rom_dialog import choose_manual_rom
+
+        choose_manual_rom(shared.win)
 
     def on_import_action(
         self, *_args: Any, on_finished: Optional[Callable[[], None]] = None
