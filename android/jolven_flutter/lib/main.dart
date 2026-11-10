@@ -11,6 +11,7 @@ import 'src/save_vault_page.dart';
 import 'src/firmware_guide_page.dart';
 import 'src/recording_page.dart';
 import 'src/emulator_actions.dart';
+import 'src/gamepad_diagnostics_page.dart';
 
 void main() => runApp(const JolvenApp());
 
@@ -85,6 +86,7 @@ const _strings = <String, Map<String, String>>{
     'viewCover': 'Capas',
     'viewLabel': 'Cartuchos',
     'gamepads': 'Controles conectados',
+    'gamepadDiagnostics': 'Testar controle',
     'noGamepads': 'Nenhum gamepad detectado',
     'note': 'O Jolven não inclui emuladores, cores, jogos ou BIOS.',
   },
@@ -158,6 +160,7 @@ const _strings = <String, Map<String, String>>{
     'viewCover': 'Covers',
     'viewLabel': 'Cartridges',
     'gamepads': 'Connected gamepads',
+    'gamepadDiagnostics': 'Test controller',
     'noGamepads': 'No gamepad detected',
     'note': 'Jolven does not include emulators, cores, games or BIOS.',
   },
@@ -231,6 +234,7 @@ const _strings = <String, Map<String, String>>{
     'viewCover': 'Portadas',
     'viewLabel': 'Cartuchos',
     'gamepads': 'Mandos conectados',
+    'gamepadDiagnostics': 'Probar mando',
     'noGamepads': 'No se detectaron mandos',
     'note': 'Jolven no incluye emuladores, núcleos, juegos ni BIOS.',
   },
@@ -513,6 +517,12 @@ class _JolvenHomeState extends State<JolvenHome> {
         ],
       ),
     );
+  }
+
+  void _openGamepadDiagnostics() {
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => GamepadDiagnosticsPage(gamepads: _gamepads),
+    ));
   }
 
   void _openEmulatorActions(EmulatorInfo emulator) {
@@ -1058,7 +1068,15 @@ class _JolvenHomeState extends State<JolvenHome> {
                 itemBuilder: (context, index) => _romGridItem(visibleRoms[index]),
               )),
             const SizedBox(height: 20),
-            Text(_t('gamepads'), style: Theme.of(context).textTheme.titleLarge),
+            Row(children: [
+              Expanded(child: Text(_t('gamepads'),
+                style: Theme.of(context).textTheme.titleLarge)),
+              TextButton.icon(
+                onPressed: _openGamepadDiagnostics,
+                icon: const Icon(Icons.tune),
+                label: Text(_t('gamepadDiagnostics')),
+              ),
+            ]),
             if (_gamepads.isEmpty) ListTile(title: Text(_t('noGamepads'))),
             for (final gamepad in _gamepads)
               ListTile(

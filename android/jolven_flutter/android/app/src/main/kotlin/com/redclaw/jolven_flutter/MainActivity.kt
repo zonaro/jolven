@@ -11,12 +11,15 @@ import android.provider.OpenableColumns
 import android.provider.DocumentsContract
 import android.media.projection.MediaProjectionManager
 import android.view.InputDevice
+import android.view.KeyEvent
+import android.view.MotionEvent
 import com.redclaw.jolven_flutter.rompatcher.SafRomPatchWorkflow
 import java.util.concurrent.Executors
 import java.security.MessageDigest
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import io.flutter.plugin.common.EventChannel
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -26,6 +29,8 @@ import org.json.JSONObject
  */
 class MainActivity : FlutterActivity() {
     private val channelName = "jolven/external_emulators"
+    private var gamepadSink: EventChannel.EventSink? = null
+    private var lastJoystickEventMs: Long = 0L
     private val selectRomRequest = 4083
     private val selectFolderRequest = 4084
     private val selectArtworkRequest = 4085
@@ -93,6 +98,17 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        EventChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "jolven/gamepad_diagnostics"
+        ).setStreamHandler(object : EventChannel.StreamHandler {
+            override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+                gamepadSink = events
+            }
+            override fun onCancel(arguments: Any?) {
+                gamepadSink = null
+            }
+        })
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
@@ -1016,7 +1032,45 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    /** Passive diagnostics only: Flutter and emulators keep normal input ownership. */
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if ((event.source and InputDevice.SOURCE_GAMEPAD) ==
+                InputDevice.SOURCE_GAMEPAD ||
+            (event.source and InputDevice.SOURCE_DPAD) ==
+                InputDevice.SOURCE_DPAD) {
+            if (event.action == KeyEvent.ACTION_DOWN ||
+                event.action == KeyEvent.ACTION_UP) {
+                gamepadSink?.success(mapOf(
+                    "type" to "key",
+                    "device" to (event.device?.name ?: "Gamepad"),
+                    "key" to KeyEvent.keyCodeToString(event.keyCode),
+                    "action" to (if (event.action == KeyEvent.ACTION_DOWN) "down" else "up")
+                ))
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    override fun onGenericMotionEvent(event: MotionEvent): Boolean {
+        if ((event.source and InputDevice.SOURCE_JOYSTICK) ==
+                InputDevice.SOURCE_JOYSTICK &&
+            event.actionMasked == MotionEvent.ACTION_MOVE) {
+            val now = android.os.SystemClock.uptimeMillis()
+            if (now - lastJoystickEventMs >= 65L) {
+                lastJoystickEventMs = now
+                gamepadSink?.success(mapOf(
+                    "type" to "joystick",
+                    "device" to (event.device?.name ?: "Gamepad"),
+                    "x" to event.getAxisValue(MotionEvent.AXIS_X),
+                    "y" to event.getAxisValue(MotionEvent.AXIS_Y)
+                ))
+            }
+        }
+        return super.onGenericMotionEvent(event)
+    }
+
     override fun onDestroy() {
+        gamepadSink = null
         pendingImport?.error("ACTIVITY_DESTROYED", "File selection cancelled", null)
         pendingImport = null
         scanner.shutdown()
