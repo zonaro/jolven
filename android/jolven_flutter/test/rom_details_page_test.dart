@@ -22,7 +22,11 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       locale: const Locale('pt'),
       supportedLocales: const [Locale('pt'), Locale('en'), Locale('es')],
-      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       home: RomDetailsPage(
         rom: rom, emulators: const [ppsspp],
         consoleDefaults: const {'psp': 'org.ppsspp.ppsspp'},
@@ -48,7 +52,11 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       locale: const Locale('en'),
       supportedLocales: const [Locale('pt'), Locale('en'), Locale('es')],
-      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       home: RomDetailsPage(
         rom: rom, emulators: const [],
         consoleDefaults: const {},
