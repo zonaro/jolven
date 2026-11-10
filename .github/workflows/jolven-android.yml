@@ -55,6 +55,20 @@ jobs:
       - name: Build debug APK
         working-directory: android/jolven_flutter
         run: flutter build apk --debug
+      - name: Ensure APK never bundles emulator engines or cores
+        working-directory: android/jolven_flutter
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk=build/app/outputs/flutter-apk/app-debug.apk
+          test -f "$apk"
+          unzip -Z1 "$apk" > /tmp/jolven-apk-entries.txt
+          if grep -iE '(^|/)(libretro[^/]*\\.so|retroarch[^/]*\\.so|cores/)' /tmp/jolven-apk-entries.txt; then
+            echo "::error::Emulator/core payload detected in Jolven APK"
+            exit 1
+          fi
+          echo "Frontend-only APK check passed (no RetroArch/libretro/core binaries)"
+
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
