@@ -69,7 +69,7 @@ class RomDetailsPage extends StatelessWidget {
       child: Image.file(
         File(path),
         width: 168, height: height, fit: BoxFit.contain,
-        errorBuilder: (_, _, _) => SizedBox(
+        errorBuilder: (context, error, stack) => SizedBox(
           width: 168, height: height,
           child: const Center(child: Icon(Icons.broken_image_outlined, size: 54)),
         ),
