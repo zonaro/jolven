@@ -124,6 +124,22 @@ void main() {
     expect(active.recording, true);
   });
 
+  test('ROM fingerprint is only displayed when actually computed', () {
+    final fresh = RomItem.fromMap({
+      'uri': 'content://provider/rom/1',
+      'name': 'homebrew.nes',
+    });
+    expect(fresh.sha256, null);
+    final scanned = RomItem.fromMap({
+      'uri': 'content://provider/rom/1',
+      'name': 'homebrew.nes',
+      'sha256': 'a' * 64,
+      'sizeBytes': '123',
+    });
+    expect(scanned.sha256, 'a' * 64);
+    expect(scanned.sizeBytes, 123);
+  });
+
   test('native app identity is the actual package name', () {
     final game = AndroidGame.fromMap({
       'packageName': 'org.example.game',

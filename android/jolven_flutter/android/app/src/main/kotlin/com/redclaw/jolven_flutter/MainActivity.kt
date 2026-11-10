@@ -125,6 +125,7 @@ class MainActivity : FlutterActivity() {
                         )
                     })
                     "listRoms" -> result.success(readRoms())
+                    "fingerprintRom" -> fingerprintRom(call.argument("uri"), result)
                     "listAndroidGames" -> result.success(listAndroidGames())
                     "listLaunchableApps" -> result.success(listLaunchableApps())
                     "addAndroidGame" -> {
@@ -377,11 +378,57 @@ class MainActivity : FlutterActivity() {
                     "coverPath" to value.optString("coverPath"),
                     "labelPath" to value.optString("labelPath"),
                     "retroCorePath" to value.optString("retroCorePath"),
-                    "retroRomPath" to value.optString("retroRomPath")
+                    "retroRomPath" to value.optString("retroRomPath"),
+                    "sha256" to value.optString("sha256"),
+                    "sizeBytes" to value.optString("sizeBytes")
                 )
             )
         }
         return result
+    }
+
+    private fun fingerprintRom(uriText: String?, result: MethodChannel.Result) {
+        val known = readRoms().any { it["uri"] == uriText }
+        if (uriText.isNullOrBlank() || !known) {
+            result.error("ROM_NOT_FOUND", "ROM not in local catalog", null)
+            return
+        }
+        val uri = Uri.parse(uriText)
+        scanner.execute {
+            try {
+                val input = contentResolver.openInputStream(uri)
+                    ?: error("Document is no longer available")
+                val digest = input.use { RomFingerprint.digest(it) }
+                runOnUiThread {
+                    // Refresh the current record; never overwrite user edits
+                    // made to favorites, platform or artwork during hashing.
+                    val entries = readRoms()
+                    if (entries.none { it["uri"] == uriText }) {
+                        result.error("ROM_REMOVED", "ROM no longer in catalog", null)
+                    } else {
+                        writeRoms(entries.map { record ->
+                            if (record["uri"] != uriText) record
+                            else record + mapOf(
+                                "sha256" to digest.sha256,
+                                "sizeBytes" to digest.size.toString()
+                            )
+                        })
+                        result.success(mapOf(
+                            "sha256" to digest.sha256,
+                            "sizeBytes" to digest.size.toString()
+                        ))
+                    }
+                }
+            } catch (_: Exception) {
+                runOnUiThread {
+                    result.error(
+                        "FINGERPRINT_FAILED",
+                        "ROM unreadable, permission revoked or exceeds 512 MiB",
+                        null
+                    )
+                }
+            }
+        }
     }
 
     private fun writeRoms(roms: List<Map<String, String>>) {

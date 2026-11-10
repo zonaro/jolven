@@ -43,6 +43,8 @@ class RomItem {
     this.labelPath,
     this.retroCorePath,
     this.retroRomPath,
+    this.sha256,
+    this.sizeBytes,
   });
 
   final String uri;
@@ -54,6 +56,8 @@ class RomItem {
   final String? labelPath;
   final String? retroCorePath;
   final String? retroRomPath;
+  final String? sha256;
+  final int? sizeBytes;
 
   factory RomItem.fromMap(Map<dynamic, dynamic> data) => RomItem(
         uri: data['uri'] as String,
@@ -71,6 +75,9 @@ class RomItem {
             ? null : data['retroCorePath'] as String?,
         retroRomPath: (data['retroRomPath'] as String?)?.isEmpty == true
             ? null : data['retroRomPath'] as String?,
+        sha256: (data['sha256'] as String?)?.isEmpty == true
+            ? null : data['sha256'] as String?,
+        sizeBytes: int.tryParse(data['sizeBytes']?.toString() ?? ''),
       );
 }
 

@@ -23,6 +23,10 @@ const _strings = <String, Map<String, String>>{
     'recorder': 'Gravador de tela',
     'subtitle': 'Biblioteca e emuladores externos',
     'roms': 'Minhas ROMs',
+    'romHash': 'Calcular SHA-256',
+    'hashComplete': 'Identidade SHA-256 calculada',
+    'hashSizeLimit': 'Limite de 512 MiB por arquivo',
+
     'emulators': 'Emuladores instalados',
     'emulatorActions': 'Guia de ações do emulador',
     'androidGames': 'Jogos Android',
@@ -98,6 +102,10 @@ const _strings = <String, Map<String, String>>{
     'recorder': 'Screen recorder',
     'subtitle': 'Library and external emulators',
     'roms': 'My ROMs',
+    'romHash': 'Compute SHA-256',
+    'hashComplete': 'SHA-256 identity computed',
+    'hashSizeLimit': '512 MiB per-file limit',
+
     'emulators': 'Installed emulators',
     'emulatorActions': 'Emulator action guide',
     'androidGames': 'Android games',
@@ -173,6 +181,10 @@ const _strings = <String, Map<String, String>>{
     'recorder': 'Grabador de pantalla',
     'subtitle': 'Biblioteca y emuladores externos',
     'roms': 'Mis ROMs',
+    'romHash': 'Calcular SHA-256',
+    'hashComplete': 'Identidad SHA-256 calculada',
+    'hashSizeLimit': 'Límite de 512 MiB por archivo',
+
     'emulators': 'Emuladores instalados',
     'emulatorActions': 'Guía de acciones del emulador',
     'androidGames': 'Juegos Android',
@@ -284,6 +296,7 @@ class _JolvenHomeState extends State<JolvenHome> {
   List<GamepadInfo> _gamepads = [];
   String? _activeCollectionId;
   bool _loading = false;
+  String? _hashingUri;
   bool _favoritesOnly = false;
   bool _showLabels = false;
   String _query = '';
@@ -378,6 +391,23 @@ class _JolvenHomeState extends State<JolvenHome> {
       if (mounted) await _refresh();
     } catch (error) {
       if (mounted) _message('${_t('error')}: $error');
+    }
+  }
+
+  Future<void> _fingerprintRom(RomItem rom) async {
+    if (_hashingUri != null) return;
+    setState(() => _hashingUri = rom.uri);
+    try {
+      final digest = await _bridge.fingerprintRom(rom);
+      if (!mounted) return;
+      _message('${_t('hashComplete')}: ${digest.substring(0, 12)}…');
+      await _refresh();
+    } catch (_) {
+      if (mounted) {
+        _message('${_t('error')}: ${_t('hashSizeLimit')}');
+      }
+    } finally {
+      if (mounted) setState(() => _hashingUri = null);
     }
   }
 
@@ -822,6 +852,7 @@ class _JolvenHomeState extends State<JolvenHome> {
       if (value == 'clearLabel') _clearArtwork(rom, 'label');
       if (value == 'collection') _toggleCollection('rom:${rom.uri}');
       if (value == 'remove') _remove(rom);
+      if (value == 'hash') _fingerprintRom(rom);
     },
     itemBuilder: (context) => [
       PopupMenuItem(value: 'play', child: Text(_t('play'))),
@@ -837,6 +868,7 @@ class _JolvenHomeState extends State<JolvenHome> {
       if (rom.labelPath != null)
         PopupMenuItem(value: 'clearLabel', child: Text(_t('clearLabel'))),
       PopupMenuItem(value: 'collection', child: Text(_t('addToCollection'))),
+      PopupMenuItem(value: 'hash', child: Text(_t('romHash'))),
       PopupMenuItem(value: 'remove', child: Text(_t('remove'))),
     ],
   );
@@ -845,8 +877,10 @@ class _JolvenHomeState extends State<JolvenHome> {
     child: ListTile(
       leading: _romArtwork(rom),
       title: Text(rom.name),
-      subtitle: Text(_romConsole(rom), maxLines: 1,
-        overflow: TextOverflow.ellipsis),
+      subtitle: Text(rom.sha256 == null
+          ? _romConsole(rom)
+          : '${_romConsole(rom)} · SHA-256 ${rom.sha256!.substring(0, 12)}…',
+          maxLines: 1, overflow: TextOverflow.ellipsis),
       onTap: () => _chooseEmulator(rom),
       trailing: _romMenu(rom),
     ),
