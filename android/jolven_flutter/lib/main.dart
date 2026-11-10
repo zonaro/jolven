@@ -15,6 +15,7 @@ import 'src/gamepad_diagnostics_page.dart';
 import 'src/nds_external_layout_guide.dart';
 import 'src/retroachievements_page.dart';
 import 'src/overlay_editor_page.dart';
+import 'src/nearby_receive_page.dart';
 
 void main() => runApp(const JolvenApp());
 
@@ -33,6 +34,7 @@ const _strings = <String, Map<String, String>>{
     'androidGames': 'Jogos Android',
     'addAndroid': 'Adicionar app instalado',
     'remote': 'Remote Play',
+    'nearbyReceive': 'Receber arquivos do PC',
     'noRemote': 'Instale Moonlight, Steam Link ou outro cliente de streaming.',
     'openRemote': 'Abrir cliente',
     'noGames': 'Nenhum jogo Android detectado (a classificação do sistema pode omitir alguns).',
@@ -118,6 +120,7 @@ const _strings = <String, Map<String, String>>{
     'androidGames': 'Android games',
     'addAndroid': 'Add installed app',
     'remote': 'Remote Play',
+    'nearbyReceive': 'Receive files from PC',
     'noRemote': 'Install Moonlight, Steam Link or another streaming client.',
     'openRemote': 'Open client',
     'noGames': 'No Android games found (system classification may omit some).',
@@ -203,6 +206,7 @@ const _strings = <String, Map<String, String>>{
     'androidGames': 'Juegos Android',
     'addAndroid': 'Agregar app instalada',
     'remote': 'Juego remoto',
+    'nearbyReceive': 'Recibir archivos del PC',
     'noRemote': 'Instala Moonlight, Steam Link u otro cliente de streaming.',
     'openRemote': 'Abrir cliente',
     'noGames': 'No se encontraron juegos Android (la clasificación puede omitir algunos).',
@@ -1000,6 +1004,15 @@ class _JolvenHomeState extends State<JolvenHome> {
       appBar: AppBar(
         title: Text(_t('title')),
         actions: [
+          IconButton(
+            tooltip: _t('nearbyReceive'),
+            icon: const Icon(Icons.download_for_offline_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const NearbyReceivePage(),
+              ),
+            ),
+          ),
           PopupMenuButton<String>(
             tooltip: 'Tools',
             icon: const Icon(Icons.tune),

@@ -8,6 +8,26 @@ class AndroidBridge {
 
   static const MethodChannel _channel = MethodChannel('jolven/external_emulators');
 
+  Future<String> nearbyCacheDir() async {
+    final dir = await _channel.invokeMethod<String>('nearbyCacheDir');
+    if (dir == null || dir.isEmpty) {
+      throw StateError('Android cache directory is unavailable');
+    }
+    return dir;
+  }
+
+  Future<bool> exportNearbyFile({
+    required String path,
+    required String name,
+    required String sha256,
+  }) async {
+    final result = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'exportNearbyFile',
+      {'path': path, 'name': name, 'sha256': sha256},
+    );
+    return result?['status'] == 'saved';
+  }
+
   Future<bool> exportOverlayZip(String config, Uint8List png) async {
     final result = await _channel.invokeMethod<Map<dynamic, dynamic>>(
       'exportOverlayZip', {'config': config, 'png': png},

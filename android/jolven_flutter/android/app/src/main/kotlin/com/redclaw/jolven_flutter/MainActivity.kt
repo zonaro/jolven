@@ -31,6 +31,7 @@ import org.json.JSONObject
  */
 class MainActivity : FlutterActivity() {
     private val channelName = "jolven/external_emulators"
+    private val nearbyExport by lazy { NearbyExportBridge(this) }
     private var gamepadSink: EventChannel.EventSink? = null
     private var lastJoystickEventMs: Long = 0L
     private val selectRomRequest = 4083
@@ -118,6 +119,13 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
+                    "nearbyCacheDir" -> result.success(nearbyExport.cacheDir())
+                    "exportNearbyFile" -> nearbyExport.export(
+                        call.argument("path"),
+                        call.argument("name"),
+                        call.argument("sha256"),
+                        result
+                    )
                     "listGamepads" -> result.success(listGamepads())
                     "openRetroArchGuide" -> result.success(openRetroArchGuide())
                     "listEmulators" -> result.success(emulators.map { e ->
@@ -883,6 +891,7 @@ class MainActivity : FlutterActivity() {
     @Deprecated("Using startActivityForResult for compatibility with FlutterActivity")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (nearbyExport.onActivityResult(requestCode, resultCode, data)) return
         if (requestCode != selectRomRequest &&
             requestCode != selectFolderRequest &&
             requestCode != selectArtworkRequest &&
@@ -1283,6 +1292,7 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onDestroy() {
+        nearbyExport.cancel()
         gamepadSink = null
         pendingImport?.error("ACTIVITY_DESTROYED", "File selection cancelled", null)
         pendingImport = null
