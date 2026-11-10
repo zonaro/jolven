@@ -24,6 +24,17 @@ class AndroidBridge {
     return row == null ? null : RomItem.fromMap(row);
   }
 
+  Future<String?> pickUserFile() =>
+      _channel.invokeMethod<String>('pickUserFile');
+
+  Future<Map<String, String>> inspectUserFile(String uri) async {
+    final row = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'hashUserFile', {'uri': uri});
+    return row?.map((key, value) =>
+            MapEntry(key.toString(), value.toString())) ??
+        <String, String>{};
+  }
+
   Future<List<SaveFileRecord>> listSavedFiles() async {
     final rows = await _channel.invokeMethod<List<dynamic>>('listSavedFiles') ?? [];
     return rows.map((row) => SaveFileRecord.fromMap(row as Map)).toList();

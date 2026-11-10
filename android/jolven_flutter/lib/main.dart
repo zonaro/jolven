@@ -8,6 +8,7 @@ import 'src/models.dart';
 import 'src/platform_catalog.dart';
 import 'src/patcher_page.dart';
 import 'src/save_vault_page.dart';
+import 'src/firmware_guide_page.dart';
 
 void main() => runApp(const JolvenApp());
 
@@ -852,6 +853,15 @@ class _JolvenHomeState extends State<JolvenHome> {
       appBar: AppBar(
         title: Text(_t('title')),
         actions: [
+          IconButton(
+            tooltip: 'BIOS / Firmware',
+            icon: const Icon(Icons.shield_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (context) => const FirmwareGuidePage(),
+              ),
+            ),
+          ),
           IconButton(
             tooltip: 'Save Vault',
             icon: const Icon(Icons.save_outlined),

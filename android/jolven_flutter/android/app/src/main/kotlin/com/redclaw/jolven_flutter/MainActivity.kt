@@ -12,6 +12,7 @@ import android.provider.DocumentsContract
 import android.view.InputDevice
 import com.redclaw.jolven_flutter.rompatcher.SafRomPatchWorkflow
 import java.util.concurrent.Executors
+import java.security.MessageDigest
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -140,6 +141,8 @@ class MainActivity : FlutterActivity() {
                     "deleteSaveFile" -> result.success(
                         saveVault.delete(call.argument("id") ?: "")
                     )
+                    "pickUserFile" -> pickPatchFile(result)
+                    "hashUserFile" -> hashUserFile(call.argument("uri"), result)
                     "pickPatchFile" -> pickPatchFile(result)
                     "exportPatchedRom" -> exportPatchedRom(
                         call.argument("romUri"),
@@ -465,6 +468,42 @@ class MainActivity : FlutterActivity() {
         } catch (error: Exception) {
             pendingImport = null
             result.error("PICKER_UNAVAILABLE", error.message, null)
+        }
+    }
+
+    private fun hashUserFile(uriText: String?, result: MethodChannel.Result) {
+        if (uriText.isNullOrBlank() || !uriText.startsWith("content://")) {
+            result.error("INVALID_FILE", "Select file via SAF", null)
+            return
+        }
+        scanner.execute {
+            try {
+                val uri = Uri.parse(uriText)
+                val digest = MessageDigest.getInstance("SHA-256")
+                var size = 0L
+                val stream = contentResolver.openInputStream(uri)
+                    ?: error("File cannot be read")
+                stream.use { input ->
+                    val buffer = ByteArray(32 * 1024)
+                    while (true) {
+                        val length = input.read(buffer)
+                        if (length < 0) break
+                        size += length
+                        require(size <= 64L * 1024L * 1024L) {
+                            "File exceeds 64 MiB inspection limit"
+                        }
+                        digest.update(buffer, 0, length)
+                    }
+                }
+                val checksum = digest.digest().joinToString("") {
+                    "%02x".format(it)
+                }
+                runOnUiThread {
+                    result.success(mapOf("sha256" to checksum, "sizeBytes" to size.toString()))
+                }
+            } catch (error: Exception) {
+                runOnUiThread { result.error("HASH_FAILED", error.message, null) }
+            }
         }
     }
 
