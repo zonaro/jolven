@@ -41,9 +41,11 @@ jobs:
         run: flutter test
       - name: Kotlin ROM patcher unit tests
         working-directory: android/jolven_flutter/android
-        run: |
-          echo 'dependencies { testImplementation("junit:junit:4.13.2") }' >> app/build.gradle.kts
-          ./gradlew testDebugUnitTest --no-daemon
+        run: ./gradlew testDebugUnitTest --no-daemon
+      - name: Print Kotlin test report on failure
+        if: failure()
+        working-directory: android/jolven_flutter/android
+        run: find app/build/test-results/testDebugUnitTest -name 'TEST-*.xml' -type f -exec cat {} \; || true
       - name: Build debug APK
         working-directory: android/jolven_flutter
         run: flutter build apk --debug
