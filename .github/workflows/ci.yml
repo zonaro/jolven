@@ -18,7 +18,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Test ROM transfer and RetroArch diagnostics
-        run: python -m unittest tests.test_retroarch_diagnostics tests.test_nearby_manifest -v
+        run: python -m unittest tests.test_retroarch_diagnostics tests.test_nearby_manifest tests.test_retroarch_nci -v
 
   flatpak:
     name: Flatpak

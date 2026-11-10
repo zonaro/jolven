@@ -44,6 +44,7 @@ from cartridges.utils.integrations import (
 )
 from cartridges.utils.na_tela import entregar_na_tela
 from cartridges.utils.retroarch_diagnostics import inspect_retroarch
+from cartridges.utils.retroarch_controls_dialog import open_retroarch_controls
 
 # O launcher roda ``gettext.install`` antes de importar qualquer módulo do
 # app; o fallback mantém este módulo importável em testes e ferramentas sem
@@ -158,11 +159,13 @@ class IntegrationsPage(Adw.NavigationPage):
             linha.add_suffix(self._rotulo_status(_("Instalado (nativo)")))
             if integracao.chave == "retroarch":
                 self._adicionar_diagnostico_retroarch(linha)
+                self._adicionar_controles_retroarch(linha)
             return linha
         if estado == "flatpak":
             linha.add_suffix(self._rotulo_status(_("Instalado via Flatpak")))
             if integracao.chave == "retroarch":
                 self._adicionar_diagnostico_retroarch(linha)
+                self._adicionar_controles_retroarch(linha)
             return linha
         if not integracao.app_id_flatpak:
             # Entradas sem app id (Flatpak, GameMode, Waydroid…) só informam.
@@ -188,6 +191,22 @@ class IntegrationsPage(Adw.NavigationPage):
         linha.add_suffix(espinha)
         linha.add_suffix(botao)
         return linha
+
+    def _adicionar_controles_retroarch(self, linha: Adw.ActionRow) -> None:
+        button = Gtk.Button(
+            label=_("Ações"),
+            valign=Gtk.Align.CENTER,
+            tooltip_text=_("Controles opcionais do RetroArch via localhost"),
+        )
+        button.connect("clicked", self._abrir_controles_retroarch)
+        linha.add_suffix(button)
+
+    def _abrir_controles_retroarch(self, _button: Gtk.Button) -> None:
+        parent = self.get_root()
+        if not isinstance(parent, Gtk.Window):
+            self._aviso(_("Janela não está disponível"))
+            return
+        open_retroarch_controls(parent)
 
     def _adicionar_diagnostico_retroarch(self, linha: Adw.ActionRow) -> None:
         botao = Gtk.Button(
