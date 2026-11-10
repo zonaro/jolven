@@ -32,6 +32,7 @@ import org.json.JSONObject
 class MainActivity : FlutterActivity() {
     private val channelName = "jolven/external_emulators"
     private val nearbyExport by lazy { NearbyExportBridge(this) }
+    private val nearbyStage by lazy { NearbyStageBridge(this) }
     private var gamepadSink: EventChannel.EventSink? = null
     private var lastJoystickEventMs: Long = 0L
     private val selectRomRequest = 4083
@@ -119,6 +120,12 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
+                    "stageNearbyFile" -> nearbyStage.stage(
+                        call.argument("uri"), call.argument("kind"), result
+                    )
+                    "cleanupNearbyStage" -> result.success(
+                        nearbyStage.cleanup(call.argument("path"))
+                    )
                     "nearbyCacheDir" -> result.success(nearbyExport.cacheDir())
                     "exportNearbyFile" -> nearbyExport.export(
                         call.argument("path"),

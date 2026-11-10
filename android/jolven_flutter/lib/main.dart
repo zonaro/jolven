@@ -16,6 +16,7 @@ import 'src/nds_external_layout_guide.dart';
 import 'src/retroachievements_page.dart';
 import 'src/overlay_editor_page.dart';
 import 'src/nearby_receive_page.dart';
+import 'src/nearby_send_page.dart';
 
 void main() => runApp(const JolvenApp());
 
@@ -35,6 +36,7 @@ const _strings = <String, Map<String, String>>{
     'addAndroid': 'Adicionar app instalado',
     'remote': 'Remote Play',
     'nearbyReceive': 'Receber arquivos do PC',
+    'nearbySend': 'Enviar arquivo ao PC',
     'noRemote': 'Instale Moonlight, Steam Link ou outro cliente de streaming.',
     'openRemote': 'Abrir cliente',
     'noGames': 'Nenhum jogo Android detectado (a classificação do sistema pode omitir alguns).',
@@ -121,6 +123,7 @@ const _strings = <String, Map<String, String>>{
     'addAndroid': 'Add installed app',
     'remote': 'Remote Play',
     'nearbyReceive': 'Receive files from PC',
+    'nearbySend': 'Send file to PC',
     'noRemote': 'Install Moonlight, Steam Link or another streaming client.',
     'openRemote': 'Open client',
     'noGames': 'No Android games found (system classification may omit some).',
@@ -207,6 +210,7 @@ const _strings = <String, Map<String, String>>{
     'addAndroid': 'Agregar app instalada',
     'remote': 'Juego remoto',
     'nearbyReceive': 'Recibir archivos del PC',
+    'nearbySend': 'Enviar archivo al PC',
     'noRemote': 'Instala Moonlight, Steam Link u otro cliente de streaming.',
     'openRemote': 'Abrir cliente',
     'noGames': 'No se encontraron juegos Android (la clasificación puede omitir algunos).',
@@ -1023,6 +1027,7 @@ class _JolvenHomeState extends State<JolvenHome> {
                 'patcher' => const RomPatcherPage(),
                 'achievements' => const RetroAchievementsPage(),
                 'overlay' => const OverlayEditorPage(),
+                'nearbySend' => const NearbySendPage(),
                 _ => const RecordingPage(),
               };
               Navigator.of(context).push(
@@ -1038,6 +1043,7 @@ class _JolvenHomeState extends State<JolvenHome> {
               const PopupMenuItem(value: 'overlay',
                 child: Text('RetroArch Overlay Editor')),
               PopupMenuItem(value: 'recording', child: Text(_t('recorder'))),
+              PopupMenuItem(value: 'nearbySend', child: Text(_t('nearbySend'))),
             ],
           ),
           IconButton(

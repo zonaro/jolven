@@ -8,6 +8,17 @@ class AndroidBridge {
 
   static const MethodChannel _channel = MethodChannel('jolven/external_emulators');
 
+  Future<Map<String, dynamic>> stageNearbyFile(String uri, String kind) async {
+    final row = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'stageNearbyFile', {'uri': uri, 'kind': kind});
+    if (row == null) throw StateError('Could not stage Nearby file');
+    return row.map((key, value) => MapEntry(key.toString(), value));
+  }
+
+  Future<void> cleanupNearbyStage(String path) async {
+    await _channel.invokeMethod<bool>('cleanupNearbyStage', {'path': path});
+  }
+
   Future<String> nearbyCacheDir() async {
     final dir = await _channel.invokeMethod<String>('nearbyCacheDir');
     if (dir == null || dir.isEmpty) {
