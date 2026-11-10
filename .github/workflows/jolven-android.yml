@@ -100,7 +100,4 @@ jobs:
           arch: x86_64
           profile: pixel_4
           disable-animations: true
-          script: |
-            cd android/jolven_flutter
-            flutter devices
-            flutter test integration_test/native_bridge_test.dart -d emulator-5554 --reporter expanded
+          script: cd android/jolven_flutter && flutter test integration_test/native_bridge_test.dart -d emulator-5554 --reporter expanded
