@@ -7,6 +7,7 @@ import 'src/android_bridge.dart';
 import 'src/models.dart';
 import 'src/platform_catalog.dart';
 import 'src/emulator_compatibility.dart';
+import 'src/rom_details_page.dart';
 import 'src/patcher_page.dart';
 import 'src/save_vault_page.dart';
 import 'src/firmware_guide_page.dart';
@@ -61,6 +62,9 @@ const _strings = <String, Map<String, String>>{
     'unfavorite': 'Remover dos favoritos',
     'preferred': 'Emulador preferido',
     'defaultForConsole': 'Emulador padrão deste console',
+    'details': 'Detalhes do jogo',
+    'removeConfirm': 'Remover da biblioteca?',
+    'removeWarning': 'A ROM original não será apagada, mas o registro e as capas locais do Jolven serão removidos.',
     'clearConsoleDefault': 'Remover padrão deste console',
     'consoleDefaultSaved': 'Preferência do console salva',
     'differentConsole': 'Emulador voltado para outro console; abertura manual',
@@ -156,6 +160,9 @@ const _strings = <String, Map<String, String>>{
     'unfavorite': 'Remove from favorites',
     'preferred': 'Preferred emulator',
     'defaultForConsole': 'Default emulator for this console',
+    'details': 'Game details',
+    'removeConfirm': 'Remove from library?',
+    'removeWarning': 'The original ROM will not be deleted, but the Jolven catalog entry and its local artwork will be removed.',
     'clearConsoleDefault': 'Clear console default',
     'consoleDefaultSaved': 'Console preference saved',
     'differentConsole': 'Emulator targets another console; manual opening only',
@@ -251,6 +258,9 @@ const _strings = <String, Map<String, String>>{
     'unfavorite': 'Quitar de favoritos',
     'preferred': 'Emulador preferido',
     'defaultForConsole': 'Emulador predeterminado de esta consola',
+    'details': 'Detalles del juego',
+    'removeConfirm': '¿Quitar de la biblioteca?',
+    'removeWarning': 'La ROM original no se borrará, pero se quitarán el registro y las carátulas locales de Jolven.',
     'clearConsoleDefault': 'Quitar predeterminado de esta consola',
     'consoleDefaultSaved': 'Preferencia de consola guardada',
     'differentConsole': 'Emulador de otra consola; apertura manual',
@@ -698,9 +708,27 @@ class _JolvenHomeState extends State<JolvenHome> {
   }
 
   Future<void> _remove(RomItem rom) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(_t('removeConfirm')),
+        content: Text(_t('removeWarning')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(_t('cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(_t('remove')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     try {
       await _bridge.removeRom(rom);
-      await _refresh();
+      if (mounted) await _refresh();
     } catch (error) {
       if (mounted) _message('${_t('error')}: $error');
     }
@@ -1029,6 +1057,44 @@ class _JolvenHomeState extends State<JolvenHome> {
     }
   }
 
+  Future<void> _openRomDetails(RomItem rom) async {
+    final action = await Navigator.of(context).push<RomDetailsAction>(
+      MaterialPageRoute(
+        builder: (routeContext) => RomDetailsPage(
+          rom: rom,
+          emulators: _emulators,
+          consoleDefaults: _consoleEmulatorDefaults,
+          onAction: (selected) => Navigator.of(routeContext).pop(selected),
+        ),
+      ),
+    );
+    if (action == null || !mounted) return;
+    switch (action) {
+      case RomDetailsAction.play:
+        await _chooseEmulator(rom);
+      case RomDetailsAction.platform:
+        await _setPlatform(rom);
+      case RomDetailsAction.preferred:
+        await _setPreferred(rom);
+      case RomDetailsAction.consoleDefault:
+        await _setConsoleDefault(rom);
+      case RomDetailsAction.favorite:
+        await _toggleFavorite(rom);
+      case RomDetailsAction.cover:
+        await _selectArtwork(rom, 'cover');
+      case RomDetailsAction.label:
+        await _selectArtwork(rom, 'label');
+      case RomDetailsAction.clearCover:
+        await _clearArtwork(rom, 'cover');
+      case RomDetailsAction.clearLabel:
+        await _clearArtwork(rom, 'label');
+      case RomDetailsAction.fingerprint:
+        await _fingerprintRom(rom);
+      case RomDetailsAction.remove:
+        await _remove(rom);
+    }
+  }
+
   String _romConsole(RomItem rom) {
     final system = rom.platformId ?? identifyPlatform(rom.name).confidentId;
     return system == null ? _t('unknownPlatform') : platformLabel(system);
@@ -1052,6 +1118,7 @@ class _JolvenHomeState extends State<JolvenHome> {
   Widget _romMenu(RomItem rom) => PopupMenuButton<String>(
     onSelected: (value) {
       if (value == 'play') _chooseEmulator(rom);
+      if (value == 'details') _openRomDetails(rom);
       if (value == 'platform') _setPlatform(rom);
       if (value == 'preferred') _setPreferred(rom);
       if (value == 'consoleDefault') _setConsoleDefault(rom);
@@ -1068,6 +1135,7 @@ class _JolvenHomeState extends State<JolvenHome> {
     },
     itemBuilder: (context) => [
       PopupMenuItem(value: 'play', child: Text(_t('play'))),
+      PopupMenuItem(value: 'details', child: Text(_t('details'))),
       PopupMenuItem(value: 'platform', child: Text(_t('platform'))),
       PopupMenuItem(value: 'preferred', child: Text(_t('preferred'))),
       PopupMenuItem(value: 'consoleDefault',
@@ -1097,6 +1165,7 @@ class _JolvenHomeState extends State<JolvenHome> {
           : '${_romConsole(rom)} · SHA-256 ${rom.sha256!.substring(0, 12)}…',
           maxLines: 1, overflow: TextOverflow.ellipsis),
       onTap: () => _chooseEmulator(rom),
+      onLongPress: () => _openRomDetails(rom),
       trailing: _romMenu(rom),
     ),
   );
@@ -1105,6 +1174,7 @@ class _JolvenHomeState extends State<JolvenHome> {
     clipBehavior: Clip.antiAlias,
     child: InkWell(
       onTap: () => _chooseEmulator(rom),
+      onLongPress: () => _openRomDetails(rom),
       child: Padding(
         padding: const EdgeInsets.all(8),
         child: Column(children: [
