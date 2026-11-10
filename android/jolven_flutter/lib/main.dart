@@ -10,6 +10,7 @@ import 'src/patcher_page.dart';
 import 'src/save_vault_page.dart';
 import 'src/firmware_guide_page.dart';
 import 'src/recording_page.dart';
+import 'src/emulator_actions.dart';
 
 void main() => runApp(const JolvenApp());
 
@@ -20,6 +21,7 @@ const _strings = <String, Map<String, String>>{
     'subtitle': 'Biblioteca e emuladores externos',
     'roms': 'Minhas ROMs',
     'emulators': 'Emuladores instalados',
+    'emulatorActions': 'Guia de ações do emulador',
     'androidGames': 'Jogos Android',
     'addAndroid': 'Adicionar app instalado',
     'remote': 'Remote Play',
@@ -92,6 +94,7 @@ const _strings = <String, Map<String, String>>{
     'subtitle': 'Library and external emulators',
     'roms': 'My ROMs',
     'emulators': 'Installed emulators',
+    'emulatorActions': 'Emulator action guide',
     'androidGames': 'Android games',
     'addAndroid': 'Add installed app',
     'remote': 'Remote Play',
@@ -164,6 +167,7 @@ const _strings = <String, Map<String, String>>{
     'subtitle': 'Biblioteca y emuladores externos',
     'roms': 'Mis ROMs',
     'emulators': 'Emuladores instalados',
+    'emulatorActions': 'Guía de acciones del emulador',
     'androidGames': 'Juegos Android',
     'addAndroid': 'Agregar app instalada',
     'remote': 'Juego remoto',
@@ -509,6 +513,12 @@ class _JolvenHomeState extends State<JolvenHome> {
         ],
       ),
     );
+  }
+
+  void _openEmulatorActions(EmulatorInfo emulator) {
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => EmulatorActionsPage(emulator: emulator),
+    ));
   }
 
   Future<void> _openEmulator(EmulatorInfo emulator) async {
@@ -1070,9 +1080,19 @@ class _JolvenHomeState extends State<JolvenHome> {
                 leading: const Icon(Icons.gamepad_outlined),
                 title: Text(emulator.name),
                 subtitle: Text('\${emulator.packageName} · \${emulator.versionName ?? ''}'),
-                trailing: TextButton(
-                  onPressed: () => _openEmulator(emulator),
-                  child: Text(_t('open')),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      tooltip: _t('emulatorActions'),
+                      onPressed: () => _openEmulatorActions(emulator),
+                      icon: const Icon(Icons.help_outline),
+                    ),
+                    TextButton(
+                      onPressed: () => _openEmulator(emulator),
+                      child: Text(_t('open')),
+                    ),
+                  ],
                 ),
               ),
           ],
