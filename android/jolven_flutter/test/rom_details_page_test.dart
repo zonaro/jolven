@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jolven_flutter/src/models.dart';
 import 'package:jolven_flutter/src/rom_details_page.dart';
@@ -20,6 +21,8 @@ void main() {
     RomDetailsAction? action;
     await tester.pumpWidget(MaterialApp(
       locale: const Locale('pt'),
+      supportedLocales: const [Locale('pt'), Locale('en'), Locale('es')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       home: RomDetailsPage(
         rom: rom, emulators: const [ppsspp],
         consoleDefaults: const {'psp': 'org.ppsspp.ppsspp'},
@@ -29,12 +32,13 @@ void main() {
     expect(find.text('Detalhes do jogo'), findsOneWidget);
     expect(find.text('Homebrew'), findsOneWidget);
     expect(find.text('PSP'), findsOneWidget);
-    expect(find.text('PPSSPP'), findsWidgets);
-    expect(find.text('2.0 MiB'), findsOneWidget);
-    expect(find.text('Intent documentada, não testada no aparelho'),
-        findsOneWidget);
     await tester.tap(find.text('Jogar'));
     expect(action, RomDetailsAction.play);
+    await tester.scrollUntilVisible(find.text('2.0 MiB'), 160);
+    expect(find.text('2.0 MiB'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Intent documentada, não testada no aparelho'), 160);
+    expect(find.text('PPSSPP'), findsWidgets);
   });
 
   testWidgets('unknown console is explained, removal needs caller action',
@@ -43,6 +47,8 @@ void main() {
     RomDetailsAction? action;
     await tester.pumpWidget(MaterialApp(
       locale: const Locale('en'),
+      supportedLocales: const [Locale('pt'), Locale('en'), Locale('es')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       home: RomDetailsPage(
         rom: rom, emulators: const [],
         consoleDefaults: const {},
@@ -50,8 +56,10 @@ void main() {
       ),
     ));
     expect(find.text('Console not identified'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.textContaining('No suitable emulator detected'), 160);
     expect(find.textContaining('No suitable emulator detected'), findsOneWidget);
-    await tester.ensureVisible(find.text('Remove from library'));
+    await tester.scrollUntilVisible(find.text('Remove from library'), 160);
     await tester.tap(find.text('Remove from library'));
     expect(action, RomDetailsAction.remove);
     // No deletion happens in the details page; parent confirms and performs it.
