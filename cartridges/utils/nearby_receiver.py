@@ -15,6 +15,7 @@ import ipaddress
 import os
 import ssl
 import tempfile
+import threading
 import time
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -210,9 +211,15 @@ def create_receiver(
         raise
 
 
-def serve_receiver(server, temporary, state, deadline):
+def serve_receiver(
+    server, temporary, state, deadline,
+    stop_event: threading.Event | None = None,
+):
     try:
-        while time.monotonic() < deadline and not state["finished"]:
+        while (
+            time.monotonic() < deadline and not state["finished"] and
+            (stop_event is None or not stop_event.is_set())
+        ):
             server.handle_request()
     finally:
         server.server_close()

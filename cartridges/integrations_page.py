@@ -45,6 +45,7 @@ from cartridges.utils.integrations import (
 from cartridges.utils.na_tela import entregar_na_tela
 from cartridges.utils.retroarch_diagnostics import inspect_retroarch
 from cartridges.utils.retroarch_controls_dialog import open_retroarch_controls
+from cartridges.utils.nearby_dialog import open_nearby_dialog
 
 # O launcher roda ``gettext.install`` antes de importar qualquer módulo do
 # app; o fallback mantém este módulo importável em testes e ferramentas sem
@@ -140,10 +141,34 @@ class IntegrationsPage(Adw.NavigationPage):
             grupo.add(linha)
             self._linhas.append((grupo, linha))
             self._por_chave[integracao.chave] = linha
+        self._adicionar_nearby()
         self.integrations_stack.set_visible_child_name("list")
         if chave_focada:
             self._focar_linha(chave_focada)
         return GLib.SOURCE_REMOVE
+
+    def _adicionar_nearby(self) -> None:
+        # Nearby is a Jolven function, not an external program to install.
+        row = Adw.ActionRow(
+            title=_("Jolven Nearby"),
+            subtitle=_("Transferir ROMs próprias, saves exportados e imagens na LAN"),
+        )
+        button = Gtk.Button(
+            label=_("Compartilhar / receber"),
+            valign=Gtk.Align.CENTER,
+        )
+        button.connect("clicked", self._abrir_nearby)
+        row.add_suffix(button)
+        self.grupo_ferramentas.add(row)
+        self._linhas.append((self.grupo_ferramentas, row))
+        self._por_chave["jolven_nearby"] = row
+
+    def _abrir_nearby(self, _button: Gtk.Button) -> None:
+        root = self.get_root()
+        if not isinstance(root, Gtk.Window):
+            self._aviso(_("Janela não está disponível"))
+            return
+        open_nearby_dialog(root)
 
     def _limpar_linhas(self) -> None:
         for grupo, linha in self._linhas:

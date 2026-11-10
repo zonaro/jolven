@@ -116,6 +116,25 @@ class NearbyReceiverTests(unittest.TestCase):
                         state["staging"].cleanup()
                     temp.cleanup()
 
+    def test_receiver_can_be_cancelled_without_opening_a_file(self):
+        with tempfile.TemporaryDirectory() as td:
+            dest = Path(td)
+            server, temporary, state, info, deadline = create_receiver(
+                dest, session_seconds=30, approve_offer=lambda _: False,
+            )
+            stop = threading.Event()
+            credential_dir = Path(temporary.name)
+            worker = threading.Thread(
+                target=serve_receiver,
+                args=(server, temporary, state, deadline, stop), daemon=True,
+            )
+            worker.start()
+            stop.set()
+            worker.join(timeout=3)
+            self.assertFalse(worker.is_alive())
+            self.assertFalse(credential_dir.exists())
+            self.assertEqual(list(dest.iterdir()), [])
+
     def test_cannot_bind_to_public_address(self):
         with tempfile.TemporaryDirectory() as td:
             with self.assertRaises(ValueError):

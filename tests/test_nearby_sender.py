@@ -74,6 +74,25 @@ class NearbySenderTests(unittest.TestCase):
                     server.server_close()
                     temporary.cleanup()
 
+    def test_user_cancel_releases_port_and_removes_ephemeral_credentials(self):
+        with tempfile.TemporaryDirectory() as td:
+            rom = Path(td) / "homebrew.gba"
+            rom.write_bytes(b"homebrew")
+            server, temporary, info, deadline = create_sender(
+                [(rom, "rom")], session_seconds=30,
+            )
+            credentials_dir = Path(temporary.name)
+            stopped = threading.Event()
+            worker = threading.Thread(
+                target=serve_sender,
+                args=(server, temporary, deadline, stopped), daemon=True,
+            )
+            worker.start()
+            stopped.set()
+            worker.join(timeout=3)
+            self.assertFalse(worker.is_alive())
+            self.assertFalse(credentials_dir.exists())
+
     def test_rejects_public_bind_address(self):
         with tempfile.TemporaryDirectory() as td:
             rom = Path(td) / "save.srm"

@@ -20,6 +20,7 @@ import shutil
 import ssl
 import subprocess
 import tempfile
+import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -195,10 +196,15 @@ def create_sender(
         raise
 
 
-def serve_sender(server: http.server.HTTPServer, temporary, deadline: float) -> None:
+def serve_sender(
+    server: http.server.HTTPServer, temporary, deadline: float,
+    stop_event: threading.Event | None = None,
+) -> None:
     """Serve only for the explicitly requested lifetime and then release port."""
     try:
-        while time.monotonic() < deadline:
+        while time.monotonic() < deadline and (
+            stop_event is None or not stop_event.is_set()
+        ):
             server.handle_request()
     finally:
         server.server_close()
