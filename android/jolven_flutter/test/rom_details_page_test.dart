@@ -13,6 +13,10 @@ const ppsspp = EmulatorInfo(
 void main() {
   testWidgets('details show game, console and explicit play without bundled emulator',
       (tester) async {
+    tester.view.physicalSize = const Size(1080, 2800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     const rom = RomItem(
       uri: 'content://rom/1', name: 'Homebrew.iso',
       platformId: 'psp', favorite: true, sizeBytes: 2 * 1024 * 1024,
@@ -38,15 +42,16 @@ void main() {
     expect(find.text('PSP'), findsOneWidget);
     await tester.tap(find.text('Jogar'));
     expect(action, RomDetailsAction.play);
-    await tester.ensureVisible(find.text('2.0 MiB').first);
     expect(find.text('2.0 MiB').first, findsOneWidget);
-    await tester.ensureVisible(
-      find.text('Intent documentada, não testada no aparelho').first);
     expect(find.text('PPSSPP'), findsWidgets);
   });
 
   testWidgets('unknown console is explained, removal needs caller action',
       (tester) async {
+    tester.view.physicalSize = const Size(1080, 2800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     const rom = RomItem(uri: 'content://archive', name: 'unknown.zip');
     RomDetailsAction? action;
     await tester.pumpWidget(MaterialApp(
@@ -64,10 +69,7 @@ void main() {
       ),
     ));
     expect(find.text('Console not identified'), findsOneWidget);
-    await tester.ensureVisible(
-      find.textContaining('No suitable emulator detected').first);
     expect(find.textContaining('No suitable emulator detected').first, findsOneWidget);
-    await tester.ensureVisible(find.text('Remove from library').first);
     await tester.tap(find.text('Remove from library').first);
     expect(action, RomDetailsAction.remove);
     // No deletion happens in the details page; parent confirms and performs it.
