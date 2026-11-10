@@ -8,6 +8,7 @@ import java.util.Locale
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
+import android.provider.DocumentsContract
 import android.view.InputDevice
 import com.redclaw.jolven_flutter.rompatcher.SafRomPatchWorkflow
 import java.util.concurrent.Executors
@@ -28,6 +29,8 @@ class MainActivity : FlutterActivity() {
     private val selectArtworkRequest = 4085
     private val pickPatchRequest = 4086
     private val savePatchRequest = 4087
+    private val pickSaveRequest = 4088
+    private val exportSaveRequest = 4089
     private val scanner = Executors.newSingleThreadExecutor()
     private var pendingImport: MethodChannel.Result? = null
     private var importMultiple = false
@@ -35,6 +38,8 @@ class MainActivity : FlutterActivity() {
     private var artworkKind: String? = null
     private var patchRomUri: String? = null
     private var patchFileUri: String? = null
+    private var saveRomUri: String? = null
+    private var saveFileId: String? = null
 
     private data class Emulator(
         val id: String,
@@ -61,6 +66,7 @@ class MainActivity : FlutterActivity() {
     private val prefs by lazy { getSharedPreferences("jolven_rom_catalog", MODE_PRIVATE) }
     private val collections by lazy { JolvenCollections(this) }
     private val artworkStore by lazy { JolvenArtworkStore(filesDir) }
+    private val saveVault by lazy { JolvenSaveVault(this) }
 
     private data class RemoteClient(
         val id: String, val name: String, val packageName: String
@@ -127,6 +133,12 @@ class MainActivity : FlutterActivity() {
                     )
                     "clearArtwork" -> result.success(
                         clearArtwork(call.argument("uri"), call.argument("kind"))
+                    )
+                    "listSavedFiles" -> result.success(saveVault.all())
+                    "pickSaveFile" -> pickSaveFile(call.argument("romUri"), result)
+                    "exportSaveFile" -> exportSaveFile(call.argument("id"), result)
+                    "deleteSaveFile" -> result.success(
+                        saveVault.delete(call.argument("id") ?: "")
                     )
                     "pickPatchFile" -> pickPatchFile(result)
                     "exportPatchedRom" -> exportPatchedRom(
@@ -456,6 +468,62 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    private fun pickSaveFile(romUri: String?, result: MethodChannel.Result) {
+        if (pendingImport != null) {
+            result.error("BUSY", "A file picker is already open", null)
+            return
+        }
+        if (!romUri.isNullOrBlank() &&
+            readRoms().none { it["uri"] == romUri }) {
+            result.error("INVALID_ROM", "Unknown ROM reference", null)
+            return
+        }
+        pendingImport = result
+        saveRomUri = romUri
+        try {
+            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "*/*"
+                addFlags(
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                        Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+                )
+            }
+            startActivityForResult(intent, pickSaveRequest)
+        } catch (error: Exception) {
+            pendingImport = null
+            saveRomUri = null
+            result.error("SAVE_PICKER", error.message, null)
+        }
+    }
+
+    private fun exportSaveFile(id: String?, result: MethodChannel.Result) {
+        if (pendingImport != null) {
+            result.error("BUSY", "A file picker is already open", null)
+            return
+        }
+        val name = id?.let { saveVault.displayName(it) } ?: run {
+            result.error("SAVE_NOT_FOUND", "Save no longer exists", null)
+            return
+        }
+        pendingImport = result
+        saveFileId = id
+        try {
+            val safeName = name.replace(Regex("[^a-zA-Z0-9._ ()-]"), "_")
+                .take(95).ifBlank { "save.bin" }
+            val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "application/octet-stream"
+                putExtra(Intent.EXTRA_TITLE, safeName)
+            }
+            startActivityForResult(intent, exportSaveRequest)
+        } catch (error: Exception) {
+            pendingImport = null
+            saveFileId = null
+            result.error("SAVE_DESTINATION", error.message, null)
+        }
+    }
+
     private fun pickPatchFile(result: MethodChannel.Result) {
         if (pendingImport != null) {
             result.error("BUSY", "A file picker is already open", null)
@@ -561,11 +629,66 @@ class MainActivity : FlutterActivity() {
             requestCode != selectFolderRequest &&
             requestCode != selectArtworkRequest &&
             requestCode != pickPatchRequest &&
-            requestCode != savePatchRequest) return
+            requestCode != savePatchRequest &&
+            requestCode != pickSaveRequest &&
+            requestCode != exportSaveRequest) return
         val result = pendingImport ?: return
         pendingImport = null
         val multiple = importMultiple
         importMultiple = false
+
+        if (requestCode == pickSaveRequest) {
+            val associatedRom = saveRomUri
+            saveRomUri = null
+            val selected = data?.data
+            if (resultCode != Activity.RESULT_OK || selected?.scheme != "content") {
+                result.success(null)
+                return
+            }
+            try {
+                contentResolver.takePersistableUriPermission(
+                    selected, Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (error: Exception) {
+                result.error("SAVE_PERMISSION", error.message, null)
+                return
+            }
+            scanner.execute {
+                try {
+                    val entry = saveVault.import(contentResolver, selected, associatedRom)
+                    runOnUiThread { result.success(entry) }
+                } catch (error: Exception) {
+                    runOnUiThread { result.error("SAVE_IMPORT", error.message, null) }
+                }
+            }
+            return
+        }
+
+        if (requestCode == exportSaveRequest) {
+            val id = saveFileId
+            saveFileId = null
+            val destination = data?.data
+            if (resultCode != Activity.RESULT_OK || destination == null) {
+                result.success(mapOf("status" to "cancelled"))
+                return
+            }
+            if (id == null) {
+                result.error("SAVE_NOT_FOUND", "Save selection expired", null)
+                return
+            }
+            scanner.execute {
+                try {
+                    val report = saveVault.export(contentResolver, id, destination)
+                    runOnUiThread { result.success(report) }
+                } catch (error: Exception) {
+                    runCatching {
+                        DocumentsContract.deleteDocument(contentResolver, destination)
+                    }
+                    runOnUiThread { result.error("SAVE_EXPORT", error.message, null) }
+                }
+            }
+            return
+        }
 
         if (requestCode == pickPatchRequest) {
             val selected = data?.data

@@ -24,6 +24,28 @@ class AndroidBridge {
     return row == null ? null : RomItem.fromMap(row);
   }
 
+  Future<List<SaveFileRecord>> listSavedFiles() async {
+    final rows = await _channel.invokeMethod<List<dynamic>>('listSavedFiles') ?? [];
+    return rows.map((row) => SaveFileRecord.fromMap(row as Map)).toList();
+  }
+
+  Future<SaveFileRecord?> pickSaveFile({RomItem? rom}) async {
+    final row = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'pickSaveFile', {if (rom != null) 'romUri': rom.uri});
+    return row == null ? null : SaveFileRecord.fromMap(row);
+  }
+
+  Future<LaunchOutcome> exportSaveFile(SaveFileRecord save) async {
+    final row = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'exportSaveFile', {'id': save.id});
+    return LaunchOutcome.fromMap(row ?? {});
+  }
+
+  Future<void> deleteSaveFile(SaveFileRecord save) async {
+    final ok = await _channel.invokeMethod<bool>('deleteSaveFile', {'id': save.id});
+    if (ok != true) throw StateError('Could not delete save file');
+  }
+
   Future<String?> pickPatchFile() =>
       _channel.invokeMethod<String>('pickPatchFile');
 

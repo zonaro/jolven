@@ -99,6 +99,19 @@ void main() {
     expect(gamepad.name, contains('Xbox'));
   });
 
+  test('save vault records preserve user-provided association and integrity', () {
+    final saved = SaveFileRecord.fromMap({
+      'id': 'uuid-1',
+      'name': 'progress.srm',
+      'romUri': 'content://rom/123',
+      'sha256': '0123456789abcdef',
+      'sizeBytes': '4096',
+    });
+    expect(saved.name, 'progress.srm');
+    expect(saved.sizeBytes, 4096);
+    expect(saved.romUri, 'content://rom/123');
+  });
+
   test('native app identity is the actual package name', () {
     final game = AndroidGame.fromMap({
       'packageName': 'org.example.game',

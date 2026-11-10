@@ -7,6 +7,7 @@ import 'src/android_bridge.dart';
 import 'src/models.dart';
 import 'src/platform_catalog.dart';
 import 'src/patcher_page.dart';
+import 'src/save_vault_page.dart';
 
 void main() => runApp(const JolvenApp());
 
@@ -851,6 +852,15 @@ class _JolvenHomeState extends State<JolvenHome> {
       appBar: AppBar(
         title: Text(_t('title')),
         actions: [
+          IconButton(
+            tooltip: 'Save Vault',
+            icon: const Icon(Icons.save_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (context) => const SaveVaultPage(),
+              ),
+            ),
+          ),
           IconButton(
             tooltip: 'ROM Patcher',
             icon: const Icon(Icons.auto_fix_high),

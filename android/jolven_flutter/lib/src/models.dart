@@ -86,6 +86,31 @@ class AndroidGame {
       );
 }
 
+class SaveFileRecord {
+  const SaveFileRecord({
+    required this.id,
+    required this.name,
+    required this.sha256,
+    required this.sizeBytes,
+    this.romUri,
+  });
+
+  final String id;
+  final String name;
+  final String sha256;
+  final int sizeBytes;
+  final String? romUri;
+
+  factory SaveFileRecord.fromMap(Map<dynamic, dynamic> data) => SaveFileRecord(
+        id: data['id'] as String,
+        name: data['name'] as String,
+        sha256: data['sha256'] as String? ?? '',
+        sizeBytes: int.tryParse('${data['sizeBytes']}') ?? 0,
+        romUri: (data['romUri'] as String?)?.isEmpty == true
+            ? null : data['romUri'] as String?,
+      );
+}
+
 class GameCollection {
   const GameCollection({
     required this.id,
