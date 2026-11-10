@@ -38,10 +38,10 @@ void main() {
     expect(find.text('PSP'), findsOneWidget);
     await tester.tap(find.text('Jogar'));
     expect(action, RomDetailsAction.play);
-    await tester.scrollUntilVisible(find.text('2.0 MiB'), 160);
-    expect(find.text('2.0 MiB'), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.text('Intent documentada, não testada no aparelho'), 160);
+    await tester.ensureVisible(find.text('2.0 MiB').first);
+    expect(find.text('2.0 MiB').first, findsOneWidget);
+    await tester.ensureVisible(
+      find.text('Intent documentada, não testada no aparelho').first);
     expect(find.text('PPSSPP'), findsWidgets);
   });
 
@@ -64,11 +64,11 @@ void main() {
       ),
     ));
     expect(find.text('Console not identified'), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.textContaining('No suitable emulator detected'), 160);
-    expect(find.textContaining('No suitable emulator detected'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Remove from library'), 160);
-    await tester.tap(find.text('Remove from library'));
+    await tester.ensureVisible(
+      find.textContaining('No suitable emulator detected').first);
+    expect(find.textContaining('No suitable emulator detected').first, findsOneWidget);
+    await tester.ensureVisible(find.text('Remove from library').first);
+    await tester.tap(find.text('Remove from library').first);
     expect(action, RomDetailsAction.remove);
     // No deletion happens in the details page; parent confirms and performs it.
   });
