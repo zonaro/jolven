@@ -3,19 +3,23 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:jolven_flutter/src/nds_external_layout_guide.dart';
 
 void main() {
-  testWidgets('Nintendo DS guide changes preview without controlling external apps',
+  testWidgets('Nintendo DS layout preview toggles without native emulator APIs',
       (tester) async {
     await tester.pumpWidget(const MaterialApp(
-      locale: Locale('en'),
-      supportedLocales: [Locale('en')],
       home: NdsExternalLayoutGuide(),
     ));
     await tester.pumpAndSettle();
-    expect(find.text('Nintendo DS screens'), findsOneWidget);
-    expect(find.text('Top screen'), findsOneWidget);
-    expect(find.text('Touch screen'), findsOneWidget);
-    await tester.tap(find.text('Side by side'));
+
+    final selector = find.byType(SegmentedButton<NdsPreviewOrientation>);
+    expect(find.byType(NdsExternalLayoutGuide), findsOneWidget);
+    expect(selector, findsOneWidget);
+    expect(tester.widget<SegmentedButton<NdsPreviewOrientation>>(selector)
+        .selected, contains(NdsPreviewOrientation.stacked));
+
+    await tester.tap(find.byIcon(Icons.view_column_outlined));
     await tester.pumpAndSettle();
-    expect(find.text('Top screen'), findsOneWidget);
+
+    expect(tester.widget<SegmentedButton<NdsPreviewOrientation>>(selector)
+        .selected, contains(NdsPreviewOrientation.sideBySide));
   });
 }
