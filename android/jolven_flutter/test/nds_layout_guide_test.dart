@@ -7,6 +7,7 @@ void main() {
       (tester) async {
     await tester.pumpWidget(const MaterialApp(
       locale: Locale('pt'),
+      supportedLocales: [Locale('pt'), Locale('en'), Locale('es')],
       home: NdsExternalLayoutGuide(),
     ));
     await tester.pumpAndSettle();
