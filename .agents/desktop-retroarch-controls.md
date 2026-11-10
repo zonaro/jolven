@@ -6,7 +6,7 @@ RetroArch é um **aplicativo externo**; o Jolven não incorpora cores nem interc
 
 1. Em RetroArch → Configurações → Rede → Comandos de rede, habilite o protocolo UDP opcional e **restrinja a escuta ao loopback** (127.0.0.1), quando essa opção existir. Não exponha a porta 55355 à rede Wi-Fi/LAN.
 2. Abra Jolven → Integrações → RetroArch → **Ações**. A tela consulta `GET_STATUS` e habilita controles apenas se encontrar um jogo ativo.
-3. São permitidos apenas comandos oficiais de menu, pausa, captura, áudio e velocidade. Nenhum comando de escrita de memória, execução arbitrária, troca de core, `QUIT`, carregamento de estado ou `SET_SHADER` é emitido nessa tela.
+3. São permitidos apenas comandos oficiais de menu, pausa, captura, áudio e velocidade. Nenhum comando de escrita de memória, execução arbitrária, troca de core, `QUIT` ou carregamento de estado é emitido pela tela. O botão **Escolher shader personalizado** permite um único `SET_SHADER` para arquivo local `.slangp`, `.glslp` ou `.cgp` explicitamente escolhido pelo usuário, com validação estrita de caminho e limite de 4 MiB.
 
 ## Segurança e limitações
 
@@ -19,3 +19,6 @@ RetroArch é um **aplicativo externo**; o Jolven não incorpora cores nem interc
 
 ## Testes
 `python -m unittest tests.test_retroarch_nci -v` inclui um servidor UDP temporário de loopback, tratamento de interface ausente, parâmetros inválidos e rejeição de comandos perigosos.
+
+## Shader temporário (10/11/2026)
+O usuário pode selecionar um preset local no diálogo de controles; a ponte só transmite `SET_SHADER /caminho/absoluto` para 127.0.0.1:55355 depois de verificar `GET_STATUS` com conteúdo em execução. Paths com quebra de linha, ponto-e-vírgula, NUL ou formatos inesperados são rejeitados. **Não** altera globalmente `retroarch.cfg`, nem salva preferência por jogo, nem valida o resultado no emulador. O arquivo deve ser acessível ao processo externo do RetroArch, inclusive através do Flatpak quando for o caso. Testes de fixtures locais não substituem teste real com Vulkan/OpenGL e hardcore.

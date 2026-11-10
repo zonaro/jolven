@@ -9,6 +9,7 @@ Sending a UDP packet acknowledges *transmission*, not the emulated action.
 from __future__ import annotations
 
 import socket
+from pathlib import Path
 from dataclasses import dataclass
 
 
@@ -61,7 +62,9 @@ def _exchange(
     _validate_port(port)
     if not 0.05 <= timeout <= 2:
         raise ValueError("Invalid command timeout")
-    if not isinstance(command, str) or not command.isascii() or len(command) > 64:
+    if (not isinstance(command, str) or not command.isascii() or
+            not 1 <= len(command) <= 2048 or
+            any(char in command for char in (";", chr(10), chr(13), chr(0)))):
         raise ValueError("Invalid command")
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client:
         client.settimeout(timeout)
@@ -116,3 +119,34 @@ def request_action(
     except OSError:
         return CommandRequest(False, command, "transmission_failed")
     return CommandRequest(sent, command, "request_sent_unverified")
+
+def request_shader(
+    shader_file: Path, *, port: int = DEFAULT_PORT, timeout: float = 0.35,
+) -> CommandRequest:
+    """Ask the user's external RetroArch to load a selected shader preset.
+
+    The caller must explicitly select a local preset. Do not read arbitrary
+    config text, send multiple commands, or claim the core accepted the
+    shader. This never mutates Jolven or RetroArch global settings.
+    """
+    raw = Path(shader_file).expanduser()
+    if not raw.is_absolute() or raw.is_symlink() or not raw.is_file():
+        raise ValueError("Select an existing non-symlink shader preset")
+    if raw.suffix.lower() not in {".slangp", ".glslp", ".cgp"}:
+        raise ValueError("Unsupported shader preset format")
+    if raw.stat().st_size > 4 * 1024 * 1024:
+        raise ValueError("Shader preset exceeds 4 MiB")
+    path = str(raw.resolve(strict=True))
+    if (not path.isascii() or len(path) > 2000 or
+            any(char in path for char in (";", chr(10), chr(13), chr(0)))):
+        raise ValueError("Unsafe shader path")
+    state = query_status(port, timeout=timeout)
+    if not state.available or not state.playing:
+        return CommandRequest(False, "SET_SHADER", "no_verified_active_game")
+    try:
+        sent, _ = _exchange(
+            "SET_SHADER " + path, port, timeout=timeout, expect_reply=False,
+        )
+    except OSError:
+        return CommandRequest(False, "SET_SHADER", "transmission_failed")
+    return CommandRequest(sent, "SET_SHADER", "request_sent_unverified")

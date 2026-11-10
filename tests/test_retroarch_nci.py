@@ -3,9 +3,11 @@
 
 import socket
 import threading
+import tempfile
+from pathlib import Path
 import unittest
 
-from cartridges.utils.retroarch_nci import query_status, request_action
+from cartridges.utils.retroarch_nci import query_status, request_action, request_shader
 
 
 class FakeRetroArch:
@@ -63,6 +65,26 @@ class RetroArchNetworkTests(unittest.TestCase):
             query_status(True)
         with self.assertRaises(ValueError):
             query_status(55355, timeout=5)
+
+    def test_shaders_accept_only_selected_local_preset(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            preset = root / "crt.slangp"
+            preset.write_text("shaders = 1", encoding="utf-8")
+            with FakeRetroArch() as emulator:
+                response = request_shader(preset, port=emulator.port)
+                self.assertTrue(response.sent)
+                self.assertEqual(response.feedback, "request_sent_unverified")
+            forbidden = root / "malicious;RESET.slangp"
+            forbidden.write_text("shaders = 1", encoding="utf-8")
+            with self.assertRaises(ValueError):
+                request_shader(forbidden)
+            with self.assertRaises(ValueError):
+                request_shader(root / "does-not-exist.slangp")
+            invalid = root / "not-a-preset.txt"
+            invalid.write_text("shader = 1", encoding="utf-8")
+            with self.assertRaises(ValueError):
+                request_shader(invalid)
 
     def test_no_retroarch_returns_unknown_not_success(self):
         unused = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

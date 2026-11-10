@@ -9,10 +9,11 @@ No X11/Wayland input injection and no in-game overlay claims.
 from __future__ import annotations
 
 import threading
+from pathlib import Path
 
 from gi.repository import Adw, GLib, Gtk
 
-from cartridges.utils.retroarch_nci import query_status, request_action
+from cartridges.utils.retroarch_nci import query_status, request_action, request_shader
 
 
 _ACTIONS = (
@@ -66,6 +67,12 @@ class RetroArchControlsDialog(Adw.Window):
             button.connect("clicked", self._action_clicked, command)
             content.append(button)
             self._buttons.append(button)
+        shader_button = Gtk.Button(
+            label=_("Escolher shader personalizado…"), sensitive=False,
+        )
+        shader_button.connect("clicked", self._pick_shader)
+        content.append(shader_button)
+        self._buttons.append(shader_button)
         scroll.set_child(content)
         page.append(scroll)
 
@@ -110,6 +117,41 @@ class RetroArchControlsDialog(Adw.Window):
         threading.Thread(
             target=work, daemon=True,
             name="jolven-retroarch-status",
+        ).start()
+
+    def _pick_shader(self, _button: Gtk.Button) -> None:
+        picker = Gtk.FileDialog()
+        picker.set_title(_("Selecione shader .slangp, .glslp ou .cgp"))
+        picker.open(self, None, self._shader_selected)
+
+    def _shader_selected(self, picker, result) -> None:
+        try:
+            selected = picker.open_finish(result)
+        except Exception:
+            return
+        path = selected.get_path() if selected else None
+        if not path or self._busy:
+            self._set_status(_("Shader precisa ser um arquivo local acessível"), False)
+            return
+        self._busy = True
+        for button in self._buttons:
+            button.set_sensitive(False)
+
+        def work() -> None:
+            try:
+                outcome = request_shader(Path(path))
+                message = (
+                    _("Shader solicitado (aplicação não verificada)")
+                    if outcome.sent else _("RetroArch não está com jogo ativo")
+                )
+            except (OSError, ValueError):
+                message = _("Formato/caminho de shader inválido ou inacessível")
+            GLib.idle_add(self._set_status, message, False)
+            GLib.idle_add(self.refresh)
+
+        threading.Thread(
+            target=work, daemon=True,
+            name="jolven-retroarch-shader",
         ).start()
 
     def _action_clicked(self, _button: Gtk.Button, command: str) -> None:
