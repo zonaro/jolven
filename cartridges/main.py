@@ -642,6 +642,8 @@ class CartridgesApplication(Adw.Application):
                 ("add_to_sunshine",),
                 ("add_game", ("<primary>n",)),
                 ("import_rom", ("<primary><shift>r",)),
+                ("export_saves",),
+                ("restore_saves",),
                 ("import", ("<primary>i",)),
                 ("remove_game_details_view", ("Delete",)),
                 ("remove_game",),
@@ -1027,6 +1029,16 @@ class CartridgesApplication(Adw.Application):
             return
 
         DetailsDialog().present(shared.win)
+
+    def on_export_saves_action(self, *_args: Any) -> None:
+        from cartridges.utils.save_backup_dialog import export_emulator_saves
+
+        export_emulator_saves(shared.win)
+
+    def on_restore_saves_action(self, *_args: Any) -> None:
+        from cartridges.utils.save_backup_dialog import restore_emulator_saves
+
+        restore_emulator_saves(shared.win)
 
     def on_import_rom_action(self, *_args: Any) -> None:
         # The picker hands off to the existing DetailsDialog and Store, never
