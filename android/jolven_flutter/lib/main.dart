@@ -14,6 +14,7 @@ import 'src/emulator_actions.dart';
 import 'src/gamepad_diagnostics_page.dart';
 import 'src/nds_external_layout_guide.dart';
 import 'src/retroachievements_page.dart';
+import 'src/overlay_editor_page.dart';
 
 void main() => runApp(const JolvenApp());
 
@@ -1008,6 +1009,7 @@ class _JolvenHomeState extends State<JolvenHome> {
                 'saves' => const SaveVaultPage(),
                 'patcher' => const RomPatcherPage(),
                 'achievements' => const RetroAchievementsPage(),
+                'overlay' => const OverlayEditorPage(),
                 _ => const RecordingPage(),
               };
               Navigator.of(context).push(
@@ -1020,6 +1022,8 @@ class _JolvenHomeState extends State<JolvenHome> {
               const PopupMenuItem(value: 'patcher', child: Text('ROM Patcher')),
               const PopupMenuItem(value: 'achievements',
                 child: Text('RetroAchievements')),
+              const PopupMenuItem(value: 'overlay',
+                child: Text('RetroArch Overlay Editor')),
               PopupMenuItem(value: 'recording', child: Text(_t('recorder'))),
             ],
           ),

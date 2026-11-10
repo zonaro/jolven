@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/services.dart';
 
 import 'models.dart';
@@ -7,6 +9,13 @@ class AndroidBridge {
   const AndroidBridge();
 
   static const MethodChannel _channel = MethodChannel('jolven/external_emulators');
+
+  Future<bool> exportOverlayZip(String config, Uint8List png) async {
+    final result = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'exportOverlayZip', {'config': config, 'png': png},
+    );
+    return result?['status'] == 'saved';
+  }
 
   Future<List<EmulatorInfo>> listEmulators() async {
     final rows = await _channel.invokeMethod<List<dynamic>>('listEmulators') ?? [];

@@ -16,6 +16,8 @@ import android.view.MotionEvent
 import com.redclaw.jolven_flutter.rompatcher.SafRomPatchWorkflow
 import java.util.concurrent.Executors
 import java.security.MessageDigest
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -39,6 +41,7 @@ class MainActivity : FlutterActivity() {
     private val pickSaveRequest = 4088
     private val exportSaveRequest = 4089
     private val screenRecordRequest = 4090
+    private val saveOverlayZipRequest = 4091
     private val scanner = Executors.newSingleThreadExecutor()
     private var pendingImport: MethodChannel.Result? = null
     private var importMultiple = false
@@ -48,6 +51,8 @@ class MainActivity : FlutterActivity() {
     private var patchFileUri: String? = null
     private var saveRomUri: String? = null
     private var saveFileId: String? = null
+    private var overlayConfig: String? = null
+    private var overlayImage: ByteArray? = null
 
     private data class Emulator(
         val id: String,
@@ -154,6 +159,11 @@ class MainActivity : FlutterActivity() {
                     )
                     "clearArtwork" -> result.success(
                         clearArtwork(call.argument("uri"), call.argument("kind"))
+                    )
+                    "exportOverlayZip" -> exportOverlayZip(
+                        call.argument("config"),
+                        call.argument("png"),
+                        result
                     )
                     "downloadLibretroCover" -> downloadLibretroCover(
                         call.argument("uri"),
@@ -758,6 +768,41 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    /** Export to a user-selected document; never touch RetroArch's sandbox. */
+    private fun exportOverlayZip(
+        config: String?, png: ByteArray?, result: MethodChannel.Result
+    ) {
+        if (pendingImport != null) {
+            result.error("BUSY", "Another file dialog is open", null)
+            return
+        }
+        if (config.isNullOrBlank() || config.length > 65536 ||
+            png == null || png.size < 8 || png.size > 5 * 1024 * 1024 ||
+            !png.copyOfRange(0, 4).contentEquals(
+                byteArrayOf(0x89.toByte(), 0x50, 0x4e, 0x47)
+            )) {
+            result.error("INVALID_OVERLAY", "Overlay config or PNG is invalid", null)
+            return
+        }
+        pendingImport = result
+        overlayConfig = config
+        overlayImage = png
+        try {
+            val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "application/zip"
+                putExtra(Intent.EXTRA_TITLE, "jolven-overlay.zip")
+                addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            }
+            startActivityForResult(intent, saveOverlayZipRequest)
+        } catch (error: Exception) {
+            pendingImport = null
+            overlayConfig = null
+            overlayImage = null
+            result.error("OVERLAY_PICKER", "Cannot open save picker", null)
+        }
+    }
+
     private fun downloadLibretroCover(
         romUri: String?, platformId: String?, title: String?,
         replaceExisting: Boolean, result: MethodChannel.Result
@@ -845,11 +890,50 @@ class MainActivity : FlutterActivity() {
             requestCode != savePatchRequest &&
             requestCode != pickSaveRequest &&
             requestCode != exportSaveRequest &&
+            requestCode != saveOverlayZipRequest &&
             requestCode != screenRecordRequest) return
         val result = pendingImport ?: return
         pendingImport = null
         val multiple = importMultiple
         importMultiple = false
+
+        if (requestCode == saveOverlayZipRequest) {
+            val cfg = overlayConfig
+            val png = overlayImage
+            overlayConfig = null
+            overlayImage = null
+            val destination = data?.data
+            if (resultCode != Activity.RESULT_OK || destination?.scheme != "content") {
+                result.success(mapOf("status" to "cancelled"))
+                return
+            }
+            if (cfg == null || png == null) {
+                result.error("OVERLAY_EXPIRED", "Export data unavailable", null)
+                return
+            }
+            scanner.execute {
+                try {
+                    val stream = contentResolver.openOutputStream(destination)
+                        ?: error("Cannot write archive")
+                    stream.use { output ->
+                        ZipOutputStream(output).use { zip ->
+                            zip.putNextEntry(ZipEntry("jolven.cfg"))
+                            zip.write(cfg.toByteArray(Charsets.UTF_8))
+                            zip.closeEntry()
+                            zip.putNextEntry(ZipEntry("jolven.png"))
+                            zip.write(png)
+                            zip.closeEntry()
+                        }
+                    }
+                    runOnUiThread { result.success(mapOf("status" to "saved")) }
+                } catch (_: Exception) {
+                    runOnUiThread {
+                        result.error("OVERLAY_EXPORT", "Unable to save overlay ZIP", null)
+                    }
+                }
+            }
+            return
+        }
 
         if (requestCode == screenRecordRequest) {
             if (resultCode != Activity.RESULT_OK || data == null) {
@@ -1202,6 +1286,8 @@ class MainActivity : FlutterActivity() {
         gamepadSink = null
         pendingImport?.error("ACTIVITY_DESTROYED", "File selection cancelled", null)
         pendingImport = null
+        overlayConfig = null
+        overlayImage = null
         scanner.shutdown()
         super.onDestroy()
     }
