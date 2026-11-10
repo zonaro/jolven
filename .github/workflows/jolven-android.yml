@@ -51,7 +51,7 @@ jobs:
       - name: Print Kotlin test report on failure
         if: failure()
         working-directory: android/jolven_flutter/android
-        run: find app/build/test-results/testDebugUnitTest -name 'TEST-*.xml' -type f -exec cat {} \; || true
+        run: if test -d ../build/app/test-results/testDebugUnitTest; then find ../build/app/test-results/testDebugUnitTest -name 'TEST-*.xml' -type f -exec cat {} \; ; fi
       - name: Build debug APK
         working-directory: android/jolven_flutter
         run: flutter build apk --debug
