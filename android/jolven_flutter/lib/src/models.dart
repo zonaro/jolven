@@ -86,6 +86,22 @@ class AndroidGame {
       );
 }
 
+class RecordingInfo {
+  const RecordingInfo({
+    required this.recording,
+    this.error,
+    this.lastVideoUri,
+  });
+  final bool recording;
+  final String? error;
+  final String? lastVideoUri;
+  factory RecordingInfo.fromMap(Map<dynamic, dynamic> row) => RecordingInfo(
+        recording: row['recording'] == true,
+        error: row['error'] as String?,
+        lastVideoUri: row['lastVideoUri'] as String?,
+      );
+}
+
 class SaveFileRecord {
   const SaveFileRecord({
     required this.id,

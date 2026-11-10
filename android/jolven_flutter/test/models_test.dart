@@ -112,6 +112,18 @@ void main() {
     expect(saved.romUri, 'content://rom/123');
   });
 
+  test('screen capture status never implies recording without service state', () {
+    final requested = RecordingInfo.fromMap({
+      'recording': false,
+      'lastVideoUri': '',
+      'error': '',
+    });
+    expect(requested.recording, false);
+    expect(requested.lastVideoUri, isEmpty);
+    final active = RecordingInfo.fromMap({'recording': true});
+    expect(active.recording, true);
+  });
+
   test('native app identity is the actual package name', () {
     final game = AndroidGame.fromMap({
       'packageName': 'org.example.game',

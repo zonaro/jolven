@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
 import android.provider.DocumentsContract
+import android.media.projection.MediaProjectionManager
 import android.view.InputDevice
 import com.redclaw.jolven_flutter.rompatcher.SafRomPatchWorkflow
 import java.util.concurrent.Executors
@@ -32,6 +33,7 @@ class MainActivity : FlutterActivity() {
     private val savePatchRequest = 4087
     private val pickSaveRequest = 4088
     private val exportSaveRequest = 4089
+    private val screenRecordRequest = 4090
     private val scanner = Executors.newSingleThreadExecutor()
     private var pendingImport: MethodChannel.Result? = null
     private var importMultiple = false
@@ -135,6 +137,16 @@ class MainActivity : FlutterActivity() {
                     "clearArtwork" -> result.success(
                         clearArtwork(call.argument("uri"), call.argument("kind"))
                     )
+                    "recordingStatus" -> result.success(mapOf(
+                        "recording" to JolvenRecordingService.isRecording,
+                        "error" to (JolvenRecordingService.lastError ?: ""),
+                        "lastVideoUri" to (JolvenRecordingService.lastVideoUri ?: "")
+                    ))
+                    "startScreenRecording" -> requestScreenRecording(result)
+                    "stopScreenRecording" -> {
+                        JolvenRecordingService.stop(this)
+                        result.success(mapOf("status" to "stop_requested"))
+                    }
                     "listSavedFiles" -> result.success(saveVault.all())
                     "pickSaveFile" -> pickSaveFile(call.argument("romUri"), result)
                     "exportSaveFile" -> exportSaveFile(call.argument("id"), result)
@@ -471,6 +483,29 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    private fun requestScreenRecording(result: MethodChannel.Result) {
+        if (android.os.Build.VERSION.SDK_INT < 29) {
+            result.error("UNSUPPORTED_ANDROID", "Screen recording requires Android 10+", null)
+            return
+        }
+        if (JolvenRecordingService.isRecording) {
+            result.success(mapOf("status" to "already_recording"))
+            return
+        }
+        if (pendingImport != null) {
+            result.error("BUSY", "Another picker or permission request is open", null)
+            return
+        }
+        pendingImport = result
+        try {
+            val manager = getSystemService(MediaProjectionManager::class.java)
+            startActivityForResult(manager.createScreenCaptureIntent(), screenRecordRequest)
+        } catch (error: Exception) {
+            pendingImport = null
+            result.error("CAPTURE_PERMISSION", error.message, null)
+        }
+    }
+
     private fun hashUserFile(uriText: String?, result: MethodChannel.Result) {
         if (uriText.isNullOrBlank() || !uriText.startsWith("content://")) {
             result.error("INVALID_FILE", "Select file via SAF", null)
@@ -670,11 +705,26 @@ class MainActivity : FlutterActivity() {
             requestCode != pickPatchRequest &&
             requestCode != savePatchRequest &&
             requestCode != pickSaveRequest &&
-            requestCode != exportSaveRequest) return
+            requestCode != exportSaveRequest &&
+            requestCode != screenRecordRequest) return
         val result = pendingImport ?: return
         pendingImport = null
         val multiple = importMultiple
         importMultiple = false
+
+        if (requestCode == screenRecordRequest) {
+            if (resultCode != Activity.RESULT_OK || data == null) {
+                result.success(mapOf("status" to "cancelled"))
+                return
+            }
+            try {
+                JolvenRecordingService.start(this, resultCode, data)
+                result.success(mapOf("status" to "consent_received"))
+            } catch (error: Exception) {
+                result.error("CAPTURE_START", error.message, null)
+            }
+            return
+        }
 
         if (requestCode == pickSaveRequest) {
             val associatedRom = saveRomUri

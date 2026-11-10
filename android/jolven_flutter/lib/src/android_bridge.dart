@@ -35,6 +35,23 @@ class AndroidBridge {
         <String, String>{};
   }
 
+  Future<RecordingInfo> recordingStatus() async {
+    final row = await _channel.invokeMethod<Map<dynamic, dynamic>>('recordingStatus');
+    return RecordingInfo.fromMap(row ?? {});
+  }
+
+  Future<LaunchOutcome> startScreenRecording() async {
+    final row = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'startScreenRecording');
+    return LaunchOutcome.fromMap(row ?? {});
+  }
+
+  Future<LaunchOutcome> stopScreenRecording() async {
+    final row = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'stopScreenRecording');
+    return LaunchOutcome.fromMap(row ?? {});
+  }
+
   Future<List<SaveFileRecord>> listSavedFiles() async {
     final rows = await _channel.invokeMethod<List<dynamic>>('listSavedFiles') ?? [];
     return rows.map((row) => SaveFileRecord.fromMap(row as Map)).toList();

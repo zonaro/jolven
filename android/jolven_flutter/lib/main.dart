@@ -9,12 +9,14 @@ import 'src/platform_catalog.dart';
 import 'src/patcher_page.dart';
 import 'src/save_vault_page.dart';
 import 'src/firmware_guide_page.dart';
+import 'src/recording_page.dart';
 
 void main() => runApp(const JolvenApp());
 
 const _strings = <String, Map<String, String>>{
   'pt': {
     'title': 'Jolven',
+    'recorder': 'Gravador de tela',
     'subtitle': 'Biblioteca e emuladores externos',
     'roms': 'Minhas ROMs',
     'emulators': 'Emuladores instalados',
@@ -86,6 +88,7 @@ const _strings = <String, Map<String, String>>{
   },
   'en': {
     'title': 'Jolven',
+    'recorder': 'Screen recorder',
     'subtitle': 'Library and external emulators',
     'roms': 'My ROMs',
     'emulators': 'Installed emulators',
@@ -157,6 +160,7 @@ const _strings = <String, Map<String, String>>{
   },
   'es': {
     'title': 'Jolven',
+    'recorder': 'Grabador de pantalla',
     'subtitle': 'Biblioteca y emuladores externos',
     'roms': 'Mis ROMs',
     'emulators': 'Emuladores instalados',
@@ -853,32 +857,26 @@ class _JolvenHomeState extends State<JolvenHome> {
       appBar: AppBar(
         title: Text(_t('title')),
         actions: [
-          IconButton(
-            tooltip: 'BIOS / Firmware',
-            icon: const Icon(Icons.shield_outlined),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (context) => const FirmwareGuidePage(),
-              ),
-            ),
-          ),
-          IconButton(
-            tooltip: 'Save Vault',
-            icon: const Icon(Icons.save_outlined),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (context) => const SaveVaultPage(),
-              ),
-            ),
-          ),
-          IconButton(
-            tooltip: 'ROM Patcher',
-            icon: const Icon(Icons.auto_fix_high),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (context) => const RomPatcherPage(),
-              ),
-            ),
+          PopupMenuButton<String>(
+            tooltip: 'Tools',
+            icon: const Icon(Icons.tune),
+            onSelected: (action) {
+              final screen = switch (action) {
+                'bios' => const FirmwareGuidePage(),
+                'saves' => const SaveVaultPage(),
+                'patcher' => const RomPatcherPage(),
+                _ => const RecordingPage(),
+              };
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (context) => screen),
+              );
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(value: 'bios', child: Text('BIOS / Firmware')),
+              const PopupMenuItem(value: 'saves', child: Text('Save Vault')),
+              const PopupMenuItem(value: 'patcher', child: Text('ROM Patcher')),
+              PopupMenuItem(value: 'recording', child: Text(_t('recorder'))),
+            ],
           ),
           IconButton(
             tooltip: _t('refresh'),
