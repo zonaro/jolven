@@ -6,6 +6,7 @@ void main() {
   testWidgets('Nintendo DS guide changes preview without controlling external apps',
       (tester) async {
     await tester.pumpWidget(const MaterialApp(
+      locale: Locale('pt'),
       home: NdsExternalLayoutGuide(),
     ));
     await tester.pumpAndSettle();
