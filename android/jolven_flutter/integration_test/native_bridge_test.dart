@@ -14,12 +14,15 @@ void main() {
     final remote = await channel.invokeMethod<List<dynamic>>('listRemoteClients');
     final gamepads = await channel.invokeMethod<List<dynamic>>('listGamepads');
     final collections = await channel.invokeMethod<List<dynamic>>('listCollections');
+    final consoleDefaults =
+        await channel.invokeMethod<Map<dynamic, dynamic>>('getConsoleEmulatorDefaults');
 
     expect(emulators, isNotNull);
     expect(roms, isNotNull);
     expect(remote, isNotNull);
     expect(gamepads, isNotNull);
     expect(collections, isNotNull);
+    expect(consoleDefaults, isNotNull);
 
     // The app itself is a frontend. Android games/ROM catalog remain usable
     // when RetroArch and other third-party emulators are absent.

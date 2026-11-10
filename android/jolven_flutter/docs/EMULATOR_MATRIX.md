@@ -30,3 +30,20 @@ References:
 ## Opt-in advanced RetroArch launch (not a default)
 
 The ROM's action menu now offers `RetroArch: advanced paths`. The user types an absolute ROM path readable by the **external RetroArch** and the exact installed core full `.so` path copied from that app's settings. Jolven validates only simple path syntax and then passes official `ROM`/`LIBRETRO` intent extras. It does **not** read/verify the other app's core directory, convert arbitrary SAF URIs into guessed filesystem paths, install a core, or claim successful play. The normal safe default remains to open RetroArch and let the user browse their ROM there. Do not advertise this advanced path as broadly compatible before on-device tests.
+
+## Preferred external emulators by console — 10/11/2026 (issue #85/#151)
+
+The Android hub now reads a separate persisted preference for **each console** (in Android's private `jolven_console_emulator_defaults` SharedPreferences). A game-level override always wins over its console default. The user can set or clear this from each ROM menu → **Emulador padrão deste console**; the selector also shows a default marker.
+
+`lib/src/emulator_compatibility.dart` ranks only **installed** emulator packages from Jolven's known adapter list. A conservative static console-family heuristic puts PPSSPP next to PSP content, Dolphin next to GameCube/Wii, Mupen64 next to N64, DuckStation next to PS1, Azahar next to 3DS and DraStic next to NDS. RetroArch is treated as a **manual** option until the user enters its real external ROM/core paths, and even then the handoff is labeled **unverified**. The heuristic does **not** infer whether any core, BIOS, file format or emulator version actually works. Unknown/ambiguous ROM extensions get no compatibility claim.
+
+Other installed emulators are hidden under **Mostrar outros emuladores instalados** when there is an appropriate console family. Choosing one of those unrelated apps opens it **without** sending a ROM intent. Users can still configure an emulator per-game. Removed/uninstalled packages are filtered out at the point of display.
+
+### Acceptance still pending
+
+- Actual on-device install/launch results for each external package/Android version; evidence must distinguish successful intent dispatch from successful game loading.
+- Version-based capability metadata from public emulator APIs (if any) and a device-tested matrix; do not label generic intents as verified solely because package exists.
+- Game collections and console defaults share only catalog metadata, never private data from other emulators.
+- A physical-gamepad-friendly selector and return-to-hub path after external apps; tests on Android 11–15, Android TV, tablets and budget devices.
+
+Tests: `flutter test test/emulator_compatibility_test.dart`, Kotlin MethodChannel smoke tests on Android emulator.

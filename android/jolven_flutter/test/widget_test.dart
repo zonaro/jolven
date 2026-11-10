@@ -18,6 +18,8 @@ void main() {
         case 'listGamepads':
         case 'listRoms':
           return <Map<String, Object?>>[];
+        case 'getConsoleEmulatorDefaults':
+          return <String, String>{};
         default:
           throw PlatformException(code: 'UNEXPECTED_CALL', message: call.method);
       }

@@ -46,6 +46,22 @@ class AndroidBridge {
     return result?['status'] == 'saved';
   }
 
+  Future<Map<String, String>> getConsoleEmulatorDefaults() async {
+    final map = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'getConsoleEmulatorDefaults',
+    );
+    return (map ?? {}).map(
+      (key, value) => MapEntry(key.toString(), value.toString()),
+    );
+  }
+
+  Future<void> setConsoleEmulatorDefault(String platformId, String? packageName) async {
+    await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'setConsoleEmulatorDefault',
+      {'platformId': platformId, 'packageName': packageName ?? ''},
+    );
+  }
+
   Future<List<EmulatorInfo>> listEmulators() async {
     final rows = await _channel.invokeMethod<List<dynamic>>('listEmulators') ?? [];
     return rows.map((row) => EmulatorInfo.fromMap(row as Map)).toList();

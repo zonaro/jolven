@@ -80,6 +80,9 @@ class MainActivity : FlutterActivity() {
     )
 
     private val prefs by lazy { getSharedPreferences("jolven_rom_catalog", MODE_PRIVATE) }
+    private val consoleDefaults by lazy {
+        getSharedPreferences("jolven_console_emulator_defaults", MODE_PRIVATE)
+    }
     private val collections by lazy { JolvenCollections(this) }
     private val artworkStore by lazy { JolvenArtworkStore(filesDir) }
     private val saveVault by lazy { JolvenSaveVault(this) }
@@ -135,6 +138,12 @@ class MainActivity : FlutterActivity() {
                     )
                     "listGamepads" -> result.success(listGamepads())
                     "openRetroArchGuide" -> result.success(openRetroArchGuide())
+                    "getConsoleEmulatorDefaults" -> result.success(readConsoleEmulatorDefaults())
+                    "setConsoleEmulatorDefault" -> setConsoleEmulatorDefault(
+                        call.argument("platformId"),
+                        call.argument("packageName"),
+                        result
+                    )
                     "listEmulators" -> result.success(emulators.map { e ->
                         mapOf(
                             "id" to e.id, "name" to e.name,
@@ -484,6 +493,39 @@ class MainActivity : FlutterActivity() {
         }
         if (added.isNotEmpty()) writeRoms(old + added)
         return added
+    }
+
+    private fun readConsoleEmulatorDefaults(): Map<String, String> {
+        // Invalid/stale packages are ignored, not guessed by matching titles.
+        return consoleDefaults.all.mapNotNull { (platform, rawPackage) ->
+            val pkg = rawPackage as? String
+            if (platform.matches(Regex("[a-z0-9_-]{1,32}")) &&
+                pkg != null && emulators.any { it.packageName == pkg }) {
+                platform to pkg
+            } else null
+        }.toMap()
+    }
+
+    private fun setConsoleEmulatorDefault(
+        platformId: String?, packageName: String?, result: MethodChannel.Result
+    ) {
+        if (platformId.isNullOrBlank() ||
+            !platformId.matches(Regex("[a-z0-9_-]{1,32}"))) {
+            result.error("INVALID_PLATFORM", "Invalid console ID", null)
+            return
+        }
+        if (packageName == null ||
+            (packageName.isNotBlank() &&
+                (emulators.none { it.packageName == packageName } ||
+                    !isInstalled(packageName)))) {
+            result.error("INVALID_EMULATOR", "Select an installed emulator", null)
+            return
+        }
+        val editor = consoleDefaults.edit()
+        if (packageName.isBlank()) editor.remove(platformId)
+        else editor.putString(platformId, packageName)
+        if (editor.commit()) result.success(readConsoleEmulatorDefaults())
+        else result.error("PREFS_WRITE", "Could not save console preference", null)
     }
 
     private fun updateRom(call: io.flutter.plugin.common.MethodCall, result: MethodChannel.Result) {

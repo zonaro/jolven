@@ -6,6 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'src/android_bridge.dart';
 import 'src/models.dart';
 import 'src/platform_catalog.dart';
+import 'src/emulator_compatibility.dart';
 import 'src/patcher_page.dart';
 import 'src/save_vault_page.dart';
 import 'src/firmware_guide_page.dart';
@@ -59,6 +60,14 @@ const _strings = <String, Map<String, String>>{
     'favorite': 'Adicionar aos favoritos',
     'unfavorite': 'Remover dos favoritos',
     'preferred': 'Emulador preferido',
+    'defaultForConsole': 'Emulador padrão deste console',
+    'clearConsoleDefault': 'Remover padrão deste console',
+    'consoleDefaultSaved': 'Preferência do console salva',
+    'differentConsole': 'Emulador voltado para outro console; abertura manual',
+    'showOtherEmulators': 'Mostrar outros emuladores instalados',
+    'defaultForGame': 'Preferido deste jogo',
+    'defaultLabel': 'Padrão',
+    'unknownCompatibility': 'Identifique o console para filtrar os emuladores',
     'retroAdvanced': 'RetroArch: caminhos avançados',
     'retroWarning': 'Use apenas caminhos obtidos na configuração do RetroArch. Não é possível verificar os cores de outro app; um caminho errado pode causar tela preta.',
     'retroCore': 'Caminho absoluto do core (.so)',
@@ -146,6 +155,14 @@ const _strings = <String, Map<String, String>>{
     'favorite': 'Add to favorites',
     'unfavorite': 'Remove from favorites',
     'preferred': 'Preferred emulator',
+    'defaultForConsole': 'Default emulator for this console',
+    'clearConsoleDefault': 'Clear console default',
+    'consoleDefaultSaved': 'Console preference saved',
+    'differentConsole': 'Emulator targets another console; manual opening only',
+    'showOtherEmulators': 'Show other installed emulators',
+    'defaultForGame': 'Preferred for this game',
+    'defaultLabel': 'Default',
+    'unknownCompatibility': 'Select a console to filter emulators',
     'retroAdvanced': 'RetroArch: advanced paths',
     'retroWarning': 'Use paths found inside RetroArch settings. Jolven cannot check another app’s cores; wrong paths may cause a black screen.',
     'retroCore': 'Absolute core path (.so)',
@@ -233,6 +250,14 @@ const _strings = <String, Map<String, String>>{
     'favorite': 'Agregar a favoritos',
     'unfavorite': 'Quitar de favoritos',
     'preferred': 'Emulador preferido',
+    'defaultForConsole': 'Emulador predeterminado de esta consola',
+    'clearConsoleDefault': 'Quitar predeterminado de esta consola',
+    'consoleDefaultSaved': 'Preferencia de consola guardada',
+    'differentConsole': 'Emulador de otra consola; apertura manual',
+    'showOtherEmulators': 'Mostrar otros emuladores instalados',
+    'defaultForGame': 'Preferido de este juego',
+    'defaultLabel': 'Predeterminado',
+    'unknownCompatibility': 'Selecciona consola para filtrar emuladores',
     'retroAdvanced': 'RetroArch: rutas avanzadas',
     'retroWarning': 'Usa las rutas indicadas en RetroArch. Jolven no puede comprobar los cores de otra app; una ruta incorrecta puede mostrar una pantalla negra.',
     'retroCore': 'Ruta absoluta del core (.so)',
@@ -316,6 +341,7 @@ class JolvenHome extends StatefulWidget {
 class _JolvenHomeState extends State<JolvenHome> {
   final _bridge = const AndroidBridge();
   List<EmulatorInfo> _emulators = [];
+  Map<String, String> _consoleEmulatorDefaults = {};
   List<RomItem> _roms = [];
   List<AndroidGame> _androidGames = [];
   List<RemoteClient> _remoteClients = [];
@@ -346,6 +372,7 @@ class _JolvenHomeState extends State<JolvenHome> {
     setState(() => _loading = true);
     try {
       final emulators = await _bridge.listEmulators();
+      final consoleDefaults = await _bridge.getConsoleEmulatorDefaults();
       final roms = await _bridge.listRoms();
       final androidGames = await _bridge.listAndroidGames();
       final remoteClients = await _bridge.listRemoteClients();
@@ -354,6 +381,7 @@ class _JolvenHomeState extends State<JolvenHome> {
       if (!mounted) return;
       setState(() {
         _emulators = emulators;
+        _consoleEmulatorDefaults = consoleDefaults;
         _roms = roms;
         _androidGames = androidGames;
         _remoteClients = remoteClients;
@@ -566,8 +594,73 @@ class _JolvenHomeState extends State<JolvenHome> {
     }
   }
 
+  String _emulatorFitLabel(EmulatorFit fit) => switch (fit) {
+    EmulatorFit.documentedIntent => _t('documented'),
+    EmulatorFit.experimentalIntent => _t('experimental'),
+    EmulatorFit.retroArchPathsUnverified => _t('retroReady'),
+    EmulatorFit.manualOnly => _t('manual'),
+    EmulatorFit.unknownSystem => _t('unknownCompatibility'),
+    EmulatorFit.differentSystem => _t('differentConsole'),
+  };
+
+  Future<void> _setConsoleDefault(RomItem rom) async {
+    final platform = romPlatformId(rom);
+    if (platform == null) {
+      _message(_t('unknownPlatform'));
+      return;
+    }
+    final installed = rankEmulators(
+      rom, _emulators, consoleDefaults: _consoleEmulatorDefaults,
+    );
+    if (installed.isEmpty) {
+      _message(_t('none'));
+      return;
+    }
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        child: SizedBox(
+          height: MediaQuery.sizeOf(sheetContext).height * 0.64,
+          child: ListView(children: [
+            ListTile(title: Text('${_t('defaultForConsole')}: ${platformLabel(platform)}')),
+            if (_consoleEmulatorDefaults.containsKey(platform))
+              ListTile(
+                leading: const Icon(Icons.close),
+                title: Text(_t('clearConsoleDefault')),
+                onTap: () => Navigator.pop(sheetContext, ''),
+              ),
+            for (final emulator in installed.where(
+              (e) => emulatorFit(rom, e) != EmulatorFit.differentSystem,
+            ))
+              ListTile(
+                leading: const Icon(Icons.sports_esports),
+                title: Text(emulator.name),
+                subtitle: Text(_emulatorFitLabel(emulatorFit(rom, emulator))),
+                trailing: _consoleEmulatorDefaults[platform] == emulator.packageName
+                    ? const Icon(Icons.check) : null,
+                onTap: () => Navigator.pop(sheetContext, emulator.packageName),
+              ),
+          ]),
+        ),
+      ),
+    );
+    if (selected == null) return;
+    try {
+      await _bridge.setConsoleEmulatorDefault(platform, selected);
+      if (mounted) {
+        await _refresh();
+        _message(_t('consoleDefaultSaved'));
+      }
+    } catch (error) {
+      if (mounted) _message('${_t('error')}: $error');
+    }
+  }
+
   Future<void> _setPreferred(RomItem rom) async {
-    final installed = _emulators.where((e) => e.installed).toList();
+    final installed = rankEmulators(
+      rom, _emulators, consoleDefaults: _consoleEmulatorDefaults,
+    );
     if (installed.isEmpty) {
       _message(_t('none'));
       return;
@@ -580,6 +673,7 @@ class _JolvenHomeState extends State<JolvenHome> {
           for (final emulator in installed)
             ListTile(
               title: Text(emulator.name),
+              subtitle: Text(_emulatorFitLabel(emulatorFit(rom, emulator))),
               onTap: () => Navigator.pop(sheetContext, emulator),
             ),
         ]),
@@ -851,40 +945,72 @@ class _JolvenHomeState extends State<JolvenHome> {
   }
 
   Future<void> _chooseEmulator(RomItem rom) async {
-    final installed = _emulators.where((e) => e.installed).toList()
-      ..sort((a, b) {
-        final aPreferred = a.packageName == rom.emulatorPackage ? 0 : 1;
-        final bPreferred = b.packageName == rom.emulatorPackage ? 0 : 1;
-        return aPreferred.compareTo(bPreferred);
-      });
+    final installed = rankEmulators(
+      rom, _emulators, consoleDefaults: _consoleEmulatorDefaults,
+    );
     if (installed.isEmpty) {
       _message(_t('none'));
       return;
     }
+    bool showOther = false;
+    final suitable = installed.where(
+      (e) => emulatorFit(rom, e) != EmulatorFit.differentSystem,
+    ).toList();
     final choice = await showModalBottomSheet<EmulatorInfo>(
       context: context,
-      builder: (sheetContext) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            ListTile(title: Text(_t('select'))),
-            for (final e in installed)
+      isScrollControlled: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, updateSheet) => SafeArea(
+          child: SizedBox(
+            height: MediaQuery.sizeOf(context).height * 0.7,
+            child: ListView(children: [
               ListTile(
-                leading: const Icon(Icons.sports_esports_outlined),
-                title: Text(e.name),
-                subtitle: Text(e.id.startsWith('retroarch') &&
-                        rom.retroCorePath != null && rom.retroRomPath != null
-                    ? _t('retroReady')
-                    : (e.documentedIntegration ? _t('documented') :
-                        (e.canAttemptView ? _t('experimental') : _t('manual')))),
-                onTap: () => Navigator.pop(sheetContext, e),
+                title: Text(_t('select')),
+                subtitle: Text(_romConsole(rom)),
               ),
-          ],
+              if (suitable.isEmpty)
+                ListTile(title: Text(_t('unknownCompatibility'))),
+              for (final emulator in (showOther || suitable.isEmpty)
+                  ? installed : suitable)
+                ListTile(
+                  leading: Icon(
+                    emulatorFit(rom, emulator) == EmulatorFit.differentSystem
+                        ? Icons.warning_amber_outlined
+                        : Icons.sports_esports_outlined,
+                  ),
+                  title: Text(emulator.name),
+                  subtitle: Text(_emulatorFitLabel(emulatorFit(rom, emulator))),
+                  trailing: emulator.packageName == rom.emulatorPackage
+                      ? Tooltip(message: _t('defaultForGame'),
+                          child: const Icon(Icons.star))
+                      : emulator.packageName ==
+                        _consoleEmulatorDefaults[romPlatformId(rom)]
+                          ? Tooltip(message: _t('defaultForConsole'),
+                              child: const Icon(Icons.check_circle_outline))
+                          : null,
+                  onTap: () => Navigator.pop(sheetContext, emulator),
+                ),
+              if (suitable.isNotEmpty && suitable.length < installed.length)
+                SwitchListTile(
+                  title: Text(_t('showOtherEmulators')),
+                  value: showOther,
+                  onChanged: (value) => updateSheet(
+                    () => showOther = value,
+                  ),
+                ),
+            ]),
+          ),
         ),
       ),
     );
     if (choice == null || !mounted) return;
     try {
+      if (emulatorFit(rom, choice) == EmulatorFit.differentSystem) {
+        // No attempt to pass a ROM to a clearly unrelated emulator.
+        _message(_t('differentConsole'));
+        await _openEmulator(choice);
+        return;
+      }
       final outcome = await _bridge.launchRom(rom, choice);
       if (!mounted) return;
       final key = switch (outcome.status) {
@@ -928,6 +1054,7 @@ class _JolvenHomeState extends State<JolvenHome> {
       if (value == 'play') _chooseEmulator(rom);
       if (value == 'platform') _setPlatform(rom);
       if (value == 'preferred') _setPreferred(rom);
+      if (value == 'consoleDefault') _setConsoleDefault(rom);
       if (value == 'retroAdvanced') _configureRetroArch(rom);
       if (value == 'favorite') _toggleFavorite(rom);
       if (value == 'cover') _selectArtwork(rom, 'cover');
@@ -943,6 +1070,8 @@ class _JolvenHomeState extends State<JolvenHome> {
       PopupMenuItem(value: 'play', child: Text(_t('play'))),
       PopupMenuItem(value: 'platform', child: Text(_t('platform'))),
       PopupMenuItem(value: 'preferred', child: Text(_t('preferred'))),
+      PopupMenuItem(value: 'consoleDefault',
+        child: Text(_t('defaultForConsole'))),
       PopupMenuItem(value: 'retroAdvanced', child: Text(_t('retroAdvanced'))),
       PopupMenuItem(value: 'favorite', child: Text(
         _t(rom.favorite ? 'unfavorite' : 'favorite'))),
