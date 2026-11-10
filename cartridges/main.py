@@ -644,6 +644,7 @@ class CartridgesApplication(Adw.Application):
                 ("import_rom", ("<primary><shift>r",)),
                 ("export_saves",),
                 ("restore_saves",),
+                ("playlists",),
                 ("import", ("<primary>i",)),
                 ("remove_game_details_view", ("Delete",)),
                 ("remove_game",),
@@ -1029,6 +1030,11 @@ class CartridgesApplication(Adw.Application):
             return
 
         DetailsDialog().present(shared.win)
+
+    def on_playlists_action(self, *_args: Any) -> None:
+        from cartridges.utils.playlists_dialog import show_playlists
+
+        show_playlists(shared.win)
 
     def on_export_saves_action(self, *_args: Any) -> None:
         from cartridges.utils.save_backup_dialog import export_emulator_saves
