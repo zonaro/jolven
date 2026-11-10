@@ -40,6 +40,7 @@ class RomItem {
     this.emulatorPackage,
     this.favorite = false,
     this.coverPath,
+    this.coverSource,
     this.labelPath,
     this.retroCorePath,
     this.retroRomPath,
@@ -53,6 +54,7 @@ class RomItem {
   final String? emulatorPackage;
   final bool favorite;
   final String? coverPath;
+  final String? coverSource;
   final String? labelPath;
   final String? retroCorePath;
   final String? retroRomPath;
@@ -69,6 +71,8 @@ class RomItem {
         favorite: data['favorite'] == true || data['favorite'] == 'true',
         coverPath: (data['coverPath'] as String?)?.isEmpty == true
             ? null : data['coverPath'] as String?,
+        coverSource: (data['coverSource'] as String?)?.isEmpty == true
+            ? null : data['coverSource'] as String?,
         labelPath: (data['labelPath'] as String?)?.isEmpty == true
             ? null : data['labelPath'] as String?,
         retroCorePath: (data['retroCorePath'] as String?)?.isEmpty == true

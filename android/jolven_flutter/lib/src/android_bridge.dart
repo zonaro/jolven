@@ -120,6 +120,25 @@ class AndroidBridge {
     });
   }
 
+  Future<String> downloadLibretroCover(
+    RomItem rom, String platformId, String title, {
+    bool replaceExisting = false,
+  }) async {
+    final row = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'downloadLibretroCover', {
+        'uri': rom.uri,
+        'platformId': platformId,
+        'title': title,
+        'replaceExisting': replaceExisting,
+      },
+    );
+    final path = row?['path'] as String?;
+    if (path == null || path.isEmpty) {
+      throw const FormatException('Thumbnail unavailable');
+    }
+    return path;
+  }
+
   Future<String?> pickArtwork(RomItem rom, String kind) async {
     return _channel.invokeMethod<String>('pickArtwork', {
       'uri': rom.uri, 'kind': kind,

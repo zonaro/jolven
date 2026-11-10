@@ -41,6 +41,12 @@ const _strings = <String, Map<String, String>>{
     'importFolder': 'Importar pasta',
     'platform': 'Definir console',
     'setCover': 'Escolher capa local',
+    'libretroCover': 'Buscar capa no Libretro',
+    'libretroTitle': 'Nome do jogo no catálogo Libretro',
+    'libretroWarning': 'Busca manual por título. A imagem pode não existir. Não substituímos sua capa sem confirmação.',
+    'libretroReplace': 'Substituir capa atual por imagem do Libretro?',
+    'libretroSaved': 'Capa recebida do Libretro',
+
     'setLabel': 'Escolher etiqueta de cartucho',
     'clearCover': 'Remover capa',
     'clearLabel': 'Remover etiqueta',
@@ -120,6 +126,12 @@ const _strings = <String, Map<String, String>>{
     'importFolder': 'Import folder',
     'platform': 'Set console',
     'setCover': 'Choose local cover',
+    'libretroCover': 'Find cover on Libretro',
+    'libretroTitle': 'Game title on Libretro thumbnails',
+    'libretroWarning': 'Manual title lookup. The image may not exist. Existing covers are never replaced without confirmation.',
+    'libretroReplace': 'Replace current cover with Libretro thumbnail?',
+    'libretroSaved': 'Cover retrieved from Libretro',
+
     'setLabel': 'Choose cartridge label',
     'clearCover': 'Remove cover',
     'clearLabel': 'Remove label',
@@ -199,6 +211,12 @@ const _strings = <String, Map<String, String>>{
     'importFolder': 'Importar carpeta',
     'platform': 'Elegir consola',
     'setCover': 'Elegir portada local',
+    'libretroCover': 'Buscar portada en Libretro',
+    'libretroTitle': 'Nombre del juego en Libretro',
+    'libretroWarning': 'Búsqueda manual por nombre. La imagen puede no existir. No reemplazamos la portada sin confirmación.',
+    'libretroReplace': '¿Reemplazar la portada actual con Libretro?',
+    'libretroSaved': 'Portada recibida de Libretro',
+
     'setLabel': 'Elegir etiqueta de cartucho',
     'clearCover': 'Quitar portada',
     'clearLabel': 'Quitar etiqueta',
@@ -373,6 +391,63 @@ class _JolvenHomeState extends State<JolvenHome> {
       if (mounted) await _refresh();
     } catch (error) {
       if (mounted) _message('${_t('error')}: $error');
+    }
+  }
+
+  Future<void> _downloadLibretroCover(RomItem rom) async {
+    final platformId = rom.platformId ?? identifyPlatform(rom.name).confidentId;
+    if (platformId == null) {
+      _message(_t('unknownPlatform'));
+      return;
+    }
+    final title = TextEditingController(
+      text: rom.name.replaceFirst(RegExp(r'\.[^.]+$'), ''),
+    );
+    try {
+      final approved = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(_t('libretroCover')),
+          content: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Text(_t('libretroWarning')),
+              if (rom.coverPath != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Text(_t('libretroReplace')),
+                ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: title,
+                maxLength: 160,
+                decoration: InputDecoration(labelText: _t('libretroTitle')),
+              ),
+            ]),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(_t('cancel')),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(_t('save')),
+            ),
+          ],
+        ),
+      );
+      if (approved != true || title.text.trim().isEmpty) return;
+      await _bridge.downloadLibretroCover(
+        rom, platformId, title.text.trim(),
+        replaceExisting: rom.coverPath != null,
+      );
+      if (!mounted) return;
+      _message(_t('libretroSaved'));
+      await _refresh();
+    } catch (_) {
+      if (mounted) _message(_t('unsupported'));
+    } finally {
+      title.dispose();
     }
   }
 
@@ -847,6 +922,7 @@ class _JolvenHomeState extends State<JolvenHome> {
       if (value == 'retroAdvanced') _configureRetroArch(rom);
       if (value == 'favorite') _toggleFavorite(rom);
       if (value == 'cover') _selectArtwork(rom, 'cover');
+      if (value == 'libretroCover') _downloadLibretroCover(rom);
       if (value == 'label') _selectArtwork(rom, 'label');
       if (value == 'clearCover') _clearArtwork(rom, 'cover');
       if (value == 'clearLabel') _clearArtwork(rom, 'label');
@@ -862,6 +938,7 @@ class _JolvenHomeState extends State<JolvenHome> {
       PopupMenuItem(value: 'favorite', child: Text(
         _t(rom.favorite ? 'unfavorite' : 'favorite'))),
       PopupMenuItem(value: 'cover', child: Text(_t('setCover'))),
+      PopupMenuItem(value: 'libretroCover', child: Text(_t('libretroCover'))),
       PopupMenuItem(value: 'label', child: Text(_t('setLabel'))),
       if (rom.coverPath != null)
         PopupMenuItem(value: 'clearCover', child: Text(_t('clearCover'))),

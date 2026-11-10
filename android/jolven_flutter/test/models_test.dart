@@ -140,6 +140,20 @@ void main() {
     expect(scanned.sizeBytes, 123);
   });
 
+  test('libretro artwork provenance remains distinct from local cover', () {
+    final rom = RomItem.fromMap({
+      'uri': 'content://game/1',
+      'name': 'Homebrew.nes',
+      'coverPath': '/data/jolven/cover.png',
+      'coverSource': 'https://thumbnails.libretro.com/Nintendo/Named_Boxarts/Homebrew.png',
+    });
+    expect(rom.coverSource, startsWith('https://'));
+    expect(RomItem.fromMap({
+      'uri': 'content://game/1', 'name': 'Homebrew.nes',
+      'coverPath': '/data/jolven/local.png', 'coverSource': '',
+    }).coverSource, null);
+  });
+
   test('native app identity is the actual package name', () {
     final game = AndroidGame.fromMap({
       'packageName': 'org.example.game',

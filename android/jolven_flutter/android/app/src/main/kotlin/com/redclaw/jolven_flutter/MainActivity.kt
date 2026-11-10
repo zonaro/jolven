@@ -155,6 +155,13 @@ class MainActivity : FlutterActivity() {
                     "clearArtwork" -> result.success(
                         clearArtwork(call.argument("uri"), call.argument("kind"))
                     )
+                    "downloadLibretroCover" -> downloadLibretroCover(
+                        call.argument("uri"),
+                        call.argument("platformId"),
+                        call.argument("title"),
+                        call.argument<Boolean>("replaceExisting") == true,
+                        result
+                    )
                     "recordingStatus" -> result.success(mapOf(
                         "recording" to JolvenRecordingService.isRecording,
                         "error" to (JolvenRecordingService.lastError ?: ""),
@@ -376,6 +383,7 @@ class MainActivity : FlutterActivity() {
                     "emulatorPackage" to value.optString("emulatorPackage"),
                     "favorite" to value.optString("favorite", "false"),
                     "coverPath" to value.optString("coverPath"),
+                    "coverSource" to value.optString("coverSource"),
                     "labelPath" to value.optString("labelPath"),
                     "retroCorePath" to value.optString("retroCorePath"),
                     "retroRomPath" to value.optString("retroRomPath"),
@@ -750,12 +758,79 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    private fun downloadLibretroCover(
+        romUri: String?, platformId: String?, title: String?,
+        replaceExisting: Boolean, result: MethodChannel.Result
+    ) {
+        if (romUri.isNullOrBlank() || platformId.isNullOrBlank() ||
+            title.isNullOrBlank()) {
+            result.error("INVALID_THUMBNAIL", "Missing ROM/system/title", null)
+            return
+        }
+        val current = readRoms().firstOrNull { it["uri"] == romUri }
+        if (current == null) {
+            result.error("ROM_NOT_FOUND", "ROM not in catalog", null)
+            return
+        }
+        if (!replaceExisting && current["coverPath"].orEmpty().isNotBlank()) {
+            result.error("COVER_EXISTS", "Cover already set", null)
+            return
+        }
+        if (LibretroThumbnailProvider.urlFor(platformId, title) == null) {
+            result.error("UNSUPPORTED_THUMBNAIL", "Unsupported console/title", null)
+            return
+        }
+        scanner.execute {
+            try {
+                val downloaded = LibretroThumbnailProvider.download(
+                    artworkStore, romUri, platformId, title
+                )
+                runOnUiThread {
+                    val records = readRoms()
+                    val old = records.firstOrNull { it["uri"] == romUri }
+                    if (old == null) {
+                        artworkStore.deleteIfOwned(downloaded.path)
+                        result.error("ROM_REMOVED", "ROM removed during download", null)
+                    } else {
+                        writeRoms(records.map { record ->
+                            if (record["uri"] != romUri) record
+                            else record + mapOf(
+                                "coverPath" to downloaded.path,
+                                "coverSource" to downloaded.source
+                            )
+                        })
+                        if (old["coverPath"] != downloaded.path) {
+                            artworkStore.deleteIfOwned(old["coverPath"])
+                        }
+                        result.success(mapOf(
+                            "path" to downloaded.path,
+                            "source" to downloaded.source
+                        ))
+                    }
+                }
+            } catch (_: Exception) {
+                runOnUiThread {
+                    result.error(
+                        "THUMBNAIL_FAILED",
+                        "Thumbnail not found or network unavailable", null
+                    )
+                }
+            }
+        }
+    }
+
     private fun clearArtwork(romUri: String?, kind: String?): Boolean {
         if (romUri.isNullOrBlank() || (kind != "cover" && kind != "label")) return false
         val key = if (kind == "cover") "coverPath" else "labelPath"
         val entries = readRoms()
         val target = entries.firstOrNull { it["uri"] == romUri } ?: return false
-        writeRoms(entries.map { if (it["uri"] == romUri) it + (key to "") else it })
+        writeRoms(entries.map { record ->
+            if (record["uri"] != romUri) record
+            else if (kind == "cover") record + mapOf(
+                "coverPath" to "", "coverSource" to ""
+            )
+            else record + (key to "")
+        })
         artworkStore.deleteIfOwned(target[key])
         return true
     }
@@ -915,7 +990,13 @@ class MainActivity : FlutterActivity() {
                             result.error("ROM_REMOVED", "ROM was removed during selection", null)
                         }
                     } else {
-                        writeRoms(entries.map { if (it["uri"] == romUri) it + (key to saved) else it })
+                        writeRoms(entries.map { record ->
+                            if (record["uri"] != romUri) record
+                            else if (kind == "cover") record + mapOf(
+                                "coverPath" to saved, "coverSource" to ""
+                            )
+                            else record + (key to saved)
+                        })
                         if (previous[key] != saved) artworkStore.deleteIfOwned(previous[key])
                         runOnUiThread { result.success(saved) }
                     }

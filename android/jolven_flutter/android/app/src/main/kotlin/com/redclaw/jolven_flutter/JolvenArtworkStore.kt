@@ -6,32 +6,37 @@ import android.net.Uri
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
 
-/** Safe offline artwork: user-selected JPEG/PNG/WebP, never remote downloads. */
+/** User-supplied or explicitly requested artwork, validated before persistence. */
 internal class JolvenArtworkStore(filesDir: File) {
     private val directory = File(filesDir, "artwork").also { it.mkdirs() }
 
     fun save(resolver: ContentResolver, input: Uri, romUri: String, kind: String): String {
         require(input.scheme == "content")
+        val stream = resolver.openInputStream(input) ?: error("Image unavailable")
+        return stream.use { saveStream(it, romUri, kind) }
+    }
+
+    /** Stream can come only from an explicit SAF pick or approved Libretro URL. */
+    fun saveStream(input: InputStream, romUri: String, kind: String): String {
         require(kind == "cover" || kind == "label")
         require(romUri.startsWith("content://"))
         val temporary = File.createTempFile("artwork-", ".tmp", directory)
         try {
-            val source = resolver.openInputStream(input) ?: error("Image is unavailable")
             var total = 0L
-            source.use { stream ->
-                FileOutputStream(temporary).use { output ->
-                    val buffer = ByteArray(32 * 1024)
-                    while (true) {
-                        val size = stream.read(buffer)
-                        if (size < 0) break
-                        total += size
-                        require(total <= MAX_BYTES) { "Image exceeds 8 MiB" }
-                        output.write(buffer, 0, size)
-                    }
+            FileOutputStream(temporary).use { output ->
+                val buffer = ByteArray(32 * 1024)
+                while (true) {
+                    val size = input.read(buffer)
+                    if (size < 0) break
+                    if (size == 0) continue
+                    total += size
+                    require(total <= MAX_BYTES) { "Image exceeds 8 MiB" }
+                    output.write(buffer, 0, size)
                 }
             }
             val ext = detectImageExtension(temporary)
@@ -40,8 +45,9 @@ internal class JolvenArtworkStore(filesDir: File) {
             BitmapFactory.decodeFile(temporary.path, options)
             require(options.outWidth in 1..MAX_DIMENSION && options.outHeight in 1..MAX_DIMENSION)
             require(options.outWidth.toLong() * options.outHeight <= MAX_PIXELS) {
-                "Image dimensions are too large"
+                "Image dimensions too large"
             }
+
             val hash = MessageDigest.getInstance("SHA-256")
                 .digest(romUri.toByteArray(Charsets.UTF_8))
                 .joinToString("") { "%02x".format(it) }
