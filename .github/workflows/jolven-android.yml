@@ -30,6 +30,12 @@ jobs:
       - name: Generate missing platform scaffold
         working-directory: android/jolven_flutter
         run: flutter create --org com.redclaw --project-name jolven_flutter --platforms android .
+      - name: Configure generated Android build (API 26 + JUnit)
+        working-directory: android/jolven_flutter/android
+        run: |
+          sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 26/' app/build.gradle.kts
+          grep -q 'minSdk = 26' app/build.gradle.kts
+          echo 'dependencies { testImplementation("junit:junit:4.13.2") }' >> app/build.gradle.kts
       - name: Resolve dependencies
         working-directory: android/jolven_flutter
         run: flutter pub get
