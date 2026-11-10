@@ -13,6 +13,7 @@ import 'src/recording_page.dart';
 import 'src/emulator_actions.dart';
 import 'src/gamepad_diagnostics_page.dart';
 import 'src/nds_external_layout_guide.dart';
+import 'src/retroachievements_page.dart';
 
 void main() => runApp(const JolvenApp());
 
@@ -895,6 +896,7 @@ class _JolvenHomeState extends State<JolvenHome> {
                 'bios' => const FirmwareGuidePage(),
                 'saves' => const SaveVaultPage(),
                 'patcher' => const RomPatcherPage(),
+                'achievements' => const RetroAchievementsPage(),
                 _ => const RecordingPage(),
               };
               Navigator.of(context).push(
@@ -905,6 +907,8 @@ class _JolvenHomeState extends State<JolvenHome> {
               const PopupMenuItem(value: 'bios', child: Text('BIOS / Firmware')),
               const PopupMenuItem(value: 'saves', child: Text('Save Vault')),
               const PopupMenuItem(value: 'patcher', child: Text('ROM Patcher')),
+              const PopupMenuItem(value: 'achievements',
+                child: Text('RetroAchievements')),
               PopupMenuItem(value: 'recording', child: Text(_t('recorder'))),
             ],
           ),
