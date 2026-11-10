@@ -13,6 +13,7 @@
         <package android:name="org.mupen64plusae.v3.fzurita" />
         <package android:name="org.duckstation.android" />
         <package android:name="org.azahar_emu.azahar" />
+        <package android:name="com.dsemu.drastic" />
         <package android:name="com.limelight" />
         <package android:name="com.limelight.unofficial" />
         <package android:name="com.limelight.noir" />

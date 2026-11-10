@@ -12,6 +12,7 @@ import 'src/firmware_guide_page.dart';
 import 'src/recording_page.dart';
 import 'src/emulator_actions.dart';
 import 'src/gamepad_diagnostics_page.dart';
+import 'src/nds_external_layout_guide.dart';
 
 void main() => runApp(const JolvenApp());
 
@@ -86,6 +87,7 @@ const _strings = <String, Map<String, String>>{
     'viewCover': 'Capas',
     'viewLabel': 'Cartuchos',
     'gamepads': 'Controles conectados',
+    'ndsGuide': 'Orientações Nintendo DS',
     'gamepadDiagnostics': 'Testar controle',
     'noGamepads': 'Nenhum gamepad detectado',
     'note': 'O Jolven não inclui emuladores, cores, jogos ou BIOS.',
@@ -160,6 +162,7 @@ const _strings = <String, Map<String, String>>{
     'viewCover': 'Covers',
     'viewLabel': 'Cartridges',
     'gamepads': 'Connected gamepads',
+    'ndsGuide': 'Nintendo DS layout guide',
     'gamepadDiagnostics': 'Test controller',
     'noGamepads': 'No gamepad detected',
     'note': 'Jolven does not include emulators, cores, games or BIOS.',
@@ -234,6 +237,7 @@ const _strings = <String, Map<String, String>>{
     'viewCover': 'Portadas',
     'viewLabel': 'Cartuchos',
     'gamepads': 'Mandos conectados',
+    'ndsGuide': 'Guía de pantallas Nintendo DS',
     'gamepadDiagnostics': 'Probar mando',
     'noGamepads': 'No se detectaron mandos',
     'note': 'Jolven no incluye emuladores, núcleos, juegos ni BIOS.',
@@ -517,6 +521,12 @@ class _JolvenHomeState extends State<JolvenHome> {
         ],
       ),
     );
+  }
+
+  void _openNdsGuide() {
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => const NdsExternalLayoutGuide(),
+    ));
   }
 
   void _openGamepadDiagnostics() {
@@ -1084,6 +1094,13 @@ class _JolvenHomeState extends State<JolvenHome> {
                 title: Text(gamepad.name),
               ),
             const SizedBox(height: 20),
+            ListTile(
+              leading: const Icon(Icons.tablet_android),
+              title: Text(_t('ndsGuide')),
+              onTap: _openNdsGuide,
+              trailing: const Icon(Icons.chevron_right),
+            ),
+            const SizedBox(height: 12),
             Text(_t('emulators'), style: Theme.of(context).textTheme.titleLarge),
             ListTile(
               leading: const Icon(Icons.info_outline),

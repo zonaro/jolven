@@ -68,7 +68,8 @@ class MainActivity : FlutterActivity() {
         Emulator("dolphin", "Dolphin", "org.dolphinemu.dolphinemu", "view_unverified"),
         Emulator("mupen64", "Mupen64Plus FZ", "org.mupen64plusae.v3.fzurita"),
         Emulator("duckstation", "DuckStation", "org.duckstation.android"),
-        Emulator("azahar", "Azahar", "org.azahar_emu.azahar")
+        Emulator("azahar", "Azahar", "org.azahar_emu.azahar"),
+        Emulator("drastic", "DraStic (external)", "com.dsemu.drastic")
     )
 
     private val prefs by lazy { getSharedPreferences("jolven_rom_catalog", MODE_PRIVATE) }
