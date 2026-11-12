@@ -19,6 +19,9 @@ contexto e as decisões.
   dependências opcionais, Flatpak, sessão e legado.
 - [Serviços e integrações](integrations.md): APIs, launchers, sistema operacional,
   credenciais, privacidade e falhas.
+- [Auditoria de independência do GNOME](gnome-independence-audit.md): diagnóstico
+  do issue #167, matriz de dependências, substituições, riscos e etapas para
+  tornar o Jolven mais agnóstico a desktops, sessões e distribuições.
 - [Regras de implementação](implementation.md): padrões de código, segurança,
   dados, importadores, tarefas assíncronas e alterações comuns.
 - [Validação e release](validation-release.md): build, testes, inspeção manual,
