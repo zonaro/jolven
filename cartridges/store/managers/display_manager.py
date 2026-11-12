@@ -24,6 +24,7 @@ from gi.repository import Gdk, Gtk
 from cartridges import shared
 from cartridges.game import Game
 from cartridges.game_cover import GameCover
+from cartridges.store.managers.identity_manager import IdentityManager
 from cartridges.store.managers.manager import Manager
 from cartridges.store.managers.sgdb_manager import SgdbManager
 from cartridges.store.managers.steam_api_manager import SteamAPIManager
@@ -104,7 +105,7 @@ def _atualizar_badge_fontes(game: Game, members: list, grouped: bool) -> None:
 class DisplayManager(Manager):
     """Manager in charge of adding a game to the UI"""
 
-    run_after = (SteamAPIManager, TheGamesDBManager, SgdbManager)
+    run_after = (SteamAPIManager, TheGamesDBManager, SgdbManager, IdentityManager)
     signals = {"update-ready"}
 
     def main(self, game: Game, _additional_data: dict) -> None:

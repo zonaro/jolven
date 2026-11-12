@@ -59,6 +59,12 @@ class Manager(ErrorProducer):
         * May raise other exceptions that will be reported
         """
 
+    def on_import_start(self) -> None:
+        """Hook chamado uma vez quando uma importação começa (opcional)."""
+
+    def on_import_end(self) -> None:
+        """Hook chamado uma vez quando a importação termina (opcional)."""
+
     def run(self, game: Game, additional_data: dict) -> None:
         """Handle errors (retry, ignore or raise) that occur in the manager logic"""
 

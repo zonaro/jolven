@@ -22,6 +22,7 @@ import json
 from cartridges import shared
 from cartridges.game import Game
 from cartridges.store.managers.async_manager import AsyncManager
+from cartridges.store.managers.identity_manager import IdentityManager
 from cartridges.store.managers.steam_api_manager import SteamAPIManager
 from cartridges.store.managers.thegamesdb_manager import TheGamesDBManager
 
@@ -29,7 +30,7 @@ from cartridges.store.managers.thegamesdb_manager import TheGamesDBManager
 class FileManager(AsyncManager):
     """Manager in charge of saving a game to a file"""
 
-    run_after = (SteamAPIManager, TheGamesDBManager)
+    run_after = (SteamAPIManager, TheGamesDBManager, IdentityManager)
     signals = {"save-ready"}
 
     def main(self, game: Game, additional_data: dict) -> None:
@@ -67,6 +68,7 @@ class FileManager(AsyncManager):
             "tgdb_fanart",
             "steam_checked",
             "steam_appid",
+            "identity",
             "shortcut_path",
             "shortcut_mtime",
             "hltb_id",

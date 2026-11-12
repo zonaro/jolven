@@ -628,6 +628,7 @@ class CartridgesApplication(Adw.Application):
         shared.store.add_manager(TheGamesDBManager())
         shared.store.add_manager(SgdbManager())
         shared.store.add_manager(SunshineManager())
+        shared.store.add_manager(IdentityManager())
         shared.store.toggle_manager_in_pipelines(FileManager, True)
 
         if shared.schema.get_boolean("xbox-cloud-gaming"):
