@@ -23,7 +23,7 @@
 | GLib/GIO, D-Bus e GSettings | cartridges/shared.py.in, schemas, main.py | APIs gerais, schema do **Jolven** é próprio | **Manter**; não migrar configurações para JSON indiscriminadamente |
 | Meson gnome module / Blueprint | meson.build, data/meson.build, subprojects | Namespace de ferramentas de build, não dependência de sessão | **Manter** |
 | Tema Adwaita / GNOME icons | cartridges/themes/, data/themes/, assets | Preferência estética ou recursos de UI; não exige GNOME desktop | **Manter** e oferecer temas atuais; pacote de ícones conforme distribuição |
-| Wallpaper ao jogar | cartridges/utils/session_wallpaper.py | **Dependência real** de org.gnome.desktop.background | **Refatorar**; separar composição de imagens do backend que aplica/restaura |
+| Wallpaper ao jogar | cartridges/utils/session_wallpaper.py | **Dependência real** de org.gnome.desktop.background | **Substituir por wallpaper virtual:** superfícies temporárias por monitor, sem modificar configurações do desktop; preferir layer-shell onde disponível e fallback condicionado por compositor |
 | Atalho global Super+G | cartridges/utils/global_shortcut.py | **Dependência opcional** de org.gnome.settings-daemon.plugins.media-keys; já possui backend KDE | **Portal GlobalShortcuts primeiro**, backends GNOME/KDE como fallback |
 | Pesquisa no overview | search-provider/* e search-provider/meson.build | **Específico do GNOME Shell SearchProvider2** | **Manter opcional**; não exigir/ativar fora do GNOME |
 | Gamepad | import protegido de Manette em cartridges/main.py; controller.py e gamepad_visual.py | libmanette é desenvolvida no GNOME, mas é biblioteca GObject de gamepad **sem precisar do shell** | **Manter** como backend padrão; eventual SDL3 apenas com benchmark/paridade |
@@ -74,7 +74,7 @@ Preferir protocolos simples (tipagem/Protocol ou classes pequenas) e composiçã
 
 **Atalhos globais:** xdg-desktop-portal GlobalShortcuts suportado e autorizado → integração GNOME se sessão GNOME verdadeira → KDE KGlobalAccel se sessão KDE verdadeira → instruções manuais. O portal trata ativação da ação durante a vida da sessão; garantir relançamento/autostart conforme necessário. Não simular atalho global por hooks de X11 em Wayland ou por /dev/input.
 
-**Wallpaper:** preferência por renderização interna no Jolven quando a finalidade for **fundo da UI** (zero alteração no desktop). Para alterar o wallpaper real do usuário, utilizar Portal Wallpaper somente onde houver suporte/consentimento e onde for possível cumprir a garantia de restauração; ele **não expõe leitura de wallpaper atual nem seleção por monitor**. Implementar fallback GNOME preservando estado e, se houver justificativa, adaptador KDE específico. Se o objetivo exigir wallpaper por monitor, nenhum portal padrão resolve sozinho: definir decisão explícita sobre escopo, com opt-in e testes por compositor. Na Jolven Session, não assumir presença de GNOME Settings Daemon.
+**Wallpaper (decisão atualizada — 12/11/2026):** o Jolven **não deve alterar o wallpaper do desktop**. Renderizar uma superfície temporária por monitor secundário, reutilizando Pillow, cache e composição; destruí-la ao encerrar o jogo. Preferir **layer-shell background** no KDE/wlroots/Smithay quando suportado; esse protocolo **não funciona no GNOME Wayland**. Neste último, uma janela GTK fullscreen é apenas uma **sobreposição**, pode ocultar janelas, capturar foco e não equivale a wallpaper de verdade: ativação só com opt-in informado, ou desabilitar. Em X11, avaliar backend de fundo via propriedades do window manager, sem assumir paridade. Na Jolven Session, só atuar em saídas efetivamente disponíveis ao Jolven/Gamescope. **Não substituir por Portal Wallpaper nem por novos adaptadores que modifiquem configurações do usuário**.
 
 **Credenciais:** Secret Service com backend disponível → indisponível e pedir novamente; **nunca** texto claro, dconf, log ou token em argumento de CLI.
 
@@ -88,7 +88,7 @@ Preferir protocolos simples (tipagem/Protocol ou classes pequenas) e composiçã
 |---|---|---|
 | Fundo visual **da interface Jolven** | **Sim, já é parcialmente interno** | GTK/CSS/imagens; evita tocar no wallpaper externo |
 | Converter/cortar/armazenar arte por jogo | **Sim, já existe** | Reaproveitar Pillow, cache e sidecars; desacoplar apenas aplicação externa |
-| Trocar wallpaper do desktop | **Não como daemon proprietário genérico** | Portal/DE controlam wallpaper; restauração, monitores e permissão são difíceis |
+| Superfície de wallpaper virtual por monitor | **Sim, com backends mínimos** | Layer Shell (quando suportado) oferece camada de fundo; fullscreen comum é somente uma sobreposição e pode roubar foco; nenhuma preferência do desktop é modificada |
 | Teclado na tela | **Sim, já existe** | Manter o componente do Jolven, não exigir OSK do desktop |
 | Atalho global Wayland | **Não interceptar diretamente** | Somente compositor/portal pode fazê-lo com segurança |
 | Controles/gamepad | **Não reescrever driver/input stack** | libmanette é pequena e madura; avaliar SDL3 só por benefício medido |
@@ -99,6 +99,58 @@ Preferir protocolos simples (tipagem/Protocol ou classes pequenas) e composiçã
 | Detecção de distro / catálogo de pacotes / preflight | **Sim** | Pequeno e testável; valor alto em CachyOS/Arch |
 | Diagnóstico de portais e sugestões de correção | **Sim** | UI própria pode orientar instalação sem mexer automaticamente no host |
 | Busca de jogos do Jolven | **Já existe** | GNOME Shell SearchProvider2 é só um adaptador opcional; pesquisa interna continua |
+
+## 4.1. Decisão atualizada — wallpaper virtual nos monitores secundários (12/11/2026)
+
+**Requisito substituto:** ao iniciar uma sessão de jogo, o Jolven prepara arte em memória/cache e exibe *superfícies gráficas próprias* para cada monitor secundário efetivamente acessível. Ao encerrar jogo, trocar de modo, sair da sessão ou ocorrer erro, fecha essas superfícies sem tocar no wallpaper do usuário.
+
+### Observação essencial: fullscreen não é wallpaper verdadeiro
+
+Uma `Gtk.Window.fullscreen_on_monitor(monitor)` solicita fullscreen, **não garante** sua aceitação/monitor, ordem de empilhamento, ausência de foco nem interação *click-through*. É uma janela normal: em GNOME Wayland pode cobrir aplicativos de outros monitores, atrapalhar Alt+Tab e não poder ficar abaixo de janelas; jamais vender esse fallback como camada de fundo real. Testar o estado efetivo da janela via `fullscreened` / `GdkToplevel:state`, identificar falha e remover a superfície. Não utilizar posicionamento absoluto de janelas em Wayland como garantia.
+
+### Backends por capacidade
+
+| Condição | Backend | Camada / comportamento | Política |
+|---|---|---|---|
+| Wayland com protocolo `zwlr_layer_shell_v1` (KDE Plasma, wlroots/Hyprland/Sway, Smithay/COSMIC onde suportado) | `gtk4-layer-shell` opcional, via GObject introspection quando disponível | Uma `Gtk.Window` por saída, **layer BACKGROUND**, sem exclusão de zona, sem foco de teclado, imagem cobrindo monitor; preservar janelas de apps acima | **Preferencial**, após prova de suporte real e teste de hotplug |
+| GNOME Wayland (sem layer-shell) | GTK4 fullscreen comum por monitor, candidato opt-in | **Overlay de apresentação**, não wallpaper: pode cobrir outras janelas/ganhar foco; compositor pode rejeitar monitor | **Não ativar automaticamente**; advertência + consentimento ou desabilitar |
+| X11 com WM compatível | Experimento com janela de desktop/abaixo via EWMH/X11 quando comprovado | Tentar fundo por monitor sem interceptar eventos; comportamento varia por WM | Implementar **somente** com teste; caso contrário mesmo modo de apresentação com opt-in ou indisponível |
+| Jolven Session/Gamescope | Surfaces internas somente em saídas listadas para o aplicativo | **Não assumir** que compositor Gamescope expõe todos os monitores físicos; uma sessão dedicada pode não ter acesso aos monitores externos | Se só houver uma saída visível, **não criar overlay**; registrar capacidade ausente |
+| Flatpak/sandbox | Reutilizar backend gráfico disponível, sem talk-name extra ao desktop | Abrir superfícies somente com permissão de display existente | Não exigir `--filesystem=host` adicional, alteração de settings ou execução privilegiada |
+
+O uso de `gtk4-layer-shell` introduz uma pequena dependência **opcional** (preferível a dependência do GNOME Shell). Não criar dependência obrigatória para abrir a UI. Não utilizar hacks `LD_PRELOAD`, manipulação direta de Wayland sem negociação ou extensões GNOME instaladas automaticamente. Layer Shell de GTK4: https://github.com/wmww/gtk4-layer-shell . GTK4 fullscreen_on_monitor: https://docs.gtk.org/gtk4/method.Window.fullscreen_on_monitor.html .
+
+### Fluxo de vida proposto
+
+1. **Início do jogo:** verificar `session-wallpaper`, `RuntimeContext`, backend gráfico efetivamente disponível, monitores visíveis em `Gdk.Display` e monitor primário. Não inferir primário exclusivamente pela primeira posição se API não garantir; tratar ausência de monitor primário de forma conservadora.
+2. **Gerar a arte:** reaproveitar `session_wallpaper.py` (`Monitor`, crop via Pillow, opções por jogo e cache), gerando uma textura/caminho **por saída** conforme orientação/resolução. Nunca fazer rede ou conversão pesada na thread GTK.
+3. **Apresentar:** criar um surface GTK sem decoração, sem controles interativos, com escala/crop `Gtk.Picture` ou equivalente; uma por saída secundária, registrando monitor/backend/sessão. Não mover foco do game/Jolven; se o backend não garantir não-foco, impor opt-in e avaliar se deve desabilitar.
+4. **Acompanhar:** reagir a monitor-added/removed, alteração de geometria/escala, troca de monitor principal e retorno de foco; destruir superfícies órfãs, recriar somente após estabilização. Não bloquear acesso aos aplicativos do usuário nem passar por cima de outras janelas quando o backend anunciar modo background.
+5. **Fim/erro:** destruir todas as superfícies no `ProcessSession` finalizar, encerrar o Jolven, mudar de runtime ou falhar uma criação; invalidar gerações assíncronas para evitar janela aparecendo **depois** do jogo acabar. Em crash, superfícies pertencentes ao processo desaparecem junto com ele; não precisar restaurar wallpaper real.
+6. **Limpeza legada:** se `session-wallpaper-saved` contém estado de versões anteriores, executar **uma rotina de restauração legada isolada e idempotente** antes de desativar o antigo backend. Jamais apagar a chave legada sem tentar recuperar wallpaper previamente alterado, nem regravar `picture-uri-dark` incorretamente. Após migração, nenhuma nova escrita em `org.gnome.desktop.background`.
+
+### Desenho mínimo para implementação
+
+- Manter `cartridges/utils/session_wallpaper.py` como geração/seleção de arte e ponto de compatibilidade temporário.
+- Adicionar `cartridges/platform/wallpaper_surfaces.py` (orquestração simples: capabilities, lista de monitores, geração atual, criação/destruição) e, se realmente necessário, `platform/wallpaper_backends.py` com duas estratégias pequenas: `LayerShellBackground` e `FullscreenPresentation`; não criar um plugin manager genérico.
+- Cada surface tem `monitor_connector`/identificador estável, `backend`, `generation_id` e referência de janela/objeto; eventos de UI sempre na main thread.
+- `fullscreen_on_monitor` não deve ser usado como substituto silencioso de `layer-shell`; o usuário precisa poder distinguir **Fundo real** de **Apresentação em tela cheia**.
+- Padrão recomendado: **automático apenas no backend background comprovado**, indisponível com mensagem noutros ambientes; modo de apresentação como escolha explícita.
+- Persistir preferências existentes `session-wallpaper` e arte por jogo sem desabilitar o toggle quando só existe 1 monitor. Novo modo opcional, se necessário, no **schema GSettings próprio Jolven**, com migração conservadora.
+- Proteger contra captura de teclado/mouse, sobreposição de diálogos, Alt+Tab, orientação de tela, monitores com escala distinta e perda de foco; não ignorar falha ao entrar fullscreen.
+- A **aplicação deve continuar funcional sem `gtk4-layer-shell` instalado**.
+
+### Verificações de aceite específicas
+
+- [ ] Sem nenhuma escrita nova em `org.gnome.desktop.background` ou em configurações de wallpaper de qualquer DE durante jogo; exceção temporária estritamente para desfazer estado legado de versões anteriores.
+- [ ] Duas telas secundárias exibem quadros distintos e corretamente dimensionados, não repetem o último quadro global; primária permanece livre.
+- [ ] KDE Plasma Wayland e um compositor wlroots compatível testados com layer BACKGROUND: aplicativos continuam por cima, wallpaper temporário não recebe teclado nem mouse, e foco do jogo permanece.
+- [ ] GNOME Wayland **não** recebe fallback fullscreen surpresa; somente apresentação opt-in com alerta de sobreposição, ou recurso indisponível.
+- [ ] Monitor desconectado/reconectado, mudança de principal, resoluções/escala/rotação e múltiplas chamadas start/stop não criam janelas órfãs.
+- [ ] O fim do jogo, kill do Jolven e falha no carregamento encerram as superfícies; reconectar após o fim **não** reapresenta arte antiga.
+- [ ] Apenas um monitor exposto pelo Gamescope não gera falsa promessa de wallpaper em monitores secundários físicos.
+- [ ] Ausência de camada de fundo, ausência de Pillow, falha de recursos ou ausência de `gtk4-layer-shell` não impede abrir ou usar a biblioteca.
+- [ ] Configuração `session-wallpaper-saved` antiga recebe restauração/migração segura antes de a integração GNOME antiga ser removida.
 
 ## 5. Roadmap executável para agentes
 
@@ -132,16 +184,15 @@ Preferir protocolos simples (tipagem/Protocol ou classes pequenas) e composiçã
 
 **Aceite:** Super+G funciona no GNOME e KDE compatíveis, sem depender de schema GNOME na sessão KDE, e tem fallback seguro para desktops sem suporte.
 
-### Fase P1 — Wallpaper seguro e cross-DE
-- [ ] Extrair interface de aplicação/restauração sem reescrever geração de arte.
-- [ ] Corrigir o backup separado picture-uri / picture-uri-dark no GNOME; fornecer migração para session-wallpaper-saved legado, sem perder valor existente ou sobrescrever após falha.
-- [ ] Corrigir a falsa aplicação per-monitor (ou documentar de forma honesta que o backend GNOME altera apenas o papel de parede global). Testar alvos simultâneos.
-- [ ] Não desligar preferência persistente na ausência de monitor secundário/backend; apenas informar incapacidade temporária.
-- [ ] Avaliar Portal Wallpaper: SetWallpaperFile para imagens locais; perguntar consentimento e **não habilitar automaticamente** se não for possível ler/restaurar o estado original. Portal não fornece getter/per-monitor.
-- [ ] Decidir produto: (A) apenas fundo interno padrão, (B) troca desktop apenas nos backends com restore comprovado, (C) suporte per-monitor com implementação explícita por ambiente. Recomendação: A como padrão, B opcional; C só se houver uso real.
-- [ ] Testar crash/kill/restart, desconexão de monitor, nome de arquivo Unicode, dark mode, cache e recovery.
+### Fase P1 — Wallpaper virtual (sem alterar papel de parede)
+- [ ] Separar geração Pillow/crops/cache de saída de wallpaper e implementar surfaces próprias por monitor secundário.
+- [ ] Usar `gtk4-layer-shell` opcional em KDE/wlroots/Smithay com layer BACKGROUND, sem capturar foco/interações; fallback de apresentação GTK fullscreen **apenas mediante opt-in** em compositor sem layer-shell.
+- [ ] Não usar Portal Wallpaper nem APIs GNOME/KDE para **alterar** papel de parede real; manter somente restauração pontual de estado legado anterior à migração.
+- [ ] Preservar `session-wallpaper` na falta de monitor/backend; distinguir capacidade indisponível de preferência desligada.
+- [ ] Testar monitor hotplug, rotação, multiple outputs, ordem de janelas, retorno de foco, fim/crash e Jolven Session/Gamescope com saída única.
+- [ ] Respeitar o capítulo 4.1 desta auditoria; não considerar fullscreen simples equivalente a wallpaper do desktop.
 
-**Aceite:** a arte da interface funciona sem GNOME; wallpaper externo nunca fica alterado permanentemente por erro do Jolven; sem perdas de configuração do usuário.
+**Aceite:** efeitos visuais temporários sem tocar nas configurações do usuário; onde existir layer BACKGROUND, apps continuam acima; sem backend seguro, o recurso é informado/opt-in e nunca invasivo.
 
 ### Fase P1 — Busca, segredos e portais
 - [ ] Deixar SearchProvider2 como integração GNOME opt-in/instalação condicional; build e execução não dependem do serviço GNOME. Testar que pesquisa interna permanece.
@@ -175,13 +226,13 @@ Preferir protocolos simples (tipagem/Protocol ou classes pequenas) e composiçã
 
 | Ambiente | App desktop | Atalho | Wallpaper | Sessão dedicada | Segredos/portal |
 |---|---|---|---|---|---|
-| Fedora + GNOME Wayland + GDM | obrigatório | GNOME/portal | legado corrigido + interno | baseline | obrigatório |
-| CachyOS/Arch + GNOME Wayland + GDM | obrigatório | GNOME/portal | interno + opt-in | obrigatório | obrigatório |
-| CachyOS/Arch + KDE Plasma Wayland + SDDM | obrigatório | KDE/portal | interno; externo só com restore | obrigatório | obrigatório |
+| Fedora + GNOME Wayland + GDM | obrigatório | GNOME/portal | fullscreen apresentação opt-in, ou indisponível; sem settings | baseline | obrigatório |
+| CachyOS/Arch + GNOME Wayland + GDM | obrigatório | GNOME/portal | apresentação opt-in, ou indisponível | obrigatório | obrigatório |
+| CachyOS/Arch + KDE Plasma Wayland + SDDM | obrigatório | KDE/portal | layer-shell BACKGROUND | obrigatório | obrigatório |
 | KDE Plasma X11 (quando existente) | smoke | backend disponível | interno | n/a | smoke |
 | XFCE/Cinnamon/LXQt/X11 | smoke | manual quando não suportado | interno | não prometer sem teste | smoke |
-| compositor Wayland independente + portal incompleto | smoke | fallback explícito | interno | smoke | ausência segura |
-| Jolven Session Gamescope (sem GNOME/KDE shell) | obrigatório | sem hotkey do desktop, gamepad/OSK sim | interno | obrigatório | diagnóstico |
+| compositor Wayland independente + portal incompleto | smoke | fallback explícito | layer-shell se suportado, senão indisponível/opt-in | smoke | ausência segura |
+| Jolven Session Gamescope (sem GNOME/KDE shell) | obrigatório | sem hotkey do desktop, gamepad/OSK sim | somente monitores expostos ao Gamescope | obrigatório | diagnóstico |
 | Flatpak GNOME/KDE | obrigatório | portal e fallback compatível | somente sem violar sandbox | instalação de sessão via host, não no sandbox | obrigatório |
 | ausência de libmanette/libsecret/wpctl/portal/Gamescope | desktop degrada | fallback | interno | modo sessão indisponível | UI preservada |
 
@@ -233,6 +284,6 @@ Preferir protocolos simples (tipagem/Protocol ou classes pequenas) e composiçã
 1. Desktop abre/importa/lança jogos sem GNOME Shell/daemon/GDM instalado.
 2. GNOME e KDE mantêm paridade onde houver suporte, e ambientes sem backend recebem instruções claras.
 3. Arch/CachyOS e Fedora possuem instalador e configuração de sessão testados, incluindo polkit/root/relay e retorno ao greeter.
-4. Wallpaper não destrói preferências claro/escuro e restaura após falhas; qualquer limite per-monitor fica explícito.
+4. Wallpaper virtual não escreve configurações do desktop, mantém superfície independente por monitor acessível, fecha sem janelas órfãs, e restaura somente eventual estado antigo que o Jolven legadamente modificou; limitações GNOME/Wayland e Gamescope ficam explícitas.
 5. Nenhuma dependência opcional causa crash na abertura da janela; nenhum segredo/execução privilegiada perde segurança.
 6. Documentação, matriz real e testes automatizados atualizados, com regressão zero na biblioteca e nos modos desktop/sessão.
