@@ -20,7 +20,7 @@ O build de fonte declara aproximadamente:
 - Python 3;
 - Meson 0.59 ou posterior;
 - GTK 4.15 ou posterior;
-- libadwaita 1.6 beta ou posterior;
+- libadwaita 1.8 ou posterior;
 - Blueprint Compiler;
 - PyGObject e bibliotecas Python instaladas pelo projeto.
 
