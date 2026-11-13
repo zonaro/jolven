@@ -11,6 +11,9 @@ on:
       - "packaging/**"
       - "build-aux/**"
       - "meson.build"
+      # Regras de instalacao dos subpacotes: uma entrada ausente aqui gera
+      # pacote sem modulo, como no #204.
+      - "cartridges/**/meson.build"
       - "cartridges/jolven.in"
 
 permissions:

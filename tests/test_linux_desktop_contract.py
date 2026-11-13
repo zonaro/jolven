@@ -11,6 +11,7 @@ a graphical environment or PyGObject installed.
 """
 
 from pathlib import Path
+import re
 import unittest
 
 
@@ -80,6 +81,28 @@ class LinuxDesktopContractTests(unittest.TestCase):
         self.assertIn('".exe"', monitor)
         importer = source("cartridges/importer/importer.py")
         self.assertIn("if game.base_source not in scanned:", importer)
+
+    def test_every_cartridges_package_is_installed(self) -> None:
+        """Todo subpacote de cartridges/ precisa de install_subdir no meson.
+
+        Um subpacote presente na arvore mas ausente do meson.build passa nos
+        testes (que rodam sobre a origem) e no `meson compile`, porem nao vai
+        para o pacote nativo nem para o AppImage, que entao quebra no import
+        (issue #204).
+        """
+        build = source("cartridges/meson.build")
+        installed = set(re.findall(r"install_subdir\(\s*'([^']+)'", build))
+        packages = {
+            path.name
+            for path in (ROOT / "cartridges").iterdir()
+            if path.is_dir() and path.name != "__pycache__"
+        }
+        self.assertTrue(packages, "cartridges/ sem subpacotes inesperado")
+        self.assertEqual(
+            packages - installed,
+            set(),
+            "subpacote sem install_subdir em cartridges/meson.build",
+        )
 
 
 if __name__ == "__main__":

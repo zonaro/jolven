@@ -6,6 +6,7 @@ configure_file(
   install_dir: get_option('bindir'),
 )
 
+install_subdir('identity', install_dir: moduledir)
 install_subdir('importer', install_dir: moduledir)
 install_subdir('utils', install_dir: moduledir)
 install_subdir('platform', install_dir: moduledir)
