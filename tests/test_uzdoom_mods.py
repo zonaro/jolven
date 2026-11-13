@@ -138,17 +138,21 @@ class GameFieldTests(unittest.TestCase):
             for node in game_class.body
             if isinstance(node, ast.FunctionDef) and node.name == "update_values"
         )
+        identity_field = ast.parse("identity: Any = None").body[0]
         synthetic = ast.ClassDef(
             name="TestGame",
             bases=[],
             keywords=[],
-            body=[field, self._tags_field(), update_values],
+            body=[identity_field, field, self._tags_field(), update_values],
             decorator_list=[],
         )
         module = ast.fix_missing_locations(
             ast.Module(body=[self._normalize_tags(), synthetic], type_ignores=[])
         )
-        namespace: dict[str, Any] = {"Any": Any}
+        namespace: dict[str, Any] = {
+            "Any": Any,
+            "sanitize_identity": lambda value: value,
+        }
         exec(compile(module, "game.py", "exec"), namespace)  # pylint: disable=exec-used
         game = namespace["TestGame"]()
         game.update_values({"name": "Legacy Game"})
@@ -162,17 +166,21 @@ class GameFieldTests(unittest.TestCase):
             for node in game_class.body
             if isinstance(node, ast.FunctionDef) and node.name == "update_values"
         )
+        identity_field = ast.parse("identity: Any = None").body[0]
         synthetic = ast.ClassDef(
             name="TestGame",
             bases=[],
             keywords=[],
-            body=[field, self._tags_field(), update_values],
+            body=[identity_field, field, self._tags_field(), update_values],
             decorator_list=[],
         )
         module = ast.fix_missing_locations(
             ast.Module(body=[self._normalize_tags(), synthetic], type_ignores=[])
         )
-        namespace: dict[str, Any] = {"Any": Any}
+        namespace: dict[str, Any] = {
+            "Any": Any,
+            "sanitize_identity": lambda value: value,
+        }
         exec(compile(module, "game.py", "exec"), namespace)  # pylint: disable=exec-used
         game = namespace["TestGame"]()
         game.update_values({"uzdoom_mods": ["/mods/one.wad", "/mods/two.pk3"]})

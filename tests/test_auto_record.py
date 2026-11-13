@@ -113,17 +113,22 @@ class GameDefaultTests(unittest.TestCase):
             and isinstance(node.target, ast.Name)
             and node.target.id == "tags"
         )
+        identity_field = ast.parse("identity: Any = None").body[0]
         synthetic = ast.ClassDef(
             name="TestGame",
             bases=[],
             keywords=[],
-            body=[field, tags_field, update_values],
+            body=[identity_field, field, tags_field, update_values],
             decorator_list=[],
         )
         module = ast.fix_missing_locations(
             ast.Module(body=[normalize_tags, synthetic], type_ignores=[])
         )
-        namespace: dict[str, Any] = {"shlex": shlex, "Any": Any}
+        namespace: dict[str, Any] = {
+            "shlex": shlex,
+            "Any": Any,
+            "sanitize_identity": lambda value: value,
+        }
         exec(compile(module, "game.py", "exec"), namespace)  # pylint: disable=exec-used
         return namespace["TestGame"]
 

@@ -78,17 +78,22 @@ def _build_game_class() -> type:
         if isinstance(node, ast.FunctionDef) and node.name == "update_values"
     )
     normalize = _function_node(tree, "normalize_tags")
+    identity_field = ast.parse("identity: Any = None").body[0]
     synthetic = ast.ClassDef(
         name="TestGame",
         bases=[],
         keywords=[],
-        body=[field, update_values],
+        body=[identity_field, field, update_values],
         decorator_list=[],
     )
     module = ast.fix_missing_locations(
         ast.Module(body=[normalize, synthetic], type_ignores=[])
     )
-    namespace: dict[str, Any] = {"shlex": shlex, "Any": Any}
+    namespace: dict[str, Any] = {
+        "shlex": shlex,
+        "Any": Any,
+        "sanitize_identity": lambda value: value,
+    }
     exec(compile(module, "game.py", "exec"), namespace)  # pylint: disable=exec-used
     return namespace["TestGame"]
 
