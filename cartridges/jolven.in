@@ -33,8 +33,8 @@ VERSION = "@VERSION@"
 def _detect_prefix() -> "str | None":
     """Devolve o prefix de instalacao deduzido do caminho deste script.
 
-    Permite extrair o tarball binario da release em qualquer $PREFIX
-    (ex: ~/.local) em vez do prefix usado na compilacao. Devolve None
+    Permite relocalizar a instalacao dentro de um AppImage e reutilizar
+    os mesmos recursos do Jolven sem depender do prefixo da compilacao. Devolve None
     quando a arvore relocada nao e encontrada (fallback: paths de build).
     """
     try:
@@ -53,8 +53,11 @@ def _detect_prefix() -> "str | None":
 def _detect_python_dir(prefix: str) -> "str | None":
     """Localiza o site-packages do app dentro do prefix detectado."""
     base = Path(prefix)
-    candidates = sorted(base.glob("lib/python3*/site-packages")) + sorted(
-        base.glob("lib64/python3*/site-packages")
+    candidates = (
+        sorted(base.glob("lib/python3*/site-packages"))
+        + sorted(base.glob("lib64/python3*/site-packages"))
+        + sorted(base.glob("lib/python3*/dist-packages"))
+        + sorted(base.glob("lib64/python3*/dist-packages"))
     )
     for candidate in candidates:
         if (candidate / "cartridges" / "shared.py").exists():
