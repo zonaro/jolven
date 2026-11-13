@@ -13,7 +13,7 @@ AppDir:
   apt:
     arch: amd64
     sources:
-      - sourceline: "deb [arch=amd64] https://deb.debian.org/debian trixie main"
+      - sourceline: "deb [arch=amd64] https://deb.debian.org/debian forky main"
         key_url: https://ftp-master.debian.org/keys/archive-key-13.asc
     include:
       - python3
