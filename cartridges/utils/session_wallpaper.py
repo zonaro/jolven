@@ -49,6 +49,7 @@ from PIL import Image, ImageFilter, ImageOps
 
 from cartridges import shared
 from cartridges.utils.download import download_bytes
+from cartridges.utils.gschema import schema_available
 from cartridges.utils.ler_json import ler_json
 from cartridges.utils.wallhaven import IMAGE_SUFFIXES, melhor_para
 
@@ -100,6 +101,11 @@ class _Fundo:
     """
 
     def __init__(self) -> None:
+        # Sem o schema do GNOME, ``Gio.Settings.new`` aborta o processo em vez
+        # de levantar excecao; por isso a pergunta vem antes do try.
+        if not schema_available(_PAREDE_SCHEMA):
+            self._config = None
+            return
         try:
             self._config = Gio.Settings.new(_PAREDE_SCHEMA)
         except Exception:

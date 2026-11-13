@@ -51,6 +51,7 @@ from cartridges.integrations.steam_skin.detector import (
     expand_steam_path,
     is_steam_path_valid,
 )
+from cartridges.utils.gschema import schema_available
 
 # ── Errors ───────────────────────────────────────────────────────────────
 
@@ -427,23 +428,34 @@ def _css_layout_controles(layout: str, rotulo: str) -> Optional[str]:
     return "\n".join(linhas) + "\n"
 
 
+_INTERFACE_SCHEMA = "org.gnome.desktop.interface"
+_APPEARANCE_SCHEMA = "org.freedesktop.appearance"
+_FALLBACK_ACCENT = "var(--adw-accent-blue)"
+
+
 def _system_accent_css() -> str:
     """Resolve the system accent to a CSS value, falling back to Adwaita blue."""
     try:
         from gi.repository import Gio  # local import: installer works without GI
 
-        interface = Gio.Settings.new("org.gnome.desktop.interface")
+        # Um schema ausente e fatal no GLib (g_error, nao excecao), entao a
+        # pergunta vem antes: sem os schemas do GNOME o fallback e o acento.
+        if not schema_available(_INTERFACE_SCHEMA):
+            return _FALLBACK_ACCENT
+
+        interface = Gio.Settings.new(_INTERFACE_SCHEMA)
         name = interface.get_string("accent-color").strip().lower()
         if name in NAMED_ACCENTS:
             return f"var(--adw-accent-{name})"
 
-        appearance = Gio.Settings.new("org.freedesktop.appearance")
-        values = appearance.get_value("accent-color").unpack()
-        if isinstance(values, tuple) and len(values) == 3:
-            return "#" + "".join(format(round(float(c) * 255), "02x") for c in values)
+        if schema_available(_APPEARANCE_SCHEMA):
+            appearance = Gio.Settings.new(_APPEARANCE_SCHEMA)
+            values = appearance.get_value("accent-color").unpack()
+            if isinstance(values, tuple) and len(values) == 3:
+                return "#" + "".join(format(round(float(c) * 255), "02x") for c in values)
     except Exception as error:  # pylint: disable=broad-exception-caught
         logging.debug("Could not resolve system accent: %s", error)
-    return "var(--adw-accent-blue)"
+    return _FALLBACK_ACCENT
 
 
 def _accent_to_css(accent: object) -> Optional[str]:
