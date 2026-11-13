@@ -8,8 +8,6 @@ case "$format" in deb|rpm|appimage) ;; *) echo "Unknown format: $format" >&2; ex
 
 cd "$(dirname "$0")/.."
 : "${JOLVEN_VERSION:?JOLVEN_VERSION must be set by the release workflow}"
-actual="$(python3 build-aux/get-version.py)"
-[[ "$actual" == "$JOLVEN_VERSION" ]] || { echo "Version mismatch" >&2; exit 1; }
 [[ "$(uname -m)" == x86_64 ]] || { echo "Only x86_64 is packaged for now" >&2; exit 1; }
 export TZ=UTC
 
@@ -35,6 +33,10 @@ else
     apt-get install -y --no-install-recommends libfuse2t64 xvfb xauth
   fi
 fi
+
+# Base container images do not include Python until dependencies are installed.
+actual="$(python3 build-aux/get-version.py)"
+[[ "$actual" == "$JOLVEN_VERSION" ]] || { echo "Version mismatch" >&2; exit 1; }
 
 meson setup .release/build --prefix=/usr --buildtype=release -Dprofile=release \
   -Dsystem_libexecdir=/usr/libexec
