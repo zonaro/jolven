@@ -1,0 +1,169 @@
+name: Jolven Linux desktop release
+
+# Pushes validate packaging without publishing. Releases require a deliberate
+# workflow_dispatch on main, and never publish fewer than all three packages.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/release-desktop.yml"
+      - "packaging/**"
+      - "build-aux/**"
+      - "meson.build"
+      - "cartridges/jolven.in"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jolven-desktop-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  version:
+    name: Freeze UTC build version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      built_at: ${{ steps.meta.outputs.built_at }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compute one version from the same UTC minute
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import sys
+          from datetime import datetime, timezone
+          sys.path.insert(0, "build-aux")
+          from versioning import validate_version
+          now = datetime.now(timezone.utc)
+          print("version=" + validate_version(now.strftime("%y.%j.%H%M")))
+          print("built_at=" + now.strftime("%Y-%m-%d %H:%M UTC"))
+          PY
+      - name: Unit-test UTC calendar and release-note contract
+        run: python3 -m unittest tests.test_versioning -v
+
+  deb:
+    name: Build DEB (Debian 13)
+    needs: version
+    runs-on: ubuntu-latest
+    container:
+      image: debian:trixie
+    env:
+      JOLVEN_VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build native Debian package and run Meson tests
+        shell: bash
+        run: bash packaging/build-release.sh deb
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jolven-desktop-deb
+          path: dist/*.deb
+          retention-days: 7
+          if-no-files-found: error
+
+  rpm:
+    name: Build RPM (Fedora 43)
+    needs: version
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:43
+    env:
+      JOLVEN_VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build native Fedora package and run Meson tests
+        shell: bash
+        run: bash packaging/build-release.sh rpm
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jolven-desktop-rpm
+          path: dist/*.rpm
+          retention-days: 7
+          if-no-files-found: error
+
+  appimage:
+    name: Build AppImage (GTK4 + Python bundle)
+    needs: version
+    runs-on: ubuntu-latest
+    container:
+      image: debian:trixie
+    env:
+      JOLVEN_VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bundle self-contained Python, Gtk4, GI and schemas
+        shell: bash
+        run: bash packaging/build-release.sh appimage
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jolven-desktop-appimage
+          path: dist/*.AppImage
+          retention-days: 7
+          if-no-files-found: error
+
+  publish:
+    name: Publish verified GitHub Release (English)
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    needs: [version, deb, rpm, appimage]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ needs.version.outputs.version }}
+      BUILT_AT: ${{ needs.version.outputs.built_at }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: jolven-desktop-*
+          path: dist
+          merge-multiple: true
+      - name: Verify all three assets, package versions and checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends rpm
+          files=(
+            "Jolven-${VERSION}-x86_64.AppImage"
+            "jolven-${VERSION}-1.x86_64.rpm"
+            "jolven_${VERSION}_amd64.deb"
+          )
+          mapfile -t actual < <(find dist -maxdepth 1 -type f -printf '%f\n' | sort)
+          [[ "${#actual[@]}" -eq 3 ]] || { echo "::error::Expected exactly 3 artifacts"; exit 1; }
+          for name in "${files[@]}"; do
+            test -s "dist/$name" || { echo "::error::Missing artifact: $name"; exit 1; }
+          done
+          [[ "$(rpm -qp --queryformat '%{VERSION}' "dist/jolven-${VERSION}-1.x86_64.rpm")" == "$VERSION" ]]
+          [[ "$(dpkg-deb --field "dist/jolven_${VERSION}_amd64.deb" Version)" == "${VERSION}-1" ]]
+          ( cd dist && sha256sum "${files[@]}" > SHA256SUMS && sha256sum -c SHA256SUMS )
+      - name: Create English release notes and reject reused tags
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="v${VERSION}"
+          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/$tag" >/dev/null 2>&1; then
+            echo "::error::Tag $tag already exists. Wait for a new UTC minute, then run again."
+            exit 1
+          fi
+          previous="$(gh release list --repo "$GITHUB_REPOSITORY" --limit 1 --json tagName --jq '.[0].tagName' || true)"
+          python3 packaging/release-notes.py --version "$VERSION" \
+            --commit "$GITHUB_SHA" --built-at "$BUILT_AT" \
+            --previous "$previous" --output release-notes.md
+      - name: Publish tag and release only after all builds pass
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create "v${VERSION}" --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --title "Jolven ${VERSION}" \
+            --notes-file release-notes.md --latest \
+            "dist/Jolven-${VERSION}-x86_64.AppImage" \
+            "dist/jolven-${VERSION}-1.x86_64.rpm" \
+            "dist/jolven_${VERSION}_amd64.deb" \
+            dist/SHA256SUMS
