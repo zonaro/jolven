@@ -39,9 +39,11 @@ Distribuições recomendadas: **Fedora Workstation, Nobara, CachyOS e Ubuntu**.
 A recomendação é de produto, não um selo de QA. Verificar por versão se GTK 4.15+,
 libadwaita 1.8+, Python/GI, Gamescope, portais, polkit e runtime da sessão estão
 disponíveis. AppImage instala apenas o aplicativo desktop, não a integração de
-sessão privilegiada. O helper automatiza dependências da sessão em Fedora;
-nas demais distros Gamescope e dependências precisam ser instalados no host
-até que os backends específicos sejam validados (ver #199).
+sessão privilegiada. O helper dispõe de instalação de dependências via DNF para Fedora/Nobara e
+APT para Ubuntu, ainda dependentes de smoke tests reais. Em CachyOS evita
+atualização automática de todo o sistema via pacman: orienta instalar Gamescope
+com CachyOS Hello antes de registrar a sessão. A sessão deve continuar falhando
+com segurança sem Gamescope (ver #199).
 
 | Família | Pacotes | Display manager a testar | Estado da sessão |
 | --- | --- | --- | --- |
