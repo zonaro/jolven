@@ -701,3 +701,14 @@ aviso recuperável e nunca encerrar o jogo ou a sessão.
 | polkit | instalar/remover a Jolven Session pelo helper `/usr/libexec/jolven-game-mode-setup` e abrir as Preferências | operações fixas, sem comando arbitrário |
 | Gamescope | compositor da Jolven Session | não aninhar em sessão dedicada |
 | GameMode/MangoHud | wrappers por jogo | opcionais e composicionalmente testados |
+
+### Schemas do GSettings
+
+`Gio.Settings.new` com um schema ausente é fatal: o GLib dispara um `g_error` e
+aborta o processo, então um `try/except Exception` em volta não protege nada.
+Antes de abrir um schema que não é do próprio Jolven (`org.gnome.desktop.*`,
+`org.gnome.settings-daemon.*`, `org.freedesktop.appearance`), pergunte com
+`cartridges/utils/gschema.py::schema_available` e siga pelo fallback. Ler uma
+chave que o schema instalado não tem também é `g_error`; nesse caso o padrão é
+consultar `Gio.SettingsSchemaSource.lookup` e `has_key` antes, como em
+`cartridges/utils/news_checker.py`. Contexto e evidência na issue #205.
