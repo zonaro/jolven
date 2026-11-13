@@ -168,7 +168,7 @@ hour/minute, e.g. `26.317.0132`). The tag is `vYY.DDD.HHmm`.
 | --- | --- | --- |
 | **AppImage** (`x86_64`) | Compatible Linux desktops, without a package-manager install | Download, make executable and run |
 | **RPM** (`x86_64`) | Fedora and RPM distributions with suitable GTK4/libadwaita versions | `sudo dnf install ./jolven-*.rpm` |
-| **DEB** (`amd64`) | Debian 13 and compatible distributions with suitable GTK4/libadwaita versions | `sudo apt install ./jolven_*.deb` |
+| **DEB** (`amd64`) | Debian testing (forky) and compatible up-to-date distributions with libadwaita 1.8+ | `sudo apt install ./jolven_*.deb` |
 
 For the AppImage:
 
@@ -183,7 +183,7 @@ AppImage is intended for desktop usage**: installing the privileged Jolven
 Session integration requires a system package, because an AppImage cannot
 install a trusted polkit policy/helper by simply being executed.
 
-The native packages depend on modern **GTK4, libadwaita, Python 3 and
+The native packages depend on modern **GTK4, libadwaita 1.8+, Python 3 and
 PyGObject**. Unsupported/older distributions may not satisfy the required
 versions. The AppImage bundles the Python/GTK runtime but also requires a
 compatible Linux graphical host; cross-distribution behavior must be verified
