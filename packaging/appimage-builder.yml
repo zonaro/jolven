@@ -60,8 +60,19 @@ AppDir:
         break
     else:
         raise SystemExit("AppRun interpreter path missing")
+    # AppRun v2 changes cwd to runtime/* before execv. Recent kernels do not
+    # reliably execute Python when appimage-builder strips the leading slash
+    # from ELF PT_INTERP. Restore the canonical loader for the entrypoint.
+    # This relies on a compatible host glibc, documented in the release notes.
+    lines = [
+        "APPDIR_LIBC_VERSION=0.0" if line.startswith("APPDIR_LIBC_VERSION=") else line
+        for line in lines
+    ]
     p.write_text("\n".join(lines) + "\n", encoding="utf-8")
     PY
+    patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 "$TARGET_APPDIR/usr/bin/python3.14"
+    echo "AppRun linker: $(patchelf --print-interpreter "$TARGET_APPDIR/usr/bin/python3.14")"
+    grep '^APPDIR_LIBC_' "$TARGET_APPDIR/AppRun.env"
   runtime:
     env:
       PYTHONHOME: "${APPDIR}/usr"
