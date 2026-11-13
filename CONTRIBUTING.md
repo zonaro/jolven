@@ -23,7 +23,7 @@ The project can be translated on [Weblate](https://hosted.weblate.org/engage/car
 
 # Building
 
-Jolven é suportado apenas em Linux.
+Jolven desktop supports Linux only. GitHub Releases distribute AppImage, RPM and DEB packages; these are not generated with an install.sh script.
 
 ## GNOME Builder
 1. Install [GNOME Builder](https://flathub.org/apps/org.gnome.Builder).
@@ -33,9 +33,11 @@ Jolven é suportado apenas em Linux.
 ## Meson
 ```bash
 git clone https://github.com/zonaro/jolven.git
-cd cartridges
-meson setup build
-ninja -C build install
+cd jolven
+meson setup build --prefix="$HOME/.local" -Dprofile=release
+meson compile -C build
+meson test -C build --print-errorlogs
+meson install -C build
 ```
 
 # Code style
@@ -57,3 +59,14 @@ VSCode extensions are available for all of these and you can set them up with th
 ```
 
 For other code editors, you can install them via `pip` and invoke them from the command line.
+
+## Desktop releases
+
+Run [Release Desktop](https://github.com/zonaro/jolven/actions/workflows/release-desktop.yml)
+manually from the `main` branch. The workflow creates one UTC version
+(`YY.DDD.HHmm`) for the entire build, assembles AppImage/RPM/DEB packages,
+verifies all assets and checksums, then publishes a GitHub Release with
+**English-language notes only**. A failed package build never publishes a
+partial release.
+
+Implementation and package dependencies: [packaging/README.md](packaging/README.md).
