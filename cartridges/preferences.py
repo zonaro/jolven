@@ -466,6 +466,12 @@ class CartridgesPreferences(Adw.PreferencesDialog):
     rom_location_action_row: Adw.ActionRow = Gtk.Template.Child()
     rom_location_file_chooser_button: Gtk.Button = Gtk.Template.Child()
 
+    minigalaxy_expander_row: Adw.ExpanderRow = Gtk.Template.Child()
+    minigalaxy_config_action_row: Adw.ActionRow = Gtk.Template.Child()
+    minigalaxy_config_file_chooser_button: Gtk.Button = Gtk.Template.Child()
+    minigalaxy_install_action_row: Adw.ActionRow = Gtk.Template.Child()
+    minigalaxy_install_file_chooser_button: Gtk.Button = Gtk.Template.Child()
+
     desktop_switch: Adw.SwitchRow = Gtk.Template.Child()
 
     sgdb_key_group: Adw.PreferencesGroup = Gtk.Template.Child()

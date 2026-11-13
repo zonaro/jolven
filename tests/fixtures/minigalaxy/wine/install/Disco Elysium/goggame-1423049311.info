@@ -1,0 +1,1 @@
+﻿{"name": "Disco Elysium", "gameId": "1423049311", "playTasks": [{"isPrimary": false, "path": "launcher.exe", "workingDir": "."}, {"isPrimary": true, "path": "game/bin/Disco Elysium.exe", "workingDir": "game/bin", "arguments": "-force-d3d11"}]}

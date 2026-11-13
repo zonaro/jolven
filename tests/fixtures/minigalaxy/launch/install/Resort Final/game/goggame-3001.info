@@ -1,0 +1,1 @@
+{"name": "Resort Final", "gameId": "3001", "playTasks": [{"isPrimary": false, "path": "launcher/comecar.sh"}, {"isPrimary": true, "path": "bin/jogo"}]}

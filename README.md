@@ -44,6 +44,7 @@ Manually add and edit games, or let Jolven pull them in automatically from:
 - Bottles
 - itch
 - Legendary
+- Minigalaxy (GOG)
 - Quiver Launcher
 - RetroArch
 - Dolphin
@@ -59,6 +60,16 @@ Manually add and edit games, or let Jolven pull them in automatically from:
 - Xbox Cloud Gaming (experimental)
 
 Filter by source, search, sort by title, date added or last played, and hide the games you don't want on the couch.
+
+**Minigalaxy (GOG)** is a read-only local source: Jolven imports the games you
+already installed with [Minigalaxy](https://github.com/sharkwouter/minigalaxy)
+and launches them from their own folder — Linux games through `start.sh`, DOSBox
+and ScummVM, and Windows games through Wine with the prefix Minigalaxy created.
+It never logs in to GOG, never touches your `refresh_token`, and never installs,
+updates or uninstalls anything; that stays in Minigalaxy. Installing and updating
+games is out of scope by design. On Fedora you only need Minigalaxy itself
+(native or Flatpak) and, for Windows games, the host `wine` package — Jolven
+installs nothing for you.
 
 ### A library that looks amazing with zero effort
 

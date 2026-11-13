@@ -1,0 +1,1 @@
+{"name": "Injecao Shell", "gameId": "4001", "playTasks": [{"isPrimary": true, "path": "game/`rm` ; $(id) | tee 'a\"b'\nnova çãó.exe", "workingDir": "w;`$(x)`|a'b"}]}

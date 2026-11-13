@@ -1695,6 +1695,52 @@ template $CartridgesPreferences: Adw.PreferencesDialog {
         }
       }
 
+      Adw.ExpanderRow minigalaxy_expander_row {
+        title: _("Minigalaxy");
+        show-enable-switch: true;
+
+        [prefix]
+        Image {
+          icon-name: "minigalaxy-source-symbolic";
+        }
+
+        Adw.ActionRow minigalaxy_config_action_row {
+          title: _("Configuration Directory");
+          subtitle: _("Folder that contains config.json");
+
+          Button minigalaxy_config_file_chooser_button {
+            icon-name: "folder-symbolic";
+            valign: center;
+
+            styles [
+              "flat"
+            ]
+          }
+
+          styles [
+            "property"
+          ]
+        }
+
+        Adw.ActionRow minigalaxy_install_action_row {
+          title: _("Games Directory");
+          subtitle: _("Folder where Minigalaxy installs the games");
+
+          Button minigalaxy_install_file_chooser_button {
+            icon-name: "folder-symbolic";
+            valign: center;
+
+            styles [
+              "flat"
+            ]
+          }
+
+          styles [
+            "property"
+          ]
+        }
+      }
+
       Adw.SwitchRow desktop_switch {
         title: _("Desktop Entries");
 

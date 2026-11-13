@@ -65,6 +65,17 @@
     <key name="heroic-import-sideload" type="b">
       <default>true</default>
     </key>
+    <key name="minigalaxy" type="b">
+      <default>true</default>
+    </key>
+    <key name="minigalaxy-location" type="s">
+      <default>""</default>
+      <summary>Minigalaxy configuration directory (config.json)</summary>
+    </key>
+    <key name="minigalaxy-games-location" type="s">
+      <default>""</default>
+      <summary>Minigalaxy games installation directory</summary>
+    </key>
     <key name="bottles" type="b">
       <default>true</default>
     </key>

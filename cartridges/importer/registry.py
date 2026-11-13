@@ -28,6 +28,7 @@ from cartridges.importer.heroic_source import HeroicSource
 from cartridges.importer.itch_source import ItchSource
 from cartridges.importer.legendary_source import LegendarySource
 from cartridges.importer.lutris_source import LutrisSource
+from cartridges.importer.minigalaxy_source import MinigalaxySource
 from cartridges.importer.quiver_source import QuiverSource
 from cartridges.importer.retroarch_source import RetroarchSource
 from cartridges.importer.rom_source import RomSource
@@ -54,6 +55,7 @@ SOURCE_CLASSES: tuple[type[Source], ...] = (
     ItchSource,
     LegendarySource,
     LutrisSource,
+    MinigalaxySource,
     QuiverSource,
     RetroarchSource,
     RomSource,

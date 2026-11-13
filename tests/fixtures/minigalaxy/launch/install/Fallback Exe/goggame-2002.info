@@ -1,0 +1,1 @@
+{"name": "Fallback Exe", "gameId": "2002", "playTasks": [{"isPrimary": false, "path": "game.exe", "workingDir": "."}]}

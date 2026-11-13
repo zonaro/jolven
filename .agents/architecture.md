@@ -135,11 +135,20 @@ O worker não pode criar, consultar ou modificar widgets. A reconciliação no
 para fontes habilitadas que concluíram uma varredura inteira e foram incluídas em
 `scanned_source_ids`.
 
+O Minigalaxy separa as três responsabilidades em três módulos puros: o contrato
+dos formatos (`importer/minigalaxy.py`), a montagem do comando
+(`importer/minigalaxy_launch.py`) e a `Source` que costura os dois com as
+`Locations` (`importer/minigalaxy_source.py`). Os dois primeiros não importam
+`gi` e podem ser testados sem GTK; a execução continua em
+`game_launch`/`run_executable`. Ao ler dados de terceiros, o importador devolve
+`argv` e só serializa com `shlex` no limite de `Game.executable`, e uma varredura
+incompleta levanta `SourceScanError` para nunca autorizar poda.
+
 Fontes cobertas hoje incluem Steam, Lutris, Heroic (Epic, GOG, Amazon e sideload),
 Epic Games Launcher (EGLv2 nativo), Bottles, Dolphin, Cemu, itch, Legendary,
-RetroArch, Yuzu, Eden, UZDoom, TwinTail, Quiver Launcher (biblioteca local com
-enriquecimento opcional pelo catálogo público), Flatpak, arquivos `.desktop` e
-Waydroid. xCloud segue um fluxo próprio de catálogo remoto e delega o lançamento
+Minigalaxy (GOG), RetroArch, Yuzu, Eden, UZDoom, TwinTail, Quiver Launcher
+(biblioteca local com enriquecimento opcional pelo catálogo público), Flatpak,
+arquivos `.desktop` e Waydroid. xCloud segue um fluxo próprio de catálogo remoto e delega o lançamento
 ao navegador externo em modo quiosque.
 
 O UZDoom tem duas localizações: a pasta de WADs (os IWADs e os archives

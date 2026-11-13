@@ -60,15 +60,24 @@ class Location:
         self.optional = optional
 
     def check_candidate(self, candidate: Path) -> bool:
-        """Check if a candidate root has the necessary files and directories"""
-        for segment, is_directory in self.paths.values():
-            path = Path(candidate) / segment
-            if is_directory:
-                if not path.is_dir():
-                    return False
-            else:
-                if not path.is_file():
-                    return False
+        """Check if a candidate root has the necessary files and directories
+
+        A candidate whose markers cannot be inspected (for instance a parent
+        directory the user cannot traverse) simply does not match: the caller
+        falls through to the next candidate instead of failing with a raw
+        ``PermissionError``.
+        """
+        try:
+            for segment, is_directory in self.paths.values():
+                path = Path(candidate) / segment
+                if is_directory:
+                    if not path.is_dir():
+                        return False
+                else:
+                    if not path.is_file():
+                        return False
+        except OSError:
+            return False
         return True
 
     def resolve(self) -> None:

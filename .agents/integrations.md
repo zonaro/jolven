@@ -462,6 +462,102 @@ reaproveitar o logotipo ou os ícones do Quiver. Na marca do Jolven, o nome e
 o logotipo do Quiver aparecem no máximo como o identificador da fonte e o
 ícone que apontam para o launcher importado.
 
+### Minigalaxy
+
+Fonte local, somente leitura, dos jogos que o Minigalaxy (GOG) já instalou. Não
+há rede, login, conta GOG nem API: o Jolven lê os arquivos que o cliente deixou
+no disco e monta o comando a partir deles. Instalar, desinstalar, atualizar,
+baixar DLC e importar saves continuam sendo trabalho do Minigalaxy; o Jolven
+oferece no máximo abrir o cliente.
+
+O contrato dos formatos fica em `cartridges/importer/minigalaxy.py` (puro, sem
+`gi`/GTK), a montagem do comando em `cartridges/importer/minigalaxy_launch.py` e
+a `Source` em `cartridges/importer/minigalaxy_source.py`. A referência é o
+upstream `sharkwouter/minigalaxy`, `master` no commit `f23e237`; a constante
+`SUPPORTED_UPSTREAM` registra essa versão e uma mudança de formato no upstream
+exige revisão do contrato. O upstream é `GPL-3.0-only` e o Jolven é
+`GPL-3.0-or-later`: a implementação é própria, escrita a partir dos formatos
+observados, sem copiar módulos do upstream.
+
+Configuração e biblioteca:
+
+- `config.json` guarda `install_dir` **e `refresh_token`**. Somente `install_dir`
+  é lido; o token é descartado na leitura e nunca é copiado, persistido ou
+  registrado em log. Nenhum outro campo do arquivo é usado.
+- Precedência de localização: escolha manual em Preferências
+  (`minigalaxy-location`, `minigalaxy-games-location`) > `install_dir` do
+  `config.json` detectado > `~/GOG Games`.
+- Candidatos de configuração, na ordem: config do próprio Jolven (o sandbox
+  quando o Jolven está em Flatpak), `$HOME/.config/minigalaxy` do host e
+  `~/.var/app/io.github.sharkwouter.Minigalaxy/config/minigalaxy` (Minigalaxy em
+  Flatpak). Com mais de um cliente presente, o primeiro candidato existente vence
+  de forma determinística; as bibliotecas nunca são fundidas em silêncio e uma
+  pasta temporariamente inacessível não é tratada como biblioteca vazia.
+- O Minigalaxy não expõe CLI de lançamento (`--reset` e `--version` apenas), então
+  não existe deep link e o Jolven não inventa um.
+
+Formatos por jogo:
+
+- Instalação Linux: `gameinfo` com o nome na primeira linha e o ID GOG na quinta
+  (0 ou vazio significa desconhecido).
+- Instalação Windows sob Wine: `goggame-<id>.info` em JSON com BOM opcional
+  (`utf-8-sig`), contendo `name`, `gameId` e `playTasks`; a tarefa com
+  `isPrimary: true` é a escolhida e sua `path`, `workingDir` e `arguments` são
+  preservados.
+- Preferências por jogo em `games/<pasta>.json`: apenas `custom_wine`,
+  `use_gamemode`, `use_mangohud`, `show_fps` e `hide_game` são considerados
+  (`last_launch_option` é lido, mas o Jolven não oferece opção de lançamento
+  alternativa). `command` e `variable` ficam de fora: execução arbitrária exige
+  decisão explícita do usuário.
+- Leitura limitada a 1 MiB por metadado (`MAX_METADATA_BYTES`), com `utf-8-sig` e
+  falha isolada por item. Arquivos desconhecidos, a pasta `installer/`, caches e
+  arquivos ocultos são ignorados; links simbólicos que apontam para fora da
+  instalação são recusados; só os subdiretórios imediatos da raiz escolhida são
+  enumerados, nunca `~` inteiro.
+
+Lançamento, na ordem do upstream:
+
+- `start.sh` na raiz do jogo — o diretório de trabalho é a própria raiz;
+- DOSBox — `dosbox -conf <conf> [-conf <conf>_single] -no-console -c exit`;
+- ScummVM — `scummvm -c <ini>` (o primeiro `.ini`);
+- Wine — `wine start /b /wait /d c:\game\<workingDir> c:\game\<path>` com
+  `WINEPREFIX=<instalação>/prefix` no ambiente, caindo para `Launch *.lnk` e
+  depois para o primeiro `.exe`/`.lnk` que não seja desinstalador;
+- fallback `game/` — `./<path>` da primeira `playTask`, com `cwd` em
+  `<instalação>/game`;
+- sem comando utilizável, o jogo entra na biblioteca e a tela informa que não foi
+  possível iniciar. Nunca se cria uma entrada executável a partir de conteúdo
+  lido de JSON.
+
+Cada argumento é montado como `argv` e só vira string no limite de
+`Game.executable`, com `shlex.join`/`shlex.quote`; metacaracteres de shell em
+nomes de pasta, apóstrofos e Unicode permanecem dentro de um único argumento. O
+`wine` é procurado no `PATH` do host e, quando o jogo tem `custom_wine`, esse
+valor tem prioridade; a ausência de `wine`, `dosbox` ou `scummvm` é diagnóstico,
+não instalação automática. O Jolven não cria nem altera o prefixo Wine e o link
+`prefix/dosdevices/c:/game` que o Minigalaxy mantém; mover uma instalação quebra
+esse link e é responsabilidade do usuário.
+
+GameMode e MangoHud: as preferências do Minigalaxy (`use_gamemode`,
+`use_mangohud`) só **ligam** o recurso quando presentes; a ausência não desliga o
+padrão global do Jolven, para não duplicar perfis.
+
+Identidade e poda:
+
+- IDs estáveis `minigalaxy_<gog_id>`; com o mesmo ID GOG em mais de uma
+  instalação, o nome da pasta entra no ID (`minigalaxy_<id>_<pasta>`); sem ID, o
+  fallback é `minigalaxy_local_<pasta>`. Renomear o jogo não muda o ID.
+- Se a pasta de jogos não puder ser lida por completo — inexistente, ilegível,
+  config truncada, disco removido ou instalação em andamento — a varredura não é
+  marcada como completa (`SourceScanError`) e o Jolven **não poda** jogos
+  existentes. A reimportação é idempotente e preserva o estado pessoal.
+
+Flatpak: o manifesto de desenvolvimento já usa `--filesystem=host`, e a pasta do
+Minigalaxy em Flatpak também é declarada como somente leitura para documentar a
+dependência. Nada além disso é ampliado; o Jolven não escreve no Minigalaxy.
+Fedora: nada a instalar além do próprio Minigalaxy (nativo ou Flatpak) e, para
+jogos Windows, `wine` do host.
+
 ### Cemu
 
 Importação de jogos do Cemu (Wii U) lendo o `settings.xml` local via

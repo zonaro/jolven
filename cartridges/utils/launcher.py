@@ -48,6 +48,11 @@ _APLICATIVOS = {
         "twintail-source-symbolic",
     ),
     "itch": ("io.itch.itch", "itch", "itch-source-symbolic"),
+    "minigalaxy": (
+        "io.github.sharkwouter.Minigalaxy",
+        "minigalaxy",
+        "minigalaxy-source-symbolic",
+    ),
     "jolven": (
         "io.github.zonaro.Jolven",
         "io.github.zonaro.Jolven.Devel",
