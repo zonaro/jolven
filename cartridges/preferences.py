@@ -443,11 +443,6 @@ class CartridgesPreferences(Adw.PreferencesDialog):
     twintail_data_action_row: Adw.ActionRow = Gtk.Template.Child()
     twintail_data_file_chooser_button: Gtk.Button = Gtk.Template.Child()
 
-    shortcuts_expander_row: Adw.ExpanderRow = Gtk.Template.Child()
-    shortcuts_location_action_row: Adw.ActionRow = Gtk.Template.Child()
-    shortcuts_location_button: Gtk.Button = Gtk.Template.Child()
-    shortcuts_recursive_switch: Adw.SwitchRow = Gtk.Template.Child()
-
     flatpak_expander_row: Adw.ExpanderRow = Gtk.Template.Child()
     flatpak_system_data_action_row: Adw.ActionRow = Gtk.Template.Child()
     flatpak_system_data_file_chooser_button: Gtk.Button = Gtk.Template.Child()
@@ -902,7 +897,6 @@ class CartridgesPreferences(Adw.PreferencesDialog):
                 "quiver-enrich",
                 "flatpak-import-launchers",
                 "appimage-import-launchers",
-                "shortcuts-recursive",
                 "sgdb",
                 "sgdb-prefer",
                 "sgdb-animated",
@@ -3952,11 +3946,6 @@ class CartridgesPreferences(Adw.PreferencesDialog):
             button = getattr(
                 self, f"{source.source_id}_{location_name}_file_chooser_button", None
             )
-            if button is None:
-                # Shorter chooser button id used by the shortcuts row.
-                button = getattr(
-                    self, f"{source.source_id}_{location_name}_button", None
-                )
             if button is not None:
                 button.connect("clicked", self.choose_folder, set_dir, location_name)
 
