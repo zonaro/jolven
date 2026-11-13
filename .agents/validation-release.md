@@ -125,9 +125,14 @@ contratos de manutenção; a landing page descreve benefícios e uso para pessoa
 
 ## Release
 
-O workflow de publicação reage a tags e usa `scripts/publish-release.sh` e os
-artefatos configurados no repositório. Uma release deve partir de árvore limpa e
-de um commit já validado.
+O workflow `.github/workflows/release-desktop.yml` gera AppImage, RPM e DEB em
+jobs independentes, todos com **a mesma versão congelada no início da compilação
+(UTC, YY.DDD.HHmm)**. Somente o acionamento manual (`workflow_dispatch`) publica
+GitHub Release depois de validar os três pacotes, checksum e CI de empacotamento.
+Um push que altera o pipeline apenas executa validações de empacotamento — não
+publica uma release. Notas de release são sempre em inglês, sem reaproveitar
+commits em português. O fluxo legado por `install.sh`, tarball e
+`scripts/publish-release.sh` foi descontinuado.
 
 Checklist:
 
@@ -137,4 +142,4 @@ Checklist:
 4. migrações e compatibilidade avaliadas;
 5. nenhum segredo ou arquivo gerado entrou no commit;
 6. release notes descrevem mudança e impacto ao usuário;
-7. tag/publicação somente após autorização explícita.
+7. publicar apenas pelo workflow manual da main, com versão única e três pacotes verificados.
