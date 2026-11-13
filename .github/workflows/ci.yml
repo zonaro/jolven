@@ -50,7 +50,13 @@ jobs:
       - name: Compilar
         run: meson compile -C build
       - name: Executar a suite de testes Python
-        run: xvfb-run meson test -C build --print-errorlogs
+        run: |
+          # Os testes importam shared.py, que le GSettings: sem o schema
+          # compilado no build, o GLib aborta o processo. Espelha o que o
+          # packaging/build-release.sh faz antes de rodar os validadores.
+          glib-compile-schemas build/data
+          GSETTINGS_SCHEMA_DIR="$PWD/build/data" \
+            xvfb-run meson test -C build --print-errorlogs
   flatpak:
     name: Flatpak
     runs-on: ubuntu-latest
