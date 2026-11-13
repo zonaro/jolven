@@ -21,8 +21,8 @@ or silently mixing artifacts.
 
 | Artifact | CI base | How it is built |
 | --- | --- | --- |
-| AppImage x86_64 | Debian 13 (trixie) | Meson staging + appimage-builder, bundling Python, GTK4, libadwaita, PyGObject, introspection typelibs and schemas |
-| .deb amd64 | Debian 13 (trixie) | Meson staging + fpm + post-install schema/cache hooks |
+| AppImage x86_64 | Debian testing (forky) | Meson staging + appimage-builder, bundling Python, GTK4, libadwaita, PyGObject, introspection typelibs and schemas |
+| .deb amd64 | Debian testing (forky) | Meson staging + fpm + post-install schema/cache hooks |
 | .rpm x86_64 | Fedora 43 | Meson staging + fpm + post-install schema/cache hooks |
 
 Commands (inside the matching disposable Linux build container):
@@ -67,8 +67,8 @@ workflow's scoped `contents: write` permission.
 
 Automated checks cannot prove that GTK/GI, GPU drivers, gamepad, desktop
 portals and Gamescope work in every environment. Test Fedora GNOME/Wayland,
-CachyOS/Arch (AppImage), KDE Plasma, Debian 13 and package removal/upgrades.
-An AppImage built on Debian 13 may not run on older glibc hosts; do not claim
+CachyOS/Arch (AppImage), KDE Plasma, Debian testing (forky) and package removal/upgrades.
+An AppImage built on Debian testing (forky) may not run on older glibc hosts; do not claim
 universal compatibility without testing. AppImage packaging uses the upstream
 [appimage-builder](https://appimage-builder.readthedocs.io/), not
 linuxdeploy-plugin-gtk (which only supports GTK2/3).
