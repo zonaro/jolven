@@ -17,7 +17,7 @@ if [[ "$format" == rpm ]]; then
     blueprint-compiler gettext glib2-devel desktop-file-utils appstream \
     python3 python3-gobject python3-pillow python3-requests python3-pyyaml \
     python3-attrs python3-jinja2 python3-cairo \
-    ruby ruby-devel rubygems make rpm-build tar gzip
+    ruby ruby-devel rubygems rubygem-json make rpm-build tar gzip
 else
   export DEBIAN_FRONTEND=noninteractive
   apt-get update
