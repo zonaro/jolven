@@ -29,11 +29,18 @@ Jolven is **not** a Linux distribution, **not** an operating system and **not** 
 
 ## Recommended Linux distributions
 
-**[Fedora Workstation](https://fedoraproject.org/workstation/)** is our primary recommendation for users who want a general-purpose desktop alongside Jolven: its GNOME/Wayland environment and the Jolven Session installer are the project's current Fedora-focused path.
+Jolven is a Linux application, not a distribution. We recommend these **four** starting points; a recommendation is **not certification** of every package, desktop environment or Jolven Session setup.
 
-**[Nobara](https://nobaraproject.org/)** is an attractive gaming-focused Fedora derivative for users who prefer a system with gaming and multimedia tooling already configured. It is a recommendation, **not a claim of official validation or guaranteed compatibility**: test the Jolven Session, Gamescope, drivers and optional capture tools on your Nobara release.
+| Distribution | Why choose it? | Installation and session status |
+| --- | --- | --- |
+| **[Fedora Workstation](https://fedoraproject.org/workstation/)** | GNOME/Wayland desktop, balance between daily use and gaming | RPM for compatible releases; Fedora is the current reference path for automated Gamescope/session dependency setup |
+| **[Nobara](https://nobaraproject.org/)** | Fedora-based system with gaming/multimedia tools | RPM where dependencies match; verify the actual edition and Gamescope/display manager before enabling Jolven Session |
+| **[CachyOS](https://cachyos.org/)** | Arch-based, rolling-release system tuned for performance, with multiple desktop choices | AppImage desktop path is the initial choice; native pacman packaging and automated Session installation need validation, including Plasma Login Manager |
+| **[Ubuntu](https://ubuntu.com/desktop)** | Familiar GNOME desktop and APT ecosystem | AppImage is an initial desktop option; DEB requires a release with the GTK4/libadwaita versions declared by Jolven; Jolven Session needs separate validation |
 
-Jolven's desktop application is designed for compatible Linux distributions, not just the two recommendations; automated Jolven Session dependency installation is currently documented for Fedora, and other distributions may require manual setup. Neither Fedora nor Nobara is affiliated with or endorses Jolven.
+**Compatibility is per release and per component.** Jolven builds currently require GTK4 4.15+ and libadwaita 1.8+. A distribution's inclusion here does not mean these libraries are present in every version. Installing a portable AppImage **does not** register the system-wide Jolven Session: that requires a native, privileged integration with the display manager and a working Gamescope. Current deployment/QA gaps are tracked in [#199](https://github.com/zonaro/jolven/issues/199) and the [compatibility matrix](.agents/compatibility.md).
+
+The separate [Jolven ISO Builder](https://github.com/zonaro/jolven-iso) currently has a Nobara-specific experimental remaster engine; Fedora, CachyOS, BigLinux and Ubuntu ISO profiles are tracked [here](https://github.com/zonaro/jolven-iso/issues/14). Building or booting an ISO is a separate requirement from running Jolven on an already-installed distribution. Jolven is not affiliated with or endorsed by the distributions listed above.
 
 ## Why Jolven?
 
