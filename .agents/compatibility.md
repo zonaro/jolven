@@ -35,10 +35,24 @@ Wayland é o caminho primário. O Flatpak ainda expõe sockets Wayland e X11 par
 compatibilidade com desktops e launchers. Jolven Session é baseada em Gamescope e
 portanto tem requisitos mais estritos que o aplicativo desktop.
 
-O instalador automatiza dependências e a integração com o display manager em
-Fedora. Outras distribuições podem executar o desktop e, se fornecerem as
-dependências, a sessão; não prometa instalação automática fora do que o helper
-privilegiado realmente implementa.
+Distribuições recomendadas: **Fedora Workstation, Nobara, CachyOS e Ubuntu**.
+A recomendação é de produto, não um selo de QA. Verificar por versão se GTK 4.15+,
+libadwaita 1.8+, Python/GI, Gamescope, portais, polkit e runtime da sessão estão
+disponíveis. AppImage instala apenas o aplicativo desktop, não a integração de
+sessão privilegiada. O helper automatiza dependências da sessão em Fedora;
+nas demais distros Gamescope e dependências precisam ser instalados no host
+até que os backends específicos sejam validados (ver #199).
+
+| Família | Pacotes | Display manager a testar | Estado da sessão |
+| --- | --- | --- | --- |
+| Fedora Workstation | RPM / DNF | GDM | Referência atual; QA por release pendente |
+| Nobara | RPM / DNF | GDM e SDDM, conforme edição | QA por edição pendente |
+| CachyOS | pacman (AppImage desktop) | Plasma Login Manager, SDDM ou GDM | QA e backend de pacotes pendentes |
+| Ubuntu | APT / DEB (somente ABI compatível) | GDM | QA e backend de pacotes pendentes |
+
+Não assumir que ID_LIKE=arch implica suporte pronto: releases rolling, login
+manager e dependências mudam. Em Ubuntu LTS antigo, validar versões das bibliotecas
+antes de oferecer DEB. Preservar rollback, dados de usuário e greeter original.
 
 Em sessão dedicada:
 
