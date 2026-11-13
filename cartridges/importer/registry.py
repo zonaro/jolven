@@ -32,7 +32,6 @@ from cartridges.importer.minigalaxy_source import MinigalaxySource
 from cartridges.importer.quiver_source import QuiverSource
 from cartridges.importer.retroarch_source import RetroarchSource
 from cartridges.importer.rom_source import RomSource
-from cartridges.importer.shortcuts_source import ShortcutsSource
 from cartridges.importer.source import Source
 from cartridges.importer.steam_source import SteamSource
 from cartridges.importer.twintail_source import TwintailSource
@@ -59,7 +58,6 @@ SOURCE_CLASSES: tuple[type[Source], ...] = (
     QuiverSource,
     RetroarchSource,
     RomSource,
-    ShortcutsSource,
     SteamSource,
     TwintailSource,
     UzdoomSource,

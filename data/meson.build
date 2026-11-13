@@ -23,26 +23,23 @@ foreach name : [
   )
 endforeach
 
-# O arquivo .desktop e a integracao com o menu sao do Linux; no Windows a
-# entrada do aplicativo e criada pelo instalador.
-if host_machine.system() == 'linux'
-  desktop_file = i18n.merge_file(
-    input: configure_file(
-      input: 'io.github.zonaro.Jolven.desktop.in',
-      output: app_id + '.desktop.in',
-      configuration: conf,
-    ),
-    output: app_id + '.desktop',
-    type: 'desktop',
-    po_dir: '../po',
-    install: true,
-    install_dir: join_paths(get_option('datadir'), 'applications'),
-  )
+# O arquivo .desktop integra o Jolven aos menus dos desktops Linux.
+desktop_file = i18n.merge_file(
+  input: configure_file(
+    input: 'io.github.zonaro.Jolven.desktop.in',
+    output: app_id + '.desktop.in',
+    configuration: conf,
+  ),
+  output: app_id + '.desktop',
+  type: 'desktop',
+  po_dir: '../po',
+  install: true,
+  install_dir: join_paths(get_option('datadir'), 'applications'),
+)
 
-  desktop_utils = find_program('desktop-file-validate', required: false)
-  if desktop_utils.found()
-    test('Validate desktop file', desktop_utils, args: [desktop_file])
-  endif
+desktop_utils = find_program('desktop-file-validate', required: false)
+if desktop_utils.found()
+  test('Validate desktop file', desktop_utils, args: [desktop_file])
 endif
 
 appstream_file = i18n.merge_file(
@@ -184,31 +181,29 @@ endif
 
 subdir('icons')
 
-if host_machine.system() == 'linux'
-  _polkit_install = get_option('prefix') in ['/usr', '/usr/local']
-  _polkit_dir = join_paths(get_option('prefix'), 'share/polkit-1/actions')
-  # O exec.path precisa apontar para onde o helper foi instalado nesta
-  # compilacao (prefixo + libexecdir). Em build de usuario (~/.local) as
-  # policies nao sao instaladas, mas o arquivo gerado mantem
-  # system_libexecdir (/usr/libexec) porque e ele que o install.sh promove.
-  _policy_execdir = get_option('system_libexecdir')
-  if _polkit_install
-    _policy_execdir = join_paths(get_option('prefix'), get_option('libexecdir'))
-  endif
-  _policy_conf = configuration_data()
-  _policy_conf.set('system_libexecdir', _policy_execdir)
-  configure_file(
-    input: 'io.github.zonaro.Jolven.GameMode.policy.in',
-    output: app_id + '.GameMode.policy',
-    configuration: _policy_conf,
-    install: _polkit_install,
-    install_dir: _polkit_dir,
-  )
-  configure_file(
-    input: 'io.github.zonaro.Jolven.Preferences.policy.in',
-    output: app_id + '.Preferences.policy',
-    configuration: _policy_conf,
-    install: _polkit_install,
-    install_dir: _polkit_dir,
-  )
+_polkit_install = get_option('prefix') in ['/usr', '/usr/local']
+_polkit_dir = join_paths(get_option('prefix'), 'share/polkit-1/actions')
+# O exec.path precisa apontar para onde o helper foi instalado nesta
+# compilacao (prefixo + libexecdir). Em build de usuario (~/.local) as
+# policies nao sao instaladas, mas o arquivo gerado mantem
+# system_libexecdir (/usr/libexec) porque e ele que o install.sh promove.
+_policy_execdir = get_option('system_libexecdir')
+if _polkit_install
+  _policy_execdir = join_paths(get_option('prefix'), get_option('libexecdir'))
 endif
+_policy_conf = configuration_data()
+_policy_conf.set('system_libexecdir', _policy_execdir)
+configure_file(
+  input: 'io.github.zonaro.Jolven.GameMode.policy.in',
+  output: app_id + '.GameMode.policy',
+  configuration: _policy_conf,
+  install: _polkit_install,
+  install_dir: _polkit_dir,
+)
+configure_file(
+  input: 'io.github.zonaro.Jolven.Preferences.policy.in',
+  output: app_id + '.Preferences.policy',
+  configuration: _policy_conf,
+  install: _polkit_install,
+  install_dir: _polkit_dir,
+)

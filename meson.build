@@ -17,7 +17,7 @@ project(
 )
 
 dependency('gtk4', version: '>= 4.15.0')
-dependency('libadwaita-1', version: '>= 1.6.beta')
+dependency('libadwaita-1', version: '>= 1.8')
 
 i18n = import('i18n')
 
@@ -65,23 +65,13 @@ subdir('data')
 subdir('cartridges')
 subdir('tests')
 
-# O provedor de busca e um servico D-Bus do GNOME Shell: so existe no Linux.
-if host_machine.system() == 'linux'
-  subdir('search-provider')
-endif
+# O search-provider e um recurso opcional do GNOME Shell, nao um requisito
+# para abrir o Jolven nos outros desktops Linux.
+subdir('search-provider')
 subdir('po')
 
-# `update-desktop-database` e integracao de desktop Linux; o Windows nao tem
-# equivalente. Schemas e cache de icones valem nas duas plataformas.
-if host_machine.system() == 'linux'
-  gnome.post_install(
-    glib_compile_schemas: true,
-    gtk_update_icon_cache: true,
-    update_desktop_database: true,
-  )
-else
-  gnome.post_install(
-    glib_compile_schemas: true,
-    gtk_update_icon_cache: true,
-  )
-endif
+gnome.post_install(
+  glib_compile_schemas: true,
+  gtk_update_icon_cache: true,
+  update_desktop_database: true,
+)

@@ -67,9 +67,9 @@ fonte de verdade para os dois:
   setters `set_palette`, `set_mode`, `set_glows`, `set_acento_custom`.
   A aplicação é coalescida (debounce) para evitar reescritas repetidas.
 
-O `ThemeManager` é instanciado no startup, logo após `apply_windows_theme()`
-(`cartridges/main.py`), e ligado ao `shared.schema`. Toda a aplicação é
-envolta em `try/except`: uma falha de tema nunca impede o uso do Jolven.
+O `ThemeManager` é instanciado no startup (`cartridges/main.py`) e ligado ao
+`shared.schema`. Toda a aplicação é envolta em `try/except`: uma falha de tema
+nunca impede o uso do Jolven.
 
 ## Tema padrão Jolven
 
@@ -238,9 +238,6 @@ execução de código remoto em tempo de execução.
   `windowcontrols/`, então fontes, controles de janela e `extras` têm efeito. As
   opções efetivas vêm de `SteamSkinManager.opcoes_suportadas()`; quando não há
   gerenciador, a UI cai na lista estática e nunca promete o que não funciona.
-- **Windows:** a interface de detecção é reutilizável, mas o suporte a
-  instalações Windows ainda não está concluído; o funcionamento no Linux não
-  depende disso.
 - **Páginas Store/Community/Profile** da Steam não são personalizadas por este
   método; o Jolven não promete isso.
 

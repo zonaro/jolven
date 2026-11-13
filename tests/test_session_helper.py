@@ -30,6 +30,26 @@ def clean_environment():
     }
 
 
+class DistroDependencyContractTests(unittest.TestCase):
+    """Ensure setup stays deliberately conservative across distro families."""
+
+    def test_dnf_handles_fedora_and_nobara(self):
+        source = HELPER.read_text(encoding="utf-8")
+        self.assertIn("fedora|nobara)", source)
+        self.assertIn("dnf install --refresh --assumeyes", source)
+
+    def test_ubuntu_apt_must_not_remove_packages(self):
+        source = HELPER.read_text(encoding="utf-8")
+        self.assertIn("    ubuntu)", source)
+        self.assertIn("apt-get install --yes --no-remove", source)
+
+    def test_arch_setup_does_not_auto_upgrade_system(self):
+        source = HELPER.read_text(encoding="utf-8")
+        self.assertIn("    cachyos)", source)
+        self.assertIn("command -v gamescope", source)
+        self.assertNotIn("pacman -Syu \"${missing[@]}\"", source)
+
+
 class SessionHelperTests(unittest.TestCase):
     def test_login_session_name_is_jolven_session(self):
         result = subprocess.run(

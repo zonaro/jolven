@@ -223,14 +223,13 @@ class WindowRetroarchControlsTests(unittest.TestCase):
             "retroarch_cmd_menu",
             "retroarch_cmd_fullscreen",
             "retroarch_cmd_reset",
-            "retroarch_cmd_shutdown",
         ]
         for id_widget in ids:
             self.assertIn(f"{id_widget}: Gtk.", py, id_widget)
             self.assertIn(f"{id_widget} {{", blp, id_widget)
 
     def test_retroarch_actions_map_only_to_allowed_commands(self) -> None:
-        from cartridges.integrations.retroarch import COMANDOS_PERMITIDOS
+        from cartridges.utils.retroarch_nci import _ALLOWED_COMMANDS
 
         py = (ROOT / "cartridges" / "window.py").read_text(encoding="utf-8")
         tree = ast.parse(py)
@@ -256,11 +255,11 @@ class WindowRetroarchControlsTests(unittest.TestCase):
         self.assertIsInstance(mapeamento, dict)
         self.assertTrue(mapeamento)
         for widget, comando in mapeamento.items():
-            self.assertIn(comando, COMANDOS_PERMITIDOS, widget)
+            self.assertIn(comando, _ALLOWED_COMMANDS, widget)
         # Nenhum botão aponta para string fora da allowlist: os ids do mapa
         # são exatamente os widgets do template, e o dispatcher só envia o
         # comando que veio do mapa.
-        self.assertEqual(len(mapeamento), 15)
+        self.assertEqual(len(mapeamento), 14)
         # Slow motion e tela cheia fazem parte do escopo do #156 e precisam
         # estar no menu, não só na allowlist.
         self.assertEqual(mapeamento["retroarch_cmd_slowmotion"], "SLOWMOTION")
@@ -284,14 +283,14 @@ class WindowRetroarchControlsTests(unittest.TestCase):
         worker = self._metodo(py, "_retroarch_worker")
         self.assertIn("threading.Thread", py)
         self.assertIn("entregar_na_tela", worker)
-        self.assertIn("is_available()", worker)
+        # O transporte e unico: o mesmo modulo que a pagina de integracoes usa.
+        self.assertIn("request_action(command)", worker)
         resultado = self._metodo(py, "_retroarch_resultado_na_tela")
         self.assertIn("RetroArch não respondeu", resultado)
 
-    def test_reset_and_shutdown_ask_before_sending(self) -> None:
+    def test_reset_asks_before_sending(self) -> None:
         py = (ROOT / "cartridges" / "window.py").read_text(encoding="utf-8")
         confirmar = self._metodo(py, "_pedir_confirmacao_retroarch")
-        self.assertIn("SHUTDOWN", confirmar)
         self.assertIn("AlertDialog", confirmar)
         self.assertIn("DESTRUCTIVE", confirmar)
         # Confirmar antes de enviar: o envio só acontece na resposta positiva.

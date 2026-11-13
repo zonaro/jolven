@@ -1,0 +1,58 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- For user-initiated, read-only RetroAchievements Web API calls. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+    <!-- Explicit package visibility: no broad QUERY_ALL_PACKAGES permission. -->
+    <queries>
+        <package android:name="com.retroarch" />
+        <package android:name="com.retroarch.aarch64" />
+        <package android:name="com.retroarch.ra32" />
+        <package android:name="org.ppsspp.ppsspp" />
+        <package android:name="org.ppsspp.ppssppgold" />
+        <package android:name="org.ppsspp.ppsspplegacy" />
+        <package android:name="org.dolphinemu.dolphinemu" />
+        <package android:name="org.mupen64plusae.v3.fzurita" />
+        <package android:name="org.duckstation.android" />
+        <package android:name="org.azahar_emu.azahar" />
+        <package android:name="com.dsemu.drastic" />
+        <package android:name="com.limelight" />
+        <package android:name="com.limelight.unofficial" />
+        <package android:name="com.limelight.noir" />
+        <package android:name="com.valvesoftware.steamlink" />
+        <package android:name="tv.parsec.client" />
+        <package android:name="com.playstation.remoteplay" />
+        <package android:name="com.metallic.chiaki" />
+        <package android:name="com.nvidia.geforcenow" />
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+    <application
+        android:label="Jolven"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <meta-data
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <service
+            android:name=".JolvenRecordingService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
+        <meta-data android:name="flutterEmbedding" android:value="2" />
+    </application>
+</manifest>

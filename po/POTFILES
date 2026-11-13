@@ -48,7 +48,6 @@ cartridges/utils/hltb.py
 cartridges/utils/install_size.py
 cartridges/utils/integrations.py
 cartridges/utils/ligacao_zerado.py
-cartridges/utils/single_instance.py
 cartridges/utils/sunshine_servico.py
 cartridges/utils/updates_checker.py
 
@@ -73,7 +72,6 @@ cartridges/importer/minigalaxy_source.py
 cartridges/importer/quiver_source.py
 cartridges/importer/retroarch_source.py
 cartridges/importer/rom_source.py
-cartridges/importer/shortcuts_source.py
 cartridges/importer/steam_source.py
 cartridges/importer/twintail_source.py
 cartridges/importer/uzdoom_source.py

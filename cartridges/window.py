@@ -45,7 +45,7 @@ from cartridges.gamepad_visual import GamepadVisual
 from cartridges.game import Game, STATUS_LABELS, status_label
 from cartridges.game_cover import GameCover
 from cartridges.integrations_page import IntegrationsPage
-from cartridges.integrations.retroarch import RetroarchCommandClient
+from cartridges.utils.retroarch_nci import request_action
 from cartridges.lighting_page import LightingPage
 from cartridges.onscreen_keyboard import OnscreenKeyboardDialog
 from cartridges.session_history import SessionHistoryDialog
@@ -131,9 +131,10 @@ _VIEW_MODE_ICONS = {
 
 # Comandos do RetroArch no bloqueador da sessão (issue #156). O par
 # id de widget -> comando é a única fonte da ligação: o dispatcher só envia
-# o que está aqui, e nada disso escapa da allowlist do cliente
-# (``COMANDOS_PERMITIDOS``). Nenhum botão aponta para string crua.
-_RETROARCH_CONFIRMAR = frozenset({"RESET", "SHUTDOWN"})
+# o que está aqui, e nada disso escapa da allowlist do transporte
+# (``_ALLOWED_COMMANDS`` em ``retroarch_nci``). Nenhum botão aponta para
+# string crua.
+_RETROARCH_CONFIRMAR = frozenset({"RESET"})
 _RETROARCH_ACOES: dict[str, str] = {
     "retroarch_cmd_pause": "PAUSE_TOGGLE",
     "retroarch_cmd_fast_forward": "FAST_FORWARD",
@@ -149,13 +150,7 @@ _RETROARCH_ACOES: dict[str, str] = {
     "retroarch_cmd_menu": "MENU_TOGGLE",
     "retroarch_cmd_fullscreen": "FULLSCREEN_TOGGLE",
     "retroarch_cmd_reset": "RESET",
-    "retroarch_cmd_shutdown": "SHUTDOWN",
 }
-_RETROARCH_CONFIRMAR_WIDGETS = frozenset(
-    widget
-    for widget, comando in _RETROARCH_ACOES.items()
-    if comando in _RETROARCH_CONFIRMAR
-)
 
 
 def can_edit_notes(game: Game) -> bool:
@@ -209,7 +204,6 @@ class CartridgesWindow(Adw.ApplicationWindow):
     retroarch_cmd_menu: Gtk.Button = Gtk.Template.Child()
     retroarch_cmd_fullscreen: Gtk.Button = Gtk.Template.Child()
     retroarch_cmd_reset: Gtk.Button = Gtk.Template.Child()
-    retroarch_cmd_shutdown: Gtk.Button = Gtk.Template.Child()
     primary_menu_button: Gtk.MenuButton = Gtk.Template.Child()
     show_sidebar_button: Gtk.Button = Gtk.Template.Child()
     details_view: Gtk.Overlay = Gtk.Template.Child()
@@ -554,9 +548,9 @@ class CartridgesWindow(Adw.ApplicationWindow):
         # __init__ preparar as playlists: sem estado, título padrão.
         playlist = None
         if getattr(self, "_playlist_filter", None) is not None:
-            playlist = self.playlist_store.get(self._playlist_filter)
+            playlist = self._playlist(self._playlist_filter)
         if playlist is not None:
-            self.library_page.set_title(playlist.name)
+            self.library_page.set_title(playlist["title"])
             return
         self._playlist_filter = None
         available = {source_id for source_id, _count in self.source_rows.values()}
@@ -1525,11 +1519,11 @@ class CartridgesWindow(Adw.ApplicationWindow):
             and not em_zerados
             and getattr(self, "_playlist_filter", None) is not None
         ):
-            playlist = self.playlist_store.get(self._playlist_filter)
+            playlist = self._playlist(self._playlist_filter)
             if playlist is None:
                 self._playlist_filter = None
             elif not any(
-                member.game_id in playlist.game_ids for member in members
+                member.game_id in playlist["games"] for member in members
             ):
                 filtered = True
 
@@ -1809,11 +1803,11 @@ class CartridgesWindow(Adw.ApplicationWindow):
         # Com uma playlist aberta, a ordem manual dela manda (issue #155):
         # mover para cima/baixo na playlist reordena a grade visível.
         if getattr(self, "_playlist_filter", None) is not None:
-            playlist = self.playlist_store.get(self._playlist_filter)
+            playlist = self._playlist(self._playlist_filter)
             if playlist is not None:
                 posicoes = {
                     ident: posicao
-                    for posicao, ident in enumerate(playlist.game_ids)
+                    for posicao, ident in enumerate(playlist["games"])
                 }
                 posicao1 = posicoes.get(child1.get_child().game_id)
                 posicao2 = posicoes.get(child2.get_child().game_id)
@@ -2656,7 +2650,9 @@ class CartridgesWindow(Adw.ApplicationWindow):
 
     def _init_playlists_e_selecao(self) -> None:
         """Estado e ações das playlists, do modo de visualização e da seleção."""
-        self.playlist_store = playlists.PlaylistStore()
+        self.playlist_store = playlists.PlaylistStore(
+            shared.app_dir / "playlists.json"
+        )
         self._playlist_filter: Optional[str] = None
         self._playlist_rows: dict = {}
         self._selected_ids: set[str] = set()
@@ -2703,6 +2699,30 @@ class CartridgesWindow(Adw.ApplicationWindow):
             self.add_action(acao)
 
         self._reconstruir_menu_playlist_selecao()
+
+    def _playlists(self) -> list:
+        """As playlists gravadas, ou lista vazia quando o arquivo não serve.
+
+        O arquivo é do usuário: se estiver truncado, grande demais ou em
+        formato desconhecido, a biblioteca segue sem playlists em vez de
+        levantar no meio da montagem da barra lateral.
+        """
+        try:
+            return self.playlist_store.all()
+        except ValueError:
+            logging.exception(
+                "Playlists file is not readable; continuing without playlists"
+            )
+            return []
+
+    def _playlist(self, playlist_id: Optional[str]) -> Optional[dict]:
+        """A playlist com esse id, ou ``None`` quando ela não existe."""
+        if playlist_id is None:
+            return None
+        return next(
+            (item for item in self._playlists() if item["id"] == playlist_id),
+            None,
+        )
 
     @staticmethod
     def _ler_modo_visual() -> str:
@@ -2831,11 +2851,11 @@ class CartridgesWindow(Adw.ApplicationWindow):
         menu.append_section(None, nova)
 
         existentes = Gio.Menu()
-        for playlist in self.playlist_store.playlists:
-            item = Gio.MenuItem.new(playlist.name, None)
+        for playlist in self._playlists():
+            item = Gio.MenuItem.new(playlist["title"], None)
             item.set_action_and_target_value(
                 "win.selection_add_to_playlist",
-                GLib.Variant("s", playlist.playlist_id),
+                GLib.Variant("s", playlist["id"]),
             )
             existentes.append_item(item)
         if existentes.get_n_items():
@@ -2850,14 +2870,14 @@ class CartridgesWindow(Adw.ApplicationWindow):
         self, _action: Gio.SimpleAction, target: GLib.Variant
     ) -> None:
         id_play = target.get_string()
-        playlist = self.playlist_store.get(id_play)
+        playlist = self._playlist(id_play)
         if playlist is None or not self._selected_ids:
             return
-        self.playlist_store.add(id_play, list(self._selected_ids))
+        self._adicionar_a_playlist(id_play, self._selected_ids)
         toast = Adw.Toast.new(
             # The variable is the title of the playlist
             _("{} jogos adicionados à playlist {}").format(
-                len(self._selected_ids), playlist.name
+                len(self._selected_ids), playlist["title"]
             )
         )
         toast.set_use_markup(False)
@@ -2877,14 +2897,16 @@ class CartridgesWindow(Adw.ApplicationWindow):
         nome = entrada.get_text().strip()
         if not nome:
             return
-        playlist = self.playlist_store.create(nome)
-        self.playlist_store.add(playlist.playlist_id, list(self._selected_ids))
+        playlist = self._criar_playlist(nome)
+        if playlist is None:
+            return
+        self._adicionar_a_playlist(playlist["id"], self._selected_ids)
         self.create_source_rows()
         self._update_selection_bar()
         toast = Adw.Toast.new(
             # The variable is the title of the playlist
             _("Playlist {} criada com {} jogos").format(
-                playlist.name, len(self._selected_ids)
+                playlist["title"], len(self._selected_ids)
             )
         )
         toast.set_use_markup(False)
@@ -3000,7 +3022,7 @@ class CartridgesWindow(Adw.ApplicationWindow):
         )
         self.sidebar.append(cabecalho)
 
-        for playlist in self.playlist_store.playlists:
+        for playlist in self._playlists():
             conteudo = Gtk.Box(
                 margin_top=6,
                 margin_bottom=6,
@@ -3010,7 +3032,7 @@ class CartridgesWindow(Adw.ApplicationWindow):
             )
             conteudo.append(
                 Gtk.Label(
-                    label=playlist.name,
+                    label=playlist["title"],
                     halign=Gtk.Align.START,
                     hexpand=True,
                     wrap=True,
@@ -3021,7 +3043,7 @@ class CartridgesWindow(Adw.ApplicationWindow):
             )
             conteudo.append(
                 contagem := Gtk.Label(
-                    label=str(len(playlist.game_ids)),
+                    label=str(len(playlist["games"])),
                     halign=Gtk.Align.END,
                     css_classes=["dim-label"],
                 )
@@ -3036,15 +3058,15 @@ class CartridgesWindow(Adw.ApplicationWindow):
                 )
             )
             botao = Gtk.ToggleButton(
-                active=self._playlist_filter == playlist.playlist_id,
+                active=self._playlist_filter == playlist["id"],
                 child=conteudo,
                 hexpand=True,
                 css_classes=["flat", "source-filter-toggle"],
                 tooltip_text=_("Clique para ver só os jogos desta playlist"),
             )
-            botao.connect("toggled", self._on_playlist_row_toggled, playlist.playlist_id)
+            botao.connect("toggled", self._on_playlist_row_toggled, playlist["id"])
             self.sidebar.append(botao)
-            self._playlist_rows[botao] = playlist.playlist_id
+            self._playlist_rows[botao] = playlist["id"]
 
         conteudo_nova = Gtk.Box(
             spacing=12,
@@ -3069,7 +3091,7 @@ class CartridgesWindow(Adw.ApplicationWindow):
         )
         nova.connect("clicked", self._on_nova_playlist_clicked)
         self.sidebar.append(nova)
-        cabecalho.set_visible(bool(self.playlist_store.playlists))
+        cabecalho.set_visible(bool(self._playlists()))
 
     def _on_playlist_row_toggled(self, botao: Gtk.ToggleButton, playlist_id: str) -> None:
         if botao.get_active():
@@ -3083,7 +3105,7 @@ class CartridgesWindow(Adw.ApplicationWindow):
             return
         self._playlist_sincronizando = True
         try:
-            if playlist_id is not None and self.playlist_store.get(playlist_id) is None:
+            if playlist_id is not None and self._playlist(playlist_id) is None:
                 playlist_id = None
             self._playlist_filter = playlist_id
             for botao, id_play in self._playlist_rows.items():
@@ -3102,12 +3124,12 @@ class CartridgesWindow(Adw.ApplicationWindow):
         secao = Gio.Menu()
         item = Gio.MenuItem.new(_("Renomear"), None)
         item.set_action_and_target_value(
-            "win.playlist_rename", GLib.Variant("s", playlist.playlist_id)
+            "win.playlist_rename", GLib.Variant("s", playlist["id"])
         )
         secao.append_item(item)
         item = Gio.MenuItem.new(_("Apagar"), None)
         item.set_action_and_target_value(
-            "win.playlist_delete", GLib.Variant("s", playlist.playlist_id)
+            "win.playlist_delete", GLib.Variant("s", playlist["id"])
         )
         secao.append_item(item)
         menu.append_section(None, secao)
@@ -3125,9 +3147,40 @@ class CartridgesWindow(Adw.ApplicationWindow):
         nome = entrada.get_text().strip()
         if not nome:
             return
-        self.playlist_store.create(nome)
+        if self._criar_playlist(nome) is None:
+            return
         self.create_source_rows()
         self._update_selection_bar()
+
+    def _criar_playlist(self, nome: str) -> Optional[dict]:
+        """Cria a playlist, avisando o usuário quando o nome já existe."""
+        if any(
+            item["title"].casefold() == nome.casefold()
+            for item in self._playlists()
+        ):
+            self._avisar_playlist(_("Já existe uma playlist com esse nome"))
+            return None
+        try:
+            return self.playlist_store.create(nome)
+        except (ValueError, OSError):
+            logging.exception("Could not create playlist")
+            self._avisar_playlist(_("Não foi possível salvar a playlist"))
+            return None
+
+    def _adicionar_a_playlist(self, playlist_id: str, game_ids: Any) -> None:
+        """Inclui cada jogo na playlist, sem tocar nas outras listas."""
+        for game_id in game_ids:
+            try:
+                self.playlist_store.set_member(playlist_id, game_id, True)
+            except (ValueError, KeyError):
+                logging.exception(
+                    "Could not add %s to playlist %s", game_id, playlist_id
+                )
+
+    def _avisar_playlist(self, texto: str) -> None:
+        toast = Adw.Toast.new(texto)
+        toast.set_use_markup(False)
+        self.toast_queue.add(toast)
 
     def _pedir_nome_playlist(
         self, titulo: str, corpo: str, inicial: str, callback: Any
@@ -3162,30 +3215,45 @@ class CartridgesWindow(Adw.ApplicationWindow):
     def on_playlist_rename_action(
         self, _action: Gio.SimpleAction, target: GLib.Variant
     ) -> None:
-        playlist = self.playlist_store.get(target.get_string())
+        playlist = self._playlist(target.get_string())
         if playlist is None:
             return
-        playlist_id = playlist.playlist_id
+        playlist_id = playlist["id"]
         self._pedir_nome_playlist(
             _("Renomear playlist"),
             _("Novo nome da playlist:"),
-            playlist.name,
+            playlist["title"],
             lambda entrada: self._renomear_playlist(playlist_id, entrada),
         )
 
     def _renomear_playlist(self, playlist_id: str, entrada: Gtk.Entry) -> None:
-        self.playlist_store.rename(playlist_id, entrada.get_text())
+        nome = entrada.get_text().strip()
+        if not nome:
+            return
+        if any(
+            item["id"] != playlist_id
+            and item["title"].casefold() == nome.casefold()
+            for item in self._playlists()
+        ):
+            self._avisar_playlist(_("Já existe uma playlist com esse nome"))
+            return
+        try:
+            self.playlist_store.rename(playlist_id, nome)
+        except (ValueError, KeyError):
+            logging.exception("Could not rename playlist %s", playlist_id)
+            self._avisar_playlist(_("Não foi possível salvar a playlist"))
+            return
         self.create_source_rows()
         self._update_source_filter_title()
 
     def on_playlist_delete_action(
         self, _action: Gio.SimpleAction, target: GLib.Variant
     ) -> None:
-        playlist = self.playlist_store.get(target.get_string())
+        playlist = self._playlist(target.get_string())
         if playlist is None:
             return
         dialogo = Adw.AlertDialog.new(
-            _("Apagar {}?").format(playlist.name),
+            _("Apagar {}?").format(playlist["title"]),
             _("Os jogos continuam na biblioteca; só a playlist desaparece."),
         )
         dialogo.add_response("cancel", _("Cancelar"))
@@ -3193,7 +3261,7 @@ class CartridgesWindow(Adw.ApplicationWindow):
         dialogo.set_response_appearance("delete", Adw.ResponseAppearance.DESTRUCTIVE)
         dialogo.set_default_response("cancel")
         dialogo.set_close_response("cancel")
-        dialogo.connect("response", self._ao_apagar_playlist, playlist.playlist_id)
+        dialogo.connect("response", self._ao_apagar_playlist, playlist["id"])
         dialogo.present(self)
 
     def _ao_apagar_playlist(
@@ -3201,9 +3269,13 @@ class CartridgesWindow(Adw.ApplicationWindow):
     ) -> None:
         if resposta != "delete":
             return
-        playlist = self.playlist_store.get(playlist_id)
-        nome = playlist.name if playlist else playlist_id
-        self.playlist_store.delete(playlist_id)
+        playlist = self._playlist(playlist_id)
+        nome = playlist["title"] if playlist else playlist_id
+        try:
+            self.playlist_store.delete(playlist_id)
+        except (ValueError, KeyError):
+            logging.exception("Could not delete playlist %s", playlist_id)
+            return
         if self._playlist_filter == playlist_id:
             self._definir_playlist_filtro(None)
         self.create_source_rows()
@@ -3217,13 +3289,20 @@ class CartridgesWindow(Adw.ApplicationWindow):
     def _mover_na_playlist(self, game_id: str, deslocamento: int) -> None:
         if self._playlist_filter is None:
             return
-        playlist = self.playlist_store.get(self._playlist_filter)
-        if playlist is None or game_id not in playlist.game_ids:
+        playlist = self._playlist(self._playlist_filter)
+        if playlist is None or game_id not in playlist["games"]:
             return
-        indice = playlist.game_ids.index(game_id)
-        self.playlist_store.move(
-            playlist.playlist_id, game_id, indice + deslocamento
-        )
+        ordem = list(playlist["games"])
+        indice = ordem.index(game_id)
+        destino = max(0, min(len(ordem) - 1, indice + deslocamento))
+        if destino == indice:
+            return
+        ordem.insert(destino, ordem.pop(indice))
+        try:
+            self.playlist_store.reorder(playlist["id"], ordem)
+        except (ValueError, KeyError):
+            logging.exception("Could not reorder playlist %s", playlist["id"])
+            return
         self.library.invalidate_sort()
 
     def on_playlist_move_up_action(
@@ -3242,7 +3321,18 @@ class CartridgesWindow(Adw.ApplicationWindow):
             conhecidos = {game.game_id for game in shared.store}
         except Exception:  # pylint: disable=broad-exception-caught
             return
-        self.playlist_store.prune(conhecidos)
+        for playlist in self._playlists():
+            for game_id in list(playlist["games"]):
+                if game_id in conhecidos:
+                    continue
+                try:
+                    self.playlist_store.set_member(playlist["id"], game_id, False)
+                except (ValueError, KeyError):
+                    logging.exception(
+                        "Could not drop %s from playlist %s",
+                        game_id,
+                        playlist["id"],
+                    )
 
     def on_toggle_launcher_action(
         self, _action: Any, target: GLib.Variant
@@ -3744,21 +3834,13 @@ class CartridgesWindow(Adw.ApplicationWindow):
         self._retroarch_enviar(command)
 
     def _pedir_confirmacao_retroarch(self, command: str) -> None:
-        """Confirmação antes de RESET e SHUTDOWN, que não têm volta."""
-        if command == "SHUTDOWN":
-            dialogo = Adw.AlertDialog.new(
-                _("Desligar o RetroArch?"),
-                _("O jogo é fechado e a sessão do emulador termina agora."),
-            )
-            dialogo.add_response("cancel", _("Cancelar"))
-            dialogo.add_response("confirm", _("Desligar"))
-        else:
-            dialogo = Adw.AlertDialog.new(
-                _("Reiniciar o jogo?"),
-                _("O progresso desde o último save state é perdido."),
-            )
-            dialogo.add_response("cancel", _("Cancelar"))
-            dialogo.add_response("confirm", _("Reiniciar"))
+        """Confirmação antes de RESET, que não tem volta."""
+        dialogo = Adw.AlertDialog.new(
+            _("Reiniciar o jogo?"),
+            _("O progresso desde o último save state é perdido."),
+        )
+        dialogo.add_response("cancel", _("Cancelar"))
+        dialogo.add_response("confirm", _("Reiniciar"))
         dialogo.set_response_appearance("confirm", Adw.ResponseAppearance.DESTRUCTIVE)
         dialogo.set_default_response("cancel")
         dialogo.set_close_response("cancel")
@@ -3790,43 +3872,36 @@ class CartridgesWindow(Adw.ApplicationWindow):
 
     def _retroarch_worker(self, command: str) -> None:
         """Trabalho de rede fora do GTK; nunca levanta."""
-        resposta: Optional[str] = None
-        disponivel = False
+        enviado = False
+        retorno = "transmission_failed"
         try:
-            cliente = RetroarchCommandClient()
-            resposta = cliente.send(command)
-            # ``send`` não distingue "comando sem resposta" de "RetroArch
-            # fora do ar": a sonda é quem diz se a interface está de pé.
-            disponivel = cliente.is_available()
+            pedido = request_action(command)
+            enviado = pedido.sent
+            retorno = pedido.feedback
         except Exception:  # pylint: disable=broad-exception-caught
             logging.exception("RetroArch: falha ao enviar %r", command)
-        entregar_na_tela(
-            self._retroarch_resultado_na_tela, command, resposta, disponivel
-        )
+        entregar_na_tela(self._retroarch_resultado_na_tela, enviado, retorno)
 
-    def _retroarch_resultado_na_tela(
-        self, command: str, resposta: Optional[str], disponivel: bool
-    ) -> None:
+    def _retroarch_resultado_na_tela(self, enviado: bool, retorno: str) -> None:
         """Resultado do comando na thread principal, sempre honesto.
 
-        Um comando da allowlist quase sempre volta sem resposta, então
-        ``None`` não significa fracasso por si só — só quando a sonda
-        ``GET_STATUS`` também não responde é que a interface de rede está
-        mesmo fora do ar.
+        O transporte sonda o estado antes de enviar, então um envio recusado
+        significa interface de rede fora do ar ou nenhum jogo em execução —
+        e um envio aceito ainda não prova que o core executou a ação.
         """
         self._retroarch_busy = False
-        if resposta or disponivel:
+        if enviado:
             self.session_retroarch_popover.popdown()
             self.add_toast(Adw.Toast.new(_("Comando enviado ao RetroArch")))
             return
-        self.add_toast(
-            Adw.Toast.new(
-                _(
-                    "RetroArch não respondeu — confira se a interface de"
-                    " comandos de rede está ativada"
-                )
+        if retorno == "no_active_game":
+            texto = _("O RetroArch não está com um jogo em execução")
+        else:
+            texto = _(
+                "RetroArch não respondeu — confira se a interface de"
+                " comandos de rede está ativada"
             )
-        )
+        self.add_toast(Adw.Toast.new(texto))
 
     def open_game_overlay(self) -> None:
         """Bring the in-game controls to the front of the Gamescope session."""

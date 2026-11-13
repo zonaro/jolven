@@ -29,6 +29,7 @@ via :func:`cartridges.utils.na_tela.entregar_na_tela`.
 import builtins
 import logging
 import threading
+from pathlib import Path
 from typing import Any, Optional
 
 from gi.repository import Adw, GLib, Gtk
@@ -42,6 +43,9 @@ from cartridges.utils.integrations import (
     obter_status,
 )
 from cartridges.utils.na_tela import entregar_na_tela
+from cartridges.utils.retroarch_diagnostics import inspect_retroarch
+from cartridges.utils.retroarch_controls_dialog import open_retroarch_controls
+from cartridges.utils.nearby_dialog import open_nearby_dialog
 
 # O launcher roda ``gettext.install`` antes de importar qualquer módulo do
 # app; o fallback mantém este módulo importável em testes e ferramentas sem
@@ -137,10 +141,34 @@ class IntegrationsPage(Adw.NavigationPage):
             grupo.add(linha)
             self._linhas.append((grupo, linha))
             self._por_chave[integracao.chave] = linha
+        self._adicionar_nearby()
         self.integrations_stack.set_visible_child_name("list")
         if chave_focada:
             self._focar_linha(chave_focada)
         return GLib.SOURCE_REMOVE
+
+    def _adicionar_nearby(self) -> None:
+        # Nearby is a Jolven function, not an external program to install.
+        row = Adw.ActionRow(
+            title=_("Jolven Nearby"),
+            subtitle=_("Transferir ROMs próprias, saves exportados e imagens na LAN"),
+        )
+        button = Gtk.Button(
+            label=_("Compartilhar / receber"),
+            valign=Gtk.Align.CENTER,
+        )
+        button.connect("clicked", self._abrir_nearby)
+        row.add_suffix(button)
+        self.grupo_ferramentas.add(row)
+        self._linhas.append((self.grupo_ferramentas, row))
+        self._por_chave["jolven_nearby"] = row
+
+    def _abrir_nearby(self, _button: Gtk.Button) -> None:
+        root = self.get_root()
+        if not isinstance(root, Gtk.Window):
+            self._aviso(_("Janela não está disponível"))
+            return
+        open_nearby_dialog(root)
 
     def _limpar_linhas(self) -> None:
         for grupo, linha in self._linhas:
@@ -154,9 +182,15 @@ class IntegrationsPage(Adw.NavigationPage):
 
         if estado == "nativo":
             linha.add_suffix(self._rotulo_status(_("Instalado (nativo)")))
+            if integracao.chave == "retroarch":
+                self._adicionar_diagnostico_retroarch(linha)
+                self._adicionar_controles_retroarch(linha)
             return linha
         if estado == "flatpak":
             linha.add_suffix(self._rotulo_status(_("Instalado via Flatpak")))
+            if integracao.chave == "retroarch":
+                self._adicionar_diagnostico_retroarch(linha)
+                self._adicionar_controles_retroarch(linha)
             return linha
         if not integracao.app_id_flatpak:
             # Entradas sem app id (Flatpak, GameMode, Waydroid…) só informam.
@@ -182,6 +216,70 @@ class IntegrationsPage(Adw.NavigationPage):
         linha.add_suffix(espinha)
         linha.add_suffix(botao)
         return linha
+
+    def _adicionar_controles_retroarch(self, linha: Adw.ActionRow) -> None:
+        button = Gtk.Button(
+            label=_("Ações"),
+            valign=Gtk.Align.CENTER,
+            tooltip_text=_("Controles opcionais do RetroArch via localhost"),
+        )
+        button.connect("clicked", self._abrir_controles_retroarch)
+        linha.add_suffix(button)
+
+    def _abrir_controles_retroarch(self, _button: Gtk.Button) -> None:
+        parent = self.get_root()
+        if not isinstance(parent, Gtk.Window):
+            self._aviso(_("Janela não está disponível"))
+            return
+        open_retroarch_controls(parent)
+
+    def _adicionar_diagnostico_retroarch(self, linha: Adw.ActionRow) -> None:
+        botao = Gtk.Button(
+            label=_("Diagnosticar"),
+            valign=Gtk.Align.CENTER,
+            tooltip_text=_("Verificar cores e diretórios da configuração RetroArch"),
+        )
+        botao.connect("clicked", self._selecionar_config_retroarch)
+        linha.add_suffix(botao)
+
+    def _selecionar_config_retroarch(self, _botao: Gtk.Button) -> None:
+        """User must explicitly pick the config file; no arbitrary probing."""
+        root = self.get_root()
+        if not isinstance(root, Gtk.Window):
+            self._aviso(_("Janela não está disponível"))
+            return
+        chooser = Gtk.FileDialog()
+        chooser.set_title(_("Selecione retroarch.cfg para diagnóstico"))
+        chooser.open(root, None, self._retroarch_config_escolhida)
+
+    def _retroarch_config_escolhida(self, chooser, result) -> None:
+        try:
+            selected = chooser.open_finish(result)
+        except Exception:
+            return
+        path = selected.get_path() if selected else None
+        if not path:
+            self._aviso(_("Selecione um arquivo local acessível"))
+            return
+        threading.Thread(
+            target=self._diagnosticar_retroarch_em_worker,
+            args=(Path(path),),
+            name="jolven-retroarch-diagnostics",
+            daemon=True,
+        ).start()
+
+    def _diagnosticar_retroarch_em_worker(self, config_file: Path) -> None:
+        try:
+            status = inspect_retroarch(config_file)
+            if not status.present:
+                mensagem = _("Configuração RetroArch ausente ou inacessível")
+            else:
+                mensagem = _("RetroArch: {} cores encontrados; {} avisos").format(
+                    len(status.cores), len(status.warnings)
+                )
+        except (OSError, ValueError):
+            mensagem = _("Falha ao verificar configuração RetroArch")
+        entregar_na_tela(self._aviso, mensagem)
 
     @staticmethod
     def _rotulo_status(texto: str) -> Gtk.Label:

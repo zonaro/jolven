@@ -94,8 +94,6 @@ class ItchSource(URLExecutableSource):
                     shared.flatpak_dir / "io.itch.itch" / "config" / "itch",
                     shared.config_dir / "itch",
                     shared.host_config_dir / "itch",
-                    shared.appdata_dir / "itch",
-                    shared.app_support_dir / "itch",
                 ),
                 paths={
                     "butler.db": LocationSubPath("db/butler.db"),

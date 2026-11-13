@@ -1,0 +1,99 @@
+name: Jolven Android signed release (manual)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  signed-android:
+    name: Build signed APK and AAB
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      JOLVEN_KEYSTORE_B64: ${{ secrets.JOLVEN_ANDROID_KEYSTORE_B64 }}
+      JOLVEN_STORE_PASSWORD: ${{ secrets.JOLVEN_ANDROID_STORE_PASSWORD }}
+      JOLVEN_KEY_ALIAS: ${{ secrets.JOLVEN_ANDROID_KEY_ALIAS }}
+      JOLVEN_KEY_PASSWORD: ${{ secrets.JOLVEN_ANDROID_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Check signing prerequisites without printing secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in JOLVEN_KEYSTORE_B64 JOLVEN_STORE_PASSWORD JOLVEN_KEY_ALIAS JOLVEN_KEY_PASSWORD; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::Missing required Android signing secret: $name"
+              exit 1
+            fi
+          done
+
+      - name: Prepare Flutter Android build
+        working-directory: android/jolven_flutter
+        run: |
+          flutter create --org com.redclaw --project-name jolven_flutter --platforms android .
+          flutter pub get
+          flutter analyze
+          flutter test
+
+      - name: Configure release keystore, refusing debug signing
+        shell: bash
+        env:
+          JOLVEN_KEYSTORE_FILE: ${{ runner.temp }}/jolven-release.jks
+        run: |
+          set -euo pipefail
+          printf '%s' "$JOLVEN_KEYSTORE_B64" | base64 --decode > "$JOLVEN_KEYSTORE_FILE"
+          chmod 600 "$JOLVEN_KEYSTORE_FILE"
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('android/jolven_flutter/android/app/build.gradle.kts')
+          source = path.read_text(encoding='utf-8')
+          debug = 'signingConfig = signingConfigs.getByName("debug")'
+          marker = '    buildTypes {'
+          if debug not in source or marker not in source:
+              raise SystemExit('Refusing release: Gradle template signing shape changed')
+          config = '''
+              signingConfigs {
+                  create("jolvenRelease") {
+                      storeFile = file(System.getenv("JOLVEN_KEYSTORE_FILE"))
+                      storePassword = System.getenv("JOLVEN_STORE_PASSWORD")
+                      keyAlias = System.getenv("JOLVEN_KEY_ALIAS")
+                      keyPassword = System.getenv("JOLVEN_KEY_PASSWORD")
+                  }
+              }
+          '''
+          source = source.replace(marker, config + marker, 1)
+          source = source.replace(debug, 'signingConfig = signingConfigs.getByName("jolvenRelease")')
+          if 'signingConfig = signingConfigs.getByName("debug")' in source:
+              raise SystemExit('Debug signing remains in release Gradle template')
+          path.write_text(source, encoding='utf-8')
+          PY
+
+      - name: Build signed APK and Android App Bundle
+        working-directory: android/jolven_flutter
+        shell: bash
+        env:
+          JOLVEN_KEYSTORE_FILE: ${{ runner.temp }}/jolven-release.jks
+        run: |
+          flutter build apk --release
+          flutter build appbundle --release
+
+      - name: Upload signed packages as private workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: jolven-android-signed
+          path: |
+            android/jolven_flutter/build/app/outputs/flutter-apk/app-release.apk
+            android/jolven_flutter/build/app/outputs/bundle/release/app-release.aab
+          retention-days: 7
+          if-no-files-found: error

@@ -1,0 +1,304 @@
+import 'package:flutter/services.dart';
+
+import 'models.dart';
+
+/// Only a bridge to Android's public APIs. No RetroArch/libretro engine.
+class AndroidBridge {
+  const AndroidBridge();
+
+  static const MethodChannel _channel = MethodChannel('jolven/external_emulators');
+
+  Future<Map<String, dynamic>> stageNearbyFile(String uri, String kind) async {
+    final row = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'stageNearbyFile', {'uri': uri, 'kind': kind});
+    if (row == null) throw StateError('Could not stage Nearby file');
+    return row.map((key, value) => MapEntry(key.toString(), value));
+  }
+
+  Future<void> cleanupNearbyStage(String path) async {
+    await _channel.invokeMethod<bool>('cleanupNearbyStage', {'path': path});
+  }
+
+  Future<String> nearbyCacheDir() async {
+    final dir = await _channel.invokeMethod<String>('nearbyCacheDir');
+    if (dir == null || dir.isEmpty) {
+      throw StateError('Android cache directory is unavailable');
+    }
+    return dir;
+  }
+
+  Future<bool> exportNearbyFile({
+    required String path,
+    required String name,
+    required String sha256,
+  }) async {
+    final result = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'exportNearbyFile',
+      {'path': path, 'name': name, 'sha256': sha256},
+    );
+    return result?['status'] == 'saved';
+  }
+
+  Future<bool> exportOverlayZip(String config, Uint8List png) async {
+    final result = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'exportOverlayZip', {'config': config, 'png': png},
+    );
+    return result?['status'] == 'saved';
+  }
+
+  Future<Map<String, String>> getConsoleEmulatorDefaults() async {
+    final map = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'getConsoleEmulatorDefaults',
+    );
+    return (map ?? {}).map(
+      (key, value) => MapEntry(key.toString(), value.toString()),
+    );
+  }
+
+  Future<void> setConsoleEmulatorDefault(String platformId, String? packageName) async {
+    await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'setConsoleEmulatorDefault',
+      {'platformId': platformId, 'packageName': packageName ?? ''},
+    );
+  }
+
+  Future<List<EmulatorInfo>> listEmulators() async {
+    final rows = await _channel.invokeMethod<List<dynamic>>('listEmulators') ?? [];
+    return rows.map((row) => EmulatorInfo.fromMap(row as Map)).toList();
+  }
+
+  Future<String> fingerprintRom(RomItem rom) async {
+    final data = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'fingerprintRom', {'uri': rom.uri});
+    final sha256 = data?['sha256'] as String?;
+    if (sha256 == null || !RegExp(r'^[a-f0-9]{64}$').hasMatch(sha256)) {
+      throw const FormatException('Invalid ROM hash');
+    }
+    return sha256;
+  }
+
+  Future<List<RomItem>> listRoms() async {
+    final rows = await _channel.invokeMethod<List<dynamic>>('listRoms') ?? [];
+    return rows.map((row) => RomItem.fromMap(row as Map)).toList();
+  }
+
+  /// Uses ACTION_OPEN_DOCUMENT and persists the user-granted read URI.
+  Future<RomItem?> importRom() async {
+    final row = await _channel.invokeMethod<Map<dynamic, dynamic>>('importRom');
+    return row == null ? null : RomItem.fromMap(row);
+  }
+
+  Future<String?> pickUserFile() =>
+      _channel.invokeMethod<String>('pickUserFile');
+
+  Future<Map<String, String>> inspectUserFile(String uri) async {
+    final row = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'hashUserFile', {'uri': uri});
+    return row?.map((key, value) =>
+            MapEntry(key.toString(), value.toString())) ??
+        <String, String>{};
+  }
+
+  Future<RecordingInfo> recordingStatus() async {
+    final row = await _channel.invokeMethod<Map<dynamic, dynamic>>('recordingStatus');
+    return RecordingInfo.fromMap(row ?? {});
+  }
+
+  Future<LaunchOutcome> startScreenRecording() async {
+    final row = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'startScreenRecording');
+    return LaunchOutcome.fromMap(row ?? {});
+  }
+
+  Future<LaunchOutcome> stopScreenRecording() async {
+    final row = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'stopScreenRecording');
+    return LaunchOutcome.fromMap(row ?? {});
+  }
+
+  Future<List<SaveFileRecord>> listSavedFiles() async {
+    final rows = await _channel.invokeMethod<List<dynamic>>('listSavedFiles') ?? [];
+    return rows.map((row) => SaveFileRecord.fromMap(row as Map)).toList();
+  }
+
+  Future<SaveFileRecord?> pickSaveFile({RomItem? rom}) async {
+    final row = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'pickSaveFile', {if (rom != null) 'romUri': rom.uri});
+    return row == null ? null : SaveFileRecord.fromMap(row);
+  }
+
+  Future<LaunchOutcome> exportSaveFile(SaveFileRecord save) async {
+    final row = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'exportSaveFile', {'id': save.id});
+    return LaunchOutcome.fromMap(row ?? {});
+  }
+
+  Future<void> deleteSaveFile(SaveFileRecord save) async {
+    final ok = await _channel.invokeMethod<bool>('deleteSaveFile', {'id': save.id});
+    if (ok != true) throw StateError('Could not delete save file');
+  }
+
+  Future<String?> pickPatchFile() =>
+      _channel.invokeMethod<String>('pickPatchFile');
+
+  Future<LaunchOutcome> exportPatchedRom(RomItem rom, String patchUri) async {
+    final row = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'exportPatchedRom', {'romUri': rom.uri, 'patchUri': patchUri});
+    return LaunchOutcome.fromMap(row ?? {});
+  }
+
+  Future<List<RomItem>> importRoms() async {
+    final rows = await _channel.invokeMethod<List<dynamic>>('importRoms') ?? [];
+    return rows.map((row) => RomItem.fromMap(row as Map)).toList();
+  }
+
+  Future<List<RomItem>> importFolder() async {
+    final rows = await _channel.invokeMethod<List<dynamic>>('importFolder') ?? [];
+    return rows.map((row) => RomItem.fromMap(row as Map)).toList();
+  }
+
+  Future<void> updateRom(RomItem rom, {
+    String? platformId,
+    String? emulatorPackage,
+    bool? favorite,
+    String? retroCorePath,
+    String? retroRomPath,
+  }) async {
+    await _channel.invokeMethod<void>('updateRom', {
+      'uri': rom.uri,
+      if (platformId != null) 'platformId': platformId,
+      if (emulatorPackage != null) 'emulatorPackage': emulatorPackage,
+      if (favorite != null) 'favorite': favorite,
+      if (retroCorePath != null) 'retroCorePath': retroCorePath,
+      if (retroRomPath != null) 'retroRomPath': retroRomPath,
+    });
+  }
+
+  Future<String> downloadLibretroCover(
+    RomItem rom, String platformId, String title, {
+    bool replaceExisting = false,
+  }) async {
+    final row = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'downloadLibretroCover', {
+        'uri': rom.uri,
+        'platformId': platformId,
+        'title': title,
+        'replaceExisting': replaceExisting,
+      },
+    );
+    final path = row?['path'] as String?;
+    if (path == null || path.isEmpty) {
+      throw const FormatException('Thumbnail unavailable');
+    }
+    return path;
+  }
+
+  Future<String?> pickArtwork(RomItem rom, String kind) async {
+    return _channel.invokeMethod<String>('pickArtwork', {
+      'uri': rom.uri, 'kind': kind,
+    });
+  }
+
+  Future<bool> clearArtwork(RomItem rom, String kind) async {
+    return await _channel.invokeMethod<bool>('clearArtwork', {
+      'uri': rom.uri, 'kind': kind,
+    }) ?? false;
+  }
+
+  Future<List<GameCollection>> listCollections() async {
+    final rows = await _channel.invokeMethod<List<dynamic>>('listCollections') ?? [];
+    return rows.map((row) => GameCollection.fromMap(row as Map)).toList();
+  }
+
+  Future<GameCollection> createCollection(String title) async {
+    final data = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'createCollection', {'title': title});
+    return GameCollection.fromMap(data!);
+  }
+
+  Future<void> renameCollection(GameCollection collection, String title) async {
+    final ok = await _channel.invokeMethod<bool>(
+      'renameCollection', {'id': collection.id, 'title': title});
+    if (ok != true) throw StateError('Could not rename collection');
+  }
+
+  Future<void> deleteCollection(GameCollection collection) async {
+    final ok = await _channel.invokeMethod<bool>(
+      'deleteCollection', {'id': collection.id});
+    if (ok != true) throw StateError('Could not delete collection');
+  }
+
+  Future<bool> toggleCollectionMember(GameCollection collection, String ref) async {
+    return await _channel.invokeMethod<bool>(
+          'toggleCollectionMember', {'id': collection.id, 'ref': ref}) ??
+        false;
+  }
+
+  Future<List<AndroidGame>> listAndroidGames() async {
+    final rows = await _channel.invokeMethod<List<dynamic>>('listAndroidGames') ?? [];
+    return rows.map((row) => AndroidGame.fromMap(row as Map)).toList();
+  }
+
+  Future<List<AndroidGame>> listLaunchableApps() async {
+    final rows = await _channel.invokeMethod<List<dynamic>>('listLaunchableApps') ?? [];
+    return rows.map((row) => AndroidGame.fromMap(row as Map)).toList();
+  }
+
+  Future<void> addAndroidGame(AndroidGame game) async {
+    final result = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'addAndroidGame', {'packageName': game.packageName});
+    if (result?['status'] != 'added') {
+      throw PlatformException(code: 'GAME_NOT_FOUND', message: game.packageName);
+    }
+  }
+
+  Future<List<GamepadInfo>> listGamepads() async {
+    final rows = await _channel.invokeMethod<List<dynamic>>('listGamepads') ?? [];
+    return rows.map((row) => GamepadInfo.fromMap(row as Map)).toList();
+  }
+
+  Future<LaunchOutcome> openRetroArchGuide() async {
+    final row = await _channel.invokeMethod<Map<dynamic, dynamic>>('openRetroArchGuide');
+    return LaunchOutcome.fromMap(row ?? {});
+  }
+
+  Future<List<RemoteClient>> listRemoteClients() async {
+    final rows = await _channel.invokeMethod<List<dynamic>>('listRemoteClients') ?? [];
+    return rows.map((row) => RemoteClient.fromMap(row as Map)).toList();
+  }
+
+  Future<LaunchOutcome> openRemoteClient(RemoteClient client) async {
+    final result = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'openRemoteClient', {'packageName': client.packageName});
+    return LaunchOutcome.fromMap(result ?? {});
+  }
+
+  Future<LaunchOutcome> openAndroidGame(AndroidGame game) async {
+    final row = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'openAndroidGame', {'packageName': game.packageName});
+    return LaunchOutcome.fromMap(row ?? {});
+  }
+
+  Future<void> removeRom(RomItem rom) async {
+    // Removes only Jolven's catalog entry, never the original user file.
+    await _channel.invokeMethod<void>('removeRom', {'uri': rom.uri});
+  }
+
+  Future<LaunchOutcome> launchRom(RomItem rom, EmulatorInfo emulator) async {
+    final row = await _channel.invokeMethod<Map<dynamic, dynamic>>('launchRom', {
+      'uri': rom.uri,
+      'packageName': emulator.packageName,
+      if (rom.retroCorePath != null) 'retroCorePath': rom.retroCorePath,
+      if (rom.retroRomPath != null) 'retroRomPath': rom.retroRomPath,
+    });
+    return LaunchOutcome.fromMap(row ?? {});
+  }
+
+  Future<LaunchOutcome> openEmulator(EmulatorInfo emulator) async {
+    final row = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      'openEmulator',
+      {'packageName': emulator.packageName},
+    );
+    return LaunchOutcome.fromMap(row ?? {});
+  }
+}

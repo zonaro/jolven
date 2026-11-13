@@ -1,0 +1,85 @@
+# Python/PyGObject/GTK4 cannot be bundled by linuxdeploy-plugin-gtk (GTK 2/3).
+# appimage-builder resolves actual Debian packages and GI typelibs.
+version: 1
+AppDir:
+  path: ./AppDir
+  app_info:
+    id: io.github.zonaro.Jolven
+    name: Jolven
+    icon: io.github.zonaro.Jolven
+    version: "{{JOLVEN_VERSION}}"
+    exec: usr/bin/python3
+    exec_args: "${APPDIR}/usr/bin/jolven $@"
+  apt:
+    arch: amd64
+    sources:
+      - sourceline: "deb [arch=amd64] https://deb.debian.org/debian forky main"
+        key_url: https://ftp-master.debian.org/keys/archive-key-13.asc
+    include:
+      - python3
+      - python3-gi
+      - python3-gi-cairo
+      - python3-pil
+      - python3-requests
+      - python3-yaml
+      - python3-attr
+      - python3-jinja2
+      - gir1.2-gtk-4.0
+      - gir1.2-adw-1
+      - gir1.2-manette-0.2
+      - gir1.2-soup-3.0
+      - librsvg2-2
+      - libgdk-pixbuf-2.0-0
+      - adwaita-icon-theme
+  after_bundle: |
+    glib-compile-schemas "$TARGET_APPDIR/usr/share/glib-2.0/schemas"
+  # appimage-builder v1.1.0 serializes the ELF interpreter paths as a
+  # Python set (e.g. "{'lib64/ld-linux-x86-64.so.2'}"). AppRun v2 expects
+  # a colon-separated list of *relative* paths, and otherwise exits with
+  # APPRUN_ERROR: No such file or directory. Normalize after runtime setup.
+  after_runtime: |
+    python3 - "$TARGET_APPDIR/AppRun.env" <<'PY'
+    import ast
+    from pathlib import Path
+    import sys
+
+    p = Path(sys.argv[1])
+    lines = p.read_text(encoding="utf-8").splitlines()
+    for i, line in enumerate(lines):
+        if not line.startswith("APPDIR_LIBC_LINKER_PATH="):
+            continue
+        key, value = line.split("=", 1)
+        if value.startswith("{"):
+            paths = ast.literal_eval(value)
+            if not isinstance(paths, set) or not paths:
+                raise SystemExit("Invalid AppRun interpreter paths")
+            for item in paths:
+                if not isinstance(item, str) or item.startswith("/") or ".." in Path(item).parts:
+                    raise SystemExit("Unsafe AppRun interpreter path")
+            lines[i] = key + "=" + ":".join(sorted(paths))
+        break
+    else:
+        raise SystemExit("AppRun interpreter path missing")
+    # AppRun v2 changes cwd to runtime/* before execv. Recent kernels do not
+    # reliably execute Python when appimage-builder strips the leading slash
+    # from ELF PT_INTERP. Restore the canonical loader for the entrypoint.
+    # This relies on a compatible host glibc, documented in the release notes.
+    lines = [
+        "APPDIR_LIBC_VERSION=0.0" if line.startswith("APPDIR_LIBC_VERSION=") else line
+        for line in lines
+    ]
+    p.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    PY
+    patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 "$TARGET_APPDIR/usr/bin/python3.14"
+    echo "AppRun linker: $(patchelf --print-interpreter "$TARGET_APPDIR/usr/bin/python3.14")"
+    grep '^APPDIR_LIBC_' "$TARGET_APPDIR/AppRun.env"
+  runtime:
+    env:
+      PYTHONHOME: "${APPDIR}/usr"
+      PYTHONPATH: "${APPDIR}/usr/lib/python3/dist-packages:${APPDIR}/usr/lib/python3.13/site-packages"
+      GI_TYPELIB_PATH: "${APPDIR}/usr/lib/x86_64-linux-gnu/girepository-1.0"
+      GSETTINGS_SCHEMA_DIR: "${APPDIR}/usr/share/glib-2.0/schemas"
+      XDG_DATA_DIRS: "${APPDIR}/usr/share:/usr/local/share:/usr/share"
+AppImage:
+  arch: x86_64
+  file_name: "dist/Jolven-{{JOLVEN_VERSION}}-x86_64.AppImage"

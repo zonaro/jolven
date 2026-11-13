@@ -379,8 +379,6 @@ class HeroicSource(URLExecutableSource):
                     / "com.heroicgameslauncher.hgl"
                     / "config"
                     / "heroic",
-                    shared.appdata_dir / "heroic",
-                    shared.app_support_dir / "heroic",
                 ),
                 paths={
                     "config.json": LocationSubPath("config.json"),

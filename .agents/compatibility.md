@@ -7,13 +7,11 @@ outros ambientes que ofereçam GTK/portais adequados. Integrações específicas
 desktop precisam detectar suporte e oferecer orientação manual quando
 indisponíveis.
 
-O Windows é um alvo em port, como aplicativo **standalone**: a mesma biblioteca
-local, sem Jolven Session e sem Gamescope. A decisão é explícita e vive nas fases
-do épico do port (fases #26–#31); a camada de plataforma reconhece o layout do
-Windows por causa dela, não como promessa genérica de multiplataforma. Não amplie
-essa camada além do que uma fase define.
-
-macOS não é alvo, mesmo que helpers antigos reconheçam seu layout.
+O Jolven **desktop é exclusivamente Linux**. O aplicativo Android é um
+projeto separado, com seu próprio frontend e integração a emuladores externos.
+A compatibilidade entre GNOME, KDE e outros ambientes Linux deve continuar
+independente do desktop, do compositor e da distribuição. A remoção do código
+de portabilidade desktop é acompanhada pelo épico #168.
 
 ## Stack mínima
 
@@ -22,14 +20,9 @@ O build de fonte declara aproximadamente:
 - Python 3;
 - Meson 0.59 ou posterior;
 - GTK 4.15 ou posterior;
-- libadwaita 1.6 beta ou posterior;
+- libadwaita 1.8 ou posterior;
 - Blueprint Compiler;
 - PyGObject e bibliotecas Python instaladas pelo projeto.
-
-No Windows o build roda no toolchain **MSYS2 UCRT64**, com os pacotes
-`mingw-w64-ucrt-x86_64-*` (`gtk4`, `libadwaita`, `python`, `python-gobject`,
-`meson`, `ninja`, `binutils`) e `blueprint-compiler`. O job do CI usa o
-`meson`/`ninja` do MinGW: o `meson` do MSYS2 recusa o Python do MinGW.
 
 O manifesto Flatpak usa a plataforma GNOME 49 e é a referência mais reprodutível
 do ambiente de runtime. Se a versão do manifesto divergir da CI ou dos requisitos
@@ -42,10 +35,26 @@ Wayland é o caminho primário. O Flatpak ainda expõe sockets Wayland e X11 par
 compatibilidade com desktops e launchers. Jolven Session é baseada em Gamescope e
 portanto tem requisitos mais estritos que o aplicativo desktop.
 
-O instalador automatiza dependências e a integração com o display manager em
-Fedora. Outras distribuições podem executar o desktop e, se fornecerem as
-dependências, a sessão; não prometa instalação automática fora do que o helper
-privilegiado realmente implementa.
+Distribuições recomendadas: **Fedora Workstation, Nobara, CachyOS e Ubuntu**.
+A recomendação é de produto, não um selo de QA. Verificar por versão se GTK 4.15+,
+libadwaita 1.8+, Python/GI, Gamescope, portais, polkit e runtime da sessão estão
+disponíveis. AppImage instala apenas o aplicativo desktop, não a integração de
+sessão privilegiada. O helper dispõe de instalação de dependências via DNF para Fedora/Nobara e
+APT para Ubuntu, ainda dependentes de smoke tests reais. Em CachyOS evita
+atualização automática de todo o sistema via pacman: orienta instalar Gamescope
+com CachyOS Hello antes de registrar a sessão. A sessão deve continuar falhando
+com segurança sem Gamescope (ver #199).
+
+| Família | Pacotes | Display manager a testar | Estado da sessão |
+| --- | --- | --- | --- |
+| Fedora Workstation | RPM / DNF | GDM | Referência atual; QA por release pendente |
+| Nobara | RPM / DNF | GDM e SDDM, conforme edição | QA por edição pendente |
+| CachyOS | pacman (AppImage desktop) | Plasma Login Manager, SDDM ou GDM | QA e backend de pacotes pendentes |
+| Ubuntu | APT / DEB (somente ABI compatível) | GDM | QA e backend de pacotes pendentes |
+
+Não assumir que ID_LIKE=arch implica suporte pronto: releases rolling, login
+manager e dependências mudam. Em Ubuntu LTS antigo, validar versões das bibliotecas
+antes de oferecer DEB. Preservar rollback, dados de usuário e greeter original.
 
 Em sessão dedicada:
 
@@ -55,58 +64,19 @@ Em sessão dedicada:
 - nunca execute a sessão como root;
 - mantenha a instalação privilegiada pequena e auditável.
 
-## Windows
-
-O port é standalone: sem sessão dedicada, sem Wayland/X11 e sem Flatpak. O que já
-é real na camada de plataforma (`cartridges/platform/`):
-
-- Dados e configuração ficam em `%APPDATA%` (Roaming); cache e logs em
-  `%LOCALAPPDATA%`. Os caminhos não vêm de `GLib.get_user_cache_dir()` porque no
-  Windows ele resolve para `INetCache`, que a Limpeza de Disco/Storage Sense
-  esvazia por padrão — o log de um crash seria apagado justamente ali. No Linux os
-  caminhos XDG continuam idênticos.
-- Instância única por **mutex nomeado**
-  (`Local\io.github.zonaro.Jolven.SingleInstance`) e um evento `...Present`. O
-  `GApplication` só garante unicidade pelo barramento de sessão do D-Bus, que o
-  Windows não tem: o GLib tenta subir `gdbus.exe`, falha e o `GApplication` volta a
-  se comportar como não-único — duas janelas gravando os mesmos arquivos de jogo.
-  No Linux nada muda (os helpers seguem no-op).
-- Tema e cor de realce lidos do registro (`...\Themes\Personalize\AppsUseLightTheme`
-  e `...\DWM\AccentColor`) via `winreg`, com `RegNotifyChangeKeyValue` para
-  acompanhar mudanças sem reiniciar.
-- GSettings usa o backend **keyfile** (`%APPDATA%\glib-2.0\settings\keyfile`), não
-  dconf. Os schemas são encontrados porque a árvore instalada mantém `bin/` e
-  `share/glib-2.0/schemas` como irmãos, que é onde o GLib procura em relação à
-  própria DLL — sem `GSETTINGS_SCHEMA_DIR` no app empacotado.
-
-Ainda sem equivalente no Windows, conforme o épico do port:
-
-- sem Jolven Session/Gamescope, sem integração de display manager e sem helper
-  privilegiado por polkit;
-- o portão das Preferências troca polkit por Windows Hello
-  (`UserConsentVerifier`, no pacote opcional
-  `winrt-Windows.Security.Credentials.UI`); sem o pacote, sem Hello configurado
-  ou com Hello desabilitado por política, as Preferências abrem com aviso no
-  log (fail-open restrito a plataformas sem polkit);
-- gamepads por libmanette dão lugar a XInput (`ctypes`);
-- GameMode, MangoHud, `wpctl`/WirePlumber e libei/snegg não têm
-  equivalente direto;
-- distribuição por MSYS2 UCRT64 + Inno Setup, com patch DComp no GTK (sem ele as
-  janelas GTK no Windows podem não pintar fora do monitor principal).
-
 ## Dependências opcionais
 
-| Capacidade | Dependência | Comportamento sem ela | Windows |
-| --- | --- | --- | --- |
-| xCloud (navegador externo) | navegador com modo quiosque | abre em janela nova sem tela cheia | navegador padrão do Windows |
-| gamepad | libmanette | teclado e mouse continuam funcionais | sem libmanette; XInput planejado |
-| emulação de entrada | libei/snegg + portal | ação específica indisponível | sem equivalente |
-| Jolven Session | Gamescope | desktop funciona; sessão não instala/inicia | fora do escopo (standalone) |
-| perfil de desempenho | GameMode | jogo inicia sem wrapper | sem equivalente |
-| overlay | MangoHud | jogo inicia sem overlay | sem equivalente |
-| controle de áudio | `wpctl`/WirePlumber | não ajustar automaticamente | sem equivalente |
-| luzes inteligentes | `tinytuya` e Secret Service | integração desabilitada | sem Secret Service; segredos por DPAPI (planejado) |
-| autenticação das Preferências | polkit (`pkcheck`) / `winrt-Windows.Security.Credentials.UI` | integração de sistema (helpers + policies) vem instalada com o Jolven pelo `install.sh`; sem ela o recurso fica indisponível com aviso de reinstalar o Jolven (no Windows, abre sem exigir autenticação, com aviso no log) | pywinrt opcional, via CPython oficial (o do MSYS2 UCRT64 recusa os wheels `win_amd64`) |
+| Capacidade | Dependência | Comportamento sem ela |
+| --- | --- | --- |
+| xCloud (navegador externo) | navegador com modo quiosque | abre em janela nova sem tela cheia |
+| gamepad | libmanette | teclado e mouse continuam funcionais |
+| emulação de entrada | libei/snegg + portal | ação específica indisponível |
+| Jolven Session | Gamescope | desktop funciona; sessão não instala/inicia |
+| perfil de desempenho | GameMode | jogo inicia sem wrapper |
+| overlay | MangoHud | jogo inicia sem overlay |
+| controle de áudio | `wpctl`/WirePlumber | não ajustar automaticamente |
+| luzes inteligentes | `tinytuya` e Secret Service | integração desabilitada |
+| autenticação das Preferências | polkit (`pkcheck`) | sem política/agente, fallback de indisponibilidade explicitamente documentado; negação real não libera o diálogo |
 
 Imports dessas capacidades devem ser lazy ou protegidos. Nunca transforme uma
 dependência opcional em falha na importação global de `main.py`.

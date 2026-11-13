@@ -780,16 +780,6 @@ Adw.StatusPage zerados_notice_empty {
                   ]
                 }
 
-                Button retroarch_cmd_shutdown {
-                  label: _("Desligar RetroArch");
-                  height-request: 44;
-                  halign: fill;
-                  tooltip-text: _("Fecha o RetroArch e encerra a sessão do emulador");
-
-                  styles [
-                    "destructive-action",
-                  ]
-                }
 
                 Label {
                   label: _("O RetroArch não informa se o core oferece save state; confira no menu dele.");
@@ -1738,6 +1728,10 @@ menu primary_menu {
 menu add_games {
   section {
     item (_("Add Game"), "app.add_game")
+    item (_("Import ROM…"), "app.import_rom")
+    item (_("Export emulator saves…"), "app.export_saves")
+    item (_("Restore emulator saves…"), "app.restore_saves")
+    item (_("My Playlists"), "app.playlists")
   }
 
   section {

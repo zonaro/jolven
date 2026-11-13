@@ -229,16 +229,56 @@ if [[ ! -x "$session_launcher" ]]; then
     exit 69
 fi
 
-if [[ "${ID:-}" == fedora ]]; then
-    missing=()
-    for package in gamescope gamemode libmanette desktop-file-utils polkit wireplumber; do
-        rpm -q "$package" >/dev/null 2>&1 || missing+=("$package")
-    done
-    if (( ${#missing[@]} )); then
-        dnf install --refresh --assumeyes "${missing[@]}"
-    fi
-elif ! command -v gamescope >/dev/null 2>&1; then
-    printf 'Install Gamescope with your distribution package manager first.\n' >&2
+# The helper is authorized by polkit for an explicit session installation.
+# Never perform an unattended full-system pacman upgrade: on Arch derivatives
+# partial upgrades are unsupported, while a full upgrade could affect unrelated apps.
+case "${ID:-}" in
+    fedora|nobara)
+        if ! command -v rpm >/dev/null 2>&1 || ! command -v dnf >/dev/null 2>&1; then
+            printf 'RPM/DNF is not available for %s.\n' "${ID:-Linux}" >&2
+            exit 69
+        fi
+        missing=()
+        for package in gamescope gamemode libmanette desktop-file-utils polkit wireplumber; do
+            rpm -q "$package" >/dev/null 2>&1 || missing+=("$package")
+        done
+        if (( ${#missing[@]} )); then
+            dnf install --refresh --assumeyes "${missing[@]}"
+        fi
+        ;;
+    ubuntu)
+        if ! command -v dpkg-query >/dev/null 2>&1 || ! command -v apt-get >/dev/null 2>&1; then
+            printf 'DPKG/APT is not available on this Ubuntu system.\n' >&2
+            exit 69
+        fi
+        missing=()
+        for package in gamescope gamemode libmanette-0.2-0 desktop-file-utils polkitd wireplumber; do
+            if [[ "$(dpkg-query -W -f='${Status}' "$package" 2>/dev/null || true)" != 'install ok installed' ]]; then
+                missing+=("$package")
+            fi
+        done
+        if (( ${#missing[@]} )); then
+            # The calling user explicitly requested a privileged Session install.
+            # APT will still fail safely if the release lacks an eligible package.
+            DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-remove --no-install-recommends "${missing[@]}"
+        fi
+        ;;
+    cachyos)
+        if ! command -v gamescope >/dev/null 2>&1; then
+            printf 'Gamescope is missing. Use CachyOS Hello > Apps/Tweaks > Install Gaming packages (recommended), or update/install dependencies explicitly with sudo pacman -Syu --needed gamescope gamemode libmanette desktop-file-utils polkit wireplumber, then retry.\n' >&2
+            exit 69
+        fi
+        ;;
+    *)
+        if ! command -v gamescope >/dev/null 2>&1; then
+            printf 'Install Gamescope with your distribution package manager first.\n' >&2
+            exit 69
+        fi
+        ;;
+esac
+
+if ! command -v gamescope >/dev/null 2>&1; then
+    printf 'Gamescope is still unavailable; refusing to register a broken session.\n' >&2
     exit 69
 fi
 

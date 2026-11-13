@@ -7,6 +7,47 @@ on:
 concurrency:
   group: release-${{ github.sha }}
 jobs:
+  python-core:
+    name: Python pure-stdlib contract tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate session helper shell syntax
+        run: |
+          bash -n session/jolven-game-mode-setup.in
+          bash -n session/jolven-session.in
+      - name: Test session helper contracts
+        run: python -m unittest tests.test_session_helper -v
+      - name: Test Linux paths, authentication, ROM transfer and RetroArch diagnostics
+        run: python -m unittest tests.test_versioning tests.test_linux_desktop_contract tests.test_platform_paths tests.test_platform_authentication tests.test_retroarch_diagnostics tests.test_nearby_manifest tests.test_retroarch_nci tests.test_nearby_sender tests.test_nearby_receiver -v
+
+  linux:
+    name: Linux - suite de testes Python
+    runs-on: ubuntu-latest
+    env:
+      # O blueprint-compiler le os .blp na codificacao do locale.
+      PYTHONUTF8: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Instalar dependencias de build e teste
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential meson ninja-build python3 python3-pip python3-gi \
+            python3-requests libgtk-4-dev libadwaita-1-dev blueprint-compiler \
+            gettext pkg-config xvfb libgl1-mesa-dri libegl1-mesa
+      - name: Configurar o build (meson)
+        run: meson setup build
+      - name: Compilar
+        run: meson compile -C build
+      - name: Executar a suite de testes Python
+        run: xvfb-run meson test -C build --print-errorlogs
   flatpak:
     name: Flatpak
     runs-on: ubuntu-latest
@@ -22,103 +63,3 @@ jobs:
         with:
           bundle: io.github.zonaro.Jolven.Devel.flatpak
           manifest-path: build-aux/flatpak/io.github.zonaro.Jolven.Devel.json
-
-  linux:
-    name: Linux - suíte de testes Python
-    runs-on: ubuntu-latest
-    env:
-      # O blueprint-compiler lê os .blp na codificação do locale.
-      PYTHONUTF8: "1"
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Instalar dependências de build e teste
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            build-essential meson ninja-build python3 python3-pip python3-gi \
-            python3-requests libgtk-4-dev libadwaita-1-dev blueprint-compiler \
-            gettext pkg-config xvfb libgl1-mesa-dri libegl1-mesa
-
-      - name: Configurar o build (meson)
-        run: meson setup build
-
-      - name: Compilar
-        run: meson compile -C build
-
-      - name: Executar a suíte de testes Python
-        run: xvfb-run meson test -C build --print-errorlogs
-
-  windows:
-    name: Windows
-    runs-on: windows-latest
-    env:
-      # O blueprint-compiler le os .blp na codificacao do locale; sem isto, cp1252.
-      PYTHONUTF8: "1"
-    steps:
-      # Mantem LF no checkout: o Windows costuma converter para CRLF.
-      - name: Desligar a conversao de fim de linha
-        run: git config --global core.autocrlf false
-
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup MSYS2
-        uses: msys2/setup-msys2@v2
-        with:
-          msystem: UCRT64
-          update: true
-          # O meson e o ninja precisam vir do MinGW: o meson do MSYS2 roda com o
-          # python do MSYS2 e recusa o ambiente MinGW.
-          install: >-
-            git
-            mingw-w64-ucrt-x86_64-gtk4
-            mingw-w64-ucrt-x86_64-libadwaita
-            mingw-w64-ucrt-x86_64-python
-            mingw-w64-ucrt-x86_64-python-gobject
-            mingw-w64-ucrt-x86_64-python-pillow
-            mingw-w64-ucrt-x86_64-python-requests
-            mingw-w64-ucrt-x86_64-python-yaml
-            mingw-w64-ucrt-x86_64-blueprint-compiler
-            mingw-w64-ucrt-x86_64-gettext
-            mingw-w64-ucrt-x86_64-ca-certificates
-            mingw-w64-ucrt-x86_64-meson
-            mingw-w64-ucrt-x86_64-ninja
-
-      # O pacote ucrt64 do blueprint-compiler 0.22.2-3 vem com o shebang
-      # apontando para o MSYS2 de quem empacotou (D:\M\msys64), que nao existe
-      # no runner. O meson adota esse interpretador em `find_program` e todo
-      # .blp falha com "CreateProcess failed" (issue #97). So reescreve quando
-      # o caminho do shebang nao existe, para virar no-op quando o pacote for
-      # corrigido a montante.
-      - name: Corrigir o interpretador do blueprint-compiler
-        shell: msys2 {0}
-        run: |
-          python3 - <<'PY'
-          import pathlib
-          import sys
-
-          # No Windows o python nao entende o prefixo POSIX /ucrt64; o proprio
-          # interpretador ja aponta para o binario dentro dele.
-          script = pathlib.Path(sys.executable).with_name("blueprint-compiler")
-          if not script.exists():
-              print("blueprint-compiler nao e um script; nada a fazer")
-              raise SystemExit(0)
-          linhas = script.read_text(encoding="utf-8").splitlines(True)
-          alvo = linhas[0][2:].strip()
-          if pathlib.Path(alvo.replace("\\", "/")).exists():
-              print("shebang ok:", alvo)
-          else:
-              linhas[0] = "#!" + sys.executable.replace("\\", "/") + "\n"
-              script.write_text("".join(linhas), encoding="utf-8")
-              print("shebang reescrito:", linhas[0].strip())
-          PY
-
-      # Fase 0: prova so a compilacao. O teste de abrir a janela entra quando o
-      # aplicativo conseguir iniciar no Windows.
-      - name: Compile
-        shell: msys2 {0}
-        run: |
-          meson setup build
-          meson compile -C build
