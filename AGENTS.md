@@ -20,8 +20,10 @@ repositório. Ele vale para toda a árvore. A documentação detalhada está em
 
 ## Invariantes do projeto
 
-- Jolven é uma aplicação Linux em Python, GTK 4 e libadwaita. A interface é
-  escrita em Blueprint e empacotada como GResource pelo Meson.
+- Jolven desktop é uma aplicação **exclusiva de Linux** em Python, GTK 4 e
+  libadwaita, com interface Blueprint e recursos GResource via Meson. O app
+  Android é desenvolvido separadamente. Não reintroduza port ou CI Win32;
+  mantenha o suporte a jogos via Wine/Proton no Linux.
 - `CartridgesApplication` coordena o ciclo de vida. `RuntimeContext` é a fonte
   autoritativa para distinguir desktop, Jolven Session e modo aninhado. Não
   espalhe novas verificações de variáveis de ambiente pela base.

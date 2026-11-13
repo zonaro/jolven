@@ -3,7 +3,7 @@
 > **Estado:** diagnóstico de arquitetura e plano de implementação; nenhuma migração de código está incluída neste documento.  
 > **Base inspecionada:** branch main em 12/11/2026 (repositório zonaro/jolven).  
 > **Issue principal:** https://github.com/zonaro/jolven/issues/167  
-> **Meta:** execução no desktop GNOME, KDE Plasma e outros desktops/WM compatíveis, além da Jolven Session dedicada, sem **exigir GNOME Shell, GNOME Settings Daemon ou GDM**. Preservar dados e UX atuais.
+> **Meta:** execução Linux no desktop GNOME, KDE Plasma e outros desktops/WM compatíveis, além da Jolven Session dedicada, sem **exigir GNOME Shell, GNOME Settings Daemon ou GDM**. Preservar dados e UX atuais; aplicativo Android é separado. O port Win32 do Jolven desktop foi descontinuado em #168.
 
 ## 1. Decisão arquitetural
 
@@ -42,7 +42,6 @@
 | Desempenho | GameMode, MangoHud, Gamescope, game_launch.py | Não GNOME | **Manter opcional** e nunca instalar só para iniciar a biblioteca |
 | Sunshine/OpenRGB/Tuya | cartridges/integrations/, iluminacao/, utils/sunshine* | Integrações independentes do desktop | **Manter opcionais**; capacidades detectadas por serviço/binário |
 | Android | android/jolven_flutter | Não depende de GNOME | **Fora do escopo**; manter contratos de biblioteca independentes |
-| Windows | cartridges/platform/*, .agents/compatibility.md | Port standalone em andamento, sem sessão dedicada | **Não regredir**; mudanças devem preservar guardas de plataforma |
 
 ### Observações que merecem correção
 

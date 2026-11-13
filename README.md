@@ -115,7 +115,7 @@ GPU, coolers, fans, case strips, ARGB controllers, keyboards, mice, headsets —
 - **GameMode + MangoHud + Gamescope, without the terminal** — toggle performance boosts and overlays per game or globally, from a normal settings screen.
 - **Xbox Cloud Gaming (experimental)** — browse the cloud catalog and press play: the title opens in your own browser, in a fullscreen window, with no embedded player.
 - **Sunshine streaming** — export games to Sunshine with one click or automatically, then play them over Moonlight on any screen.
-- **Settings behind authentication** — system installs ask for your password before opening Preferences (polkit on Linux, Windows Hello on Windows).
+- **Settings behind authentication** — system installs can request your password through polkit before opening Preferences.
 - **Waydroid apps** — import installed Android games with their package ids and local icons, while filtering system utilities.
 - **GNOME search provider** — hit Super, type a game name, press Enter.
 - **Animated, gamepad-first interface** — every screen works from the couch, with hotplug controllers, an on-screen keyboard and a global menu (library, power, session).
