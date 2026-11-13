@@ -22,9 +22,6 @@ from cartridges.platform.authentication import (
     policy_installed,
     process_subject,
     read_process_starttime,
-    windows_outcome_from_availability,
-    windows_outcome_from_result,
-    windows_should_prompt,
 )
 
 
@@ -191,39 +188,6 @@ class AuthenticateLinuxTests(unittest.TestCase):
             side_effect=AssertionError("must not spawn pkcheck"),
         ):
             self.assertEqual(authenticate("motivo"), AuthOutcome.UNAVAILABLE)
-
-
-class WindowsMappingTests(unittest.TestCase):
-    def test_should_prompt_only_when_available(self) -> None:
-        self.assertTrue(windows_should_prompt(0))
-        for value in (1, 2, 3, 4):
-            with self.subTest(value=value):
-                self.assertFalse(windows_should_prompt(value))
-
-    def test_availability_mapping(self) -> None:
-        self.assertIsNone(windows_outcome_from_availability(0))
-        for value in (1, 2, 3, 4):
-            with self.subTest(value=value):
-                self.assertEqual(
-                    windows_outcome_from_availability(value),
-                    AuthOutcome.UNAVAILABLE,
-                )
-
-    def test_result_mapping(self) -> None:
-        self.assertEqual(
-            windows_outcome_from_result(0), AuthOutcome.AUTHORIZED
-        )
-        for value in (1, 2, 3, 4):
-            with self.subTest(value=value):
-                self.assertEqual(
-                    windows_outcome_from_result(value),
-                    AuthOutcome.UNAVAILABLE,
-                )
-        for value in (5, 6):
-            with self.subTest(value=value):
-                self.assertEqual(
-                    windows_outcome_from_result(value), AuthOutcome.DENIED
-                )
 
 
 class PolicyTests(unittest.TestCase):

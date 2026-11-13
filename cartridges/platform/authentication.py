@@ -19,10 +19,8 @@
 
 """Gate that requires user authentication before opening Preferences.
 
-Low-level platform layer: **no ``gi`` import here**. The same ``authenticate``
-interface works on Linux (polkit ``pkcheck``) and Windows (Windows Hello via
-the optional ``pywinrt`` binding). It is blocking and meant to be called from
-a worker thread by the GTK layer, never on the GTK main thread.
+Low-level Linux/polkit module: **no ``gi`` import here**. The blocking
+`authenticate` call belongs in a worker thread, never in GTK main loop.
 
 Decided degradation policy:
 
@@ -35,19 +33,17 @@ Decided degradation policy:
   and a timeout of a prompt that was actually shown.
 
 Rationale: user-local builds (``~/.local``) never install the polkit
-policy and Windows installs may lack Hello/pywinrt, so those cases must
-not lock the user out of Preferences; but a prompt that was shown and
+policy, so that case must not lock the user out of Preferences; but a
+prompt that was shown and
 not answered must not open the dialog. Callers block on ``DENIED`` and
 fail open on ``UNAVAILABLE``.
 """
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import os
 import subprocess
-import sys
 from collections.abc import Iterable
 from enum import Enum
 from pathlib import Path
@@ -63,7 +59,6 @@ AUTH_ACTION_ID = "io.github.zonaro.Jolven.preferences"
 POLICY_SEARCH_DIRS = system_integration.POLKIT_ACTION_DIRS
 
 PKCHECK_TIMEOUT = 120.0
-WINDOWS_TIMEOUT = 120.0
 
 __all__ = [
     "AUTH_ACTION_ID",
@@ -76,9 +71,6 @@ __all__ = [
     "process_subject",
     "read_process_starttime",
     "current_process_subject",
-    "windows_should_prompt",
-    "windows_outcome_from_availability",
-    "windows_outcome_from_result",
 ]
 
 
@@ -230,113 +222,13 @@ def _authenticate_linux() -> AuthOutcome:
     return outcome_from_exit_code(completed.returncode)
 
 
-def windows_should_prompt(availability: int) -> bool:
-    """Whether a Hello availability value means "prompt the user"."""
-    try:
-        return int(availability) == 0  # UserConsentVerifierAvailability.AVAILABLE
-    except (TypeError, ValueError):
-        return False
-
-
-def windows_outcome_from_availability(availability: int) -> AuthOutcome | None:
-    """Map a Hello availability value; ``None`` means "proceed to prompt"."""
-    if windows_should_prompt(availability):
-        return None
-    return AuthOutcome.UNAVAILABLE
-
-
-def windows_outcome_from_result(result: int) -> AuthOutcome:
-    """Map a Hello verification result.
-
-    ``0`` (``VERIFIED``) authorizes. ``5`` (``RETRIES_EXCEEDED``) and ``6``
-    (``CANCELED``) are refusals (``DENIED``): the system asked and did not
-    get a yes. ``1``–``4`` (no device, not configured, disabled by policy,
-    busy) mean Hello cannot ask at all, so they are ``UNAVAILABLE``
-    (fail-open, mirroring the Linux policy). Anything unrecognized fails
-    closed.
-    """
-    try:
-        value = int(result)
-    except (TypeError, ValueError):
-        return AuthOutcome.DENIED
-    if value == 0:  # UserConsentVerificationResult.VERIFIED
-        return AuthOutcome.AUTHORIZED
-    if value in (1, 2, 3, 4):
-        return AuthOutcome.UNAVAILABLE
-    return AuthOutcome.DENIED
-
-
-def _coerce_int(value: object) -> int | None:
-    try:
-        return int(value)  # type: ignore[arg-type]
-    except (TypeError, ValueError):
-        inner = getattr(value, "value", None)
-        return inner if isinstance(inner, int) else None
-
-
-def _authenticate_windows(message: str, timeout: float = WINDOWS_TIMEOUT) -> AuthOutcome:
-    try:
-        from winrt.windows.security.credentials.ui import (  # type: ignore[import-not-found] # pylint: disable=import-outside-toplevel
-            UserConsentVerifier,
-        )
-    except Exception:  # pylint: disable=broad-exception-caught
-        logging.warning("Preferences auth unavailable: Windows Hello binding missing")
-        return AuthOutcome.UNAVAILABLE
-
-    async def flow() -> AuthOutcome:
-        try:
-            availability = await asyncio.wait_for(
-                UserConsentVerifier.check_availability_async(), timeout=timeout
-            )
-        except asyncio.TimeoutError:
-            logging.warning("Preferences auth check timed out")
-            return AuthOutcome.UNAVAILABLE
-        except Exception:  # pylint: disable=broad-exception-caught
-            logging.warning("Preferences auth unavailable: Hello status unknown")
-            return AuthOutcome.UNAVAILABLE
-        coerced_availability = _coerce_int(availability)
-        if coerced_availability is None:
-            logging.warning("Preferences auth unavailable: Hello status unknown")
-            return AuthOutcome.UNAVAILABLE
-        pending = windows_outcome_from_availability(coerced_availability)
-        if pending is not None:
-            logging.warning("Preferences auth unavailable: Windows Hello not usable")
-            return pending
-        try:
-            result = await asyncio.wait_for(
-                UserConsentVerifier.request_verification_async(message),
-                timeout=timeout,
-            )
-        except asyncio.TimeoutError:
-            logging.warning("Preferences auth check timed out")
-            return AuthOutcome.UNAVAILABLE
-        except Exception:  # pylint: disable=broad-exception-caught
-            logging.warning("Preferences auth prompt failed")
-            return AuthOutcome.UNAVAILABLE
-        coerced = _coerce_int(result)
-        if coerced is None:
-            return AuthOutcome.DENIED
-        return windows_outcome_from_result(coerced)
-
-    try:
-        return asyncio.run(flow())
-    except Exception:  # pylint: disable=broad-exception-caught
-        logging.warning("Preferences auth check could not run")
-        return AuthOutcome.UNAVAILABLE
-
-
 def authenticate(motivo: str) -> AuthOutcome:
-    """Check authorization; blocking — call from a worker thread.
+    """Check Linux/polkit authorization; call from a worker thread.
 
-    Never raises and never logs sensitive material (``motivo`` is only
-    shown to the user by the Windows Hello prompt, never logged).
+    The action's system policy owns the prompt text. No user input is logged.
     """
     try:
-        if sys.platform.startswith("win"):
-            return _authenticate_windows(motivo)
-        if sys.platform.startswith("linux"):
-            return _authenticate_linux()
-        return AuthOutcome.UNAVAILABLE
+        return _authenticate_linux()
     except Exception:  # pylint: disable=broad-exception-caught
-        logging.warning("Preferences auth check failed; continuing without enforcement")
+        logging.warning("Preferences auth check failed; integration unavailable")
         return AuthOutcome.UNAVAILABLE
