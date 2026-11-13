@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build a version-frozen native package or a portable GTK4/Python AppImage.
-# Run on Debian 13 (deb/appimage) or Fedora (rpm) in a disposable CI container.
+# Run on Debian testing/forky (deb/appimage) or Fedora (rpm) in a disposable CI container.
 set -Eeuo pipefail
 
 format="${1:?Usage: packaging/build-release.sh deb|rpm|appimage}"
@@ -41,6 +41,10 @@ actual="$(python3 build-aux/get-version.py)"
 meson setup .release/build --prefix=/usr --buildtype=release -Dprofile=release \
   -Dsystem_libexecdir=/usr/libexec
 meson compile -C .release/build
+# Tests import shared.py; resolve the generated app schema without installing
+# files on the packaging runner or touching host dconf.
+glib-compile-schemas .release/build/data
+export GSETTINGS_SCHEMA_DIR="$PWD/.release/build/data"
 meson test -C .release/build --print-errorlogs
 
 if [[ "$format" == appimage ]]; then
