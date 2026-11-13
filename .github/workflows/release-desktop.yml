@@ -47,11 +47,11 @@ jobs:
         run: python3 -m unittest tests.test_versioning -v
 
   deb:
-    name: Build DEB (Debian 13)
+    name: Build DEB (Debian testing)
     needs: version
     runs-on: ubuntu-latest
     container:
-      image: debian:trixie
+      image: debian:forky
     env:
       JOLVEN_VERSION: ${{ needs.version.outputs.version }}
     steps:
@@ -91,7 +91,7 @@ jobs:
     needs: version
     runs-on: ubuntu-latest
     container:
-      image: debian:trixie
+      image: debian:forky
     env:
       JOLVEN_VERSION: ${{ needs.version.outputs.version }}
     steps:
