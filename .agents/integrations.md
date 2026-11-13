@@ -512,15 +512,11 @@ diálogo, fora da thread GTK, com a entrega por
   5 minutos, então aberturas seguidas não repetem a senha. Não há helper rodando
   como root nem comando arbitrário. O início do processo vem do campo 22 de
   `/proc/<pid>/stat`.
-- Windows: Windows Hello por `UserConsentVerifier`, no pacote opcional
-  `winrt-Windows.Security.Credentials.UI`, importado de forma lazy.
 - `DENIED` — recusa, diálogo dispensado ou tempo esgotado — bloqueia a abertura
-  com toast. `UNAVAILABLE` abre assim mesmo e registra aviso: o fail-open cobre
-  apenas plataformas sem polkit (Windows/sem policy instalada; uma instalação
-  Windows pode não ter o pacote ou o Hello configurado). Em instalações normais
-  no Linux o `install.sh` instala a policy com sudo junto do Jolven, então o
-  portão atua; se a integração de sistema faltar, o recurso fica indisponível
-  com aviso de reinstalar o Jolven.
+  com toast. `UNAVAILABLE` permite abrir as Preferências com aviso no log quando
+  a integração polkit está indisponível (por exemplo, instalação user-local sem
+  a policy). Isso **não** deve ser usado para contornar uma recusa explícita.
+  Uma instalação de sistema deve fornecer a policy polkit via `install.sh`.
 - O helper privilegiado é resolvido pelo `exec.path` da policy instalada, nunca
   pelo prefixo do app.
 - O portão é higiene contra alteração casual por quem já está na sessão, não
@@ -544,6 +540,5 @@ aviso recuperável e nunca encerrar o jogo ou a sessão.
 | PipeWire/WirePlumber | volume e sink da sessão | restaurar estado ao sair |
 | `/sys/class/drm` | detecção de monitor/VRR | somente leitura |
 | polkit | instalar/remover a Jolven Session pelo helper `/usr/libexec/jolven-game-mode-setup` e abrir as Preferências | operações fixas, sem comando arbitrário |
-| Windows Hello | abrir as Preferências (Windows) | pacote opcional; sem ele, abre com aviso |
 | Gamescope | compositor da Jolven Session | não aninhar em sessão dedicada |
 | GameMode/MangoHud | wrappers por jogo | opcionais e composicionalmente testados |

@@ -3,7 +3,7 @@
 > **Estado:** diagnóstico de arquitetura e plano de implementação; nenhuma migração de código está incluída neste documento.  
 > **Base inspecionada:** branch main em 12/11/2026 (repositório zonaro/jolven).  
 > **Issue principal:** https://github.com/zonaro/jolven/issues/167  
-> **Meta:** execução Linux no desktop GNOME, KDE Plasma e outros desktops/WM compatíveis, além da Jolven Session dedicada, sem **exigir GNOME Shell, GNOME Settings Daemon ou GDM**. Preservar dados e UX atuais; aplicativo Android é separado. O port Win32 do Jolven desktop foi descontinuado em #168.
+> **Meta:** execução Linux no desktop GNOME, KDE Plasma e outros desktops/WM compatíveis, além da Jolven Session dedicada, sem **exigir GNOME Shell, GNOME Settings Daemon ou GDM**. Preservar dados e UX atuais; aplicativo Android é separado. A consolidação do escopo Linux-only está no épico #168.
 
 ## 1. Decisão arquitetural
 
@@ -237,7 +237,7 @@ O uso de `gtk4-layer-shell` introduz uma pequena dependência **opcional** (pref
 
 **Testes unitários (mocks):** seleção de backend; ausência de schemas GNOME; portal não implementado ou permissão negada; estados do Secret Service; GSettings antigo; ordenação de monitores; restauração clara/escura; distro ID/ID_LIKE; pacman/dnf; polkit path root-owned; sessão relay; stderr/timeout; reentrada no mesmo processo.
 
-**Testes de integração:** Meson compile/test; validação Blueprint, GResource, schema, desktop file e AppStream; smoke X11/Wayland; hotplug de controle; Super+G; lançamento Steam/Flatpak e retorno de foco; instalação/removal do .desktop de sessão; reinício após crash; idioma pt-BR/en/es; plataforma Windows não regressa.
+**Testes de integração:** Meson compile/test; validação Blueprint, GResource, schema, desktop file e AppStream; smoke X11/Wayland; hotplug de controle; Super+G; lançamento Steam/Flatpak e retorno de foco; instalação/removal do .desktop de sessão; reinício após crash; idioma pt-BR/en/es; código de outros sistemas desktop não é reintroduzido.
 
 **Checklist de segurança:**
 - nunca executar Jolven/Gamescope/jogo como root;
