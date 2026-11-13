@@ -73,21 +73,19 @@ install_data(
   install_dir: moduledir,
 )
 
-if host_machine.system() == 'linux'
-  configure_file(
-    input: '../session/jolven-session.in',
-    output: 'jolven-session',
-    configuration: conf,
-    install: true,
-    install_mode: 'rwxr-xr-x',
-    install_dir: get_option('bindir'),
-  )
-  configure_file(
-    input: '../session/jolven-game-mode-setup.in',
-    output: 'jolven-game-mode-setup',
-    configuration: conf,
-    install: true,
-    install_mode: 'rwxr-xr-x',
-    install_dir: get_option('libexecdir'),
-  )
-endif
+configure_file(
+  input: '../session/jolven-session.in',
+  output: 'jolven-session',
+  configuration: conf,
+  install: true,
+  install_mode: 'rwxr-xr-x',
+  install_dir: get_option('bindir'),
+)
+configure_file(
+  input: '../session/jolven-game-mode-setup.in',
+  output: 'jolven-game-mode-setup',
+  configuration: conf,
+  install: true,
+  install_mode: 'rwxr-xr-x',
+  install_dir: get_option('libexecdir'),
+)
