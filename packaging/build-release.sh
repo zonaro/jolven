@@ -30,7 +30,14 @@ else
   if [[ "$format" == deb ]]; then
     apt-get install -y --no-install-recommends ruby ruby-dev make dpkg-dev build-essential
   else
-    apt-get install -y --no-install-recommends squashfs-tools binutils patchelf xvfb xauth
+    apt-get install -y --no-install-recommends squashfs-tools binutils patchelf fakeroot xvfb xauth
+    # appimage-builder 1.1.0 probes the removed apt-key binary but its APT
+    # deploy code never invokes it. The recipe uses signed key_url files.
+    # Fail explicitly if any future builder version tries the insecure API.
+    if ! command -v apt-key >/dev/null 2>&1; then
+      printf '%s\n' '#!/bin/sh' 'echo "Legacy apt-key is unsupported" >&2' 'exit 1' > /usr/local/bin/apt-key
+      chmod 0755 /usr/local/bin/apt-key
+    fi
   fi
 fi
 
