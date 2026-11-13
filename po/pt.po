@@ -44,18 +44,6 @@ msgstr "Transforme qualquer PC Linux numa consola"
 msgid "gaming;games;play;jolven;console;gamepad;launch;launcher;steam;lutris;heroic;epic;bottles;itch;legendary;retroarch;"
 msgstr "gaming;jogos;jogar;jolven;consola;gamepad;lançamento;lançador;steam;lutris;heroic;epic;bottles;itch;legendary;retroarch;"
 
-#: data/io.github.zonaro.Jolven.gschema.xml.in:235
-msgid "Import Windows Start Menu and desktop shortcuts"
-msgstr ""
-
-#: data/io.github.zonaro.Jolven.gschema.xml.in:239
-msgid "Windows shortcuts scan location"
-msgstr ""
-
-#: data/io.github.zonaro.Jolven.gschema.xml.in:243
-msgid "Scan Windows shortcuts subfolders recursively"
-msgstr ""
-
 #: data/io.github.zonaro.Jolven.gschema.xml.in:297
 msgid "Controller button used to open the in-game overlay"
 msgstr "Botão do comando utilizado para abrir a sobreposição durante o jogo"
@@ -1829,18 +1817,6 @@ msgstr ""
 #: cartridges/importer/twintail_source.py:89
 msgid "TwinTail"
 msgstr "TwinTail"
-
-#: data/gtk/preferences.blp:1444
-msgid "Windows Shortcuts"
-msgstr ""
-
-#: data/gtk/preferences.blp:1470
-msgid "Scan Subfolders"
-msgstr ""
-
-#: data/gtk/preferences.blp:1471
-msgid "Also import shortcuts from subfolders"
-msgstr ""
 
 #: data/gtk/preferences.blp:1476 cartridges/preferences.py:3011
 #: cartridges/utils/integrations.py:159
@@ -4701,30 +4677,6 @@ msgstr "As seguintes listas de jogos não têm núcleo padrão:"
 #: cartridges/importer/retroarch_source.py:134
 msgid "Games with no core selected were not imported"
 msgstr "Jogos sem núcleo selecionado não foram importados"
-
-#: cartridges/importer/shortcuts_source.py:426
-msgid "Não foi possível ler os atalhos"
-msgstr ""
-
-#: cartridges/importer/shortcuts_source.py:428
-msgid ""
-"O Windows não conseguiu resolver os atalhos (.lnk) da pasta. Verifique se o "
-"PowerShell está disponível e tente importar novamente."
-msgstr ""
-
-#: cartridges/importer/shortcuts_source.py:452
-msgid "Não foi possível ler os aplicativos do menu Iniciar"
-msgstr ""
-
-#: cartridges/importer/shortcuts_source.py:454
-msgid ""
-"O problema afeta jogos da Microsoft Store e do Game Pass. Verifique se o "
-"PowerShell está disponível e tente importar novamente."
-msgstr ""
-
-#: cartridges/importer/shortcuts_source.py:746
-msgid "Atalhos"
-msgstr ""
 
 #: cartridges/importer/uzdoom_source.py:204
 #, python-brace-format
