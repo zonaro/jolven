@@ -343,12 +343,9 @@
         <div class="install-copy">
           <span class="eyebrow" data-i18n="installEyebrow">Pronto para jogar?</span>
           <h2 data-i18n="installTitle">Instale o Jolven.</h2>
-          <p data-i18n="installLead">No Fedora, um único comando baixa e instala o Jolven no seu usuário.</p>
-          <div class="command-box">
-            <code id="install-command">curl -fsSL https://raw.githubusercontent.com/zonaro/jolven/main/install.sh | bash</code>
-            <button type="button" id="copy-command" data-i18n="copy">Copiar</button>
-          </div>
-          <p class="command-note" data-i18n="installNote">O instalador baixa o binário oficial, cuida das dependências e instala tudo no seu usuário. Depois, abra o Jolven pelo menu de aplicativos.</p>
+          <p data-i18n="installLead">Baixe o Jolven para Linux em AppImage, RPM ou DEB diretamente no GitHub Releases.</p>
+          <a class="button primary" id="install-command" href="https://github.com/zonaro/jolven/releases/latest" target="_blank" rel="noopener noreferrer" data-i18n="downloadRelease">Baixar última versão ↗</a>
+          <p class="command-note" data-i18n="installNote">Escolha AppImage (portátil), RPM (Fedora) ou DEB (Debian). Os pacotes nativos instalam as dependências pelo gerenciador do sistema.</p>
         </div>
         <div class="install-card">
           <img src="assets/favicon.svg" alt="">
