@@ -213,7 +213,7 @@ footer .brand img { width: 28px; height: 28px; }
 }
 
 
-/* Recommended Linux distributions: two equal-weight paths, not exclusivity. */
+/* Four recommended Linux distributions, without implying certification. */
 .distro-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -231,6 +231,8 @@ footer .brand img { width: 28px; height: 28px; }
 }
 .distro-card-fedora { border-color: rgba(139, 124, 255, .35); }
 .distro-card-nobara { background: linear-gradient(150deg, rgba(91, 227, 184, .085), rgba(255, 255, 255, .025)); }
+.distro-card-cachyos { background: linear-gradient(150deg, rgba(43, 171, 231, .10), rgba(255, 255, 255, .025)); }
+.distro-card-ubuntu { background: linear-gradient(150deg, rgba(233, 91, 64, .10), rgba(255, 255, 255, .025)); }
 .distro-card-head { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-bottom: 23px; }
 .distro-mark {
   display: grid;
@@ -244,6 +246,8 @@ footer .brand img { width: 28px; height: 28px; }
   font-weight: 850;
 }
 .distro-card-nobara .distro-mark { background: rgba(91, 227, 184, .14); }
+.distro-card-cachyos .distro-mark { background: rgba(43, 171, 231, .16); }
+.distro-card-ubuntu .distro-mark { background: rgba(233, 91, 64, .16); }
 .distro-tag { color: var(--muted); font-size: .82rem; font-weight: 800; letter-spacing: .02em; }
 .distro-card h3 { margin: 0 0 12px; font-size: clamp(1.3rem, 2vw, 1.65rem); }
 .distro-card p { margin: 0 0 22px; color: var(--muted); line-height: 1.7; }
