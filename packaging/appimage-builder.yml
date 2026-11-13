@@ -33,6 +33,35 @@ AppDir:
       - adwaita-icon-theme
   after_bundle: |
     glib-compile-schemas "$TARGET_APPDIR/usr/share/glib-2.0/schemas"
+  # appimage-builder v1.1.0 serializes the ELF interpreter paths as a
+  # Python set (e.g. "{'lib64/ld-linux-x86-64.so.2'}"). AppRun v2 expects
+  # a colon-separated list of *relative* paths, and otherwise exits with
+  # APPRUN_ERROR: No such file or directory. Normalize after runtime setup.
+  after_runtime: |
+    python3 - "$TARGET_APPDIR/AppRun.env" <<'PY'
+    import ast
+    from pathlib import Path
+    import sys
+
+    p = Path(sys.argv[1])
+    lines = p.read_text(encoding="utf-8").splitlines()
+    for i, line in enumerate(lines):
+        if not line.startswith("APPDIR_LIBC_LINKER_PATH="):
+            continue
+        key, value = line.split("=", 1)
+        if value.startswith("{"):
+            paths = ast.literal_eval(value)
+            if not isinstance(paths, set) or not paths:
+                raise SystemExit("Invalid AppRun interpreter paths")
+            for item in paths:
+                if not isinstance(item, str) or item.startswith("/") or ".." in Path(item).parts:
+                    raise SystemExit("Unsafe AppRun interpreter path")
+            lines[i] = key + "=" + ":".join(sorted(paths))
+        break
+    else:
+        raise SystemExit("AppRun interpreter path missing")
+    p.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    PY
   runtime:
     env:
       PYTHONHOME: "${APPDIR}/usr"
