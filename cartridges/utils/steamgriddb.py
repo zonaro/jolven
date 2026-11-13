@@ -20,7 +20,7 @@
 
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 from urllib.parse import quote
 
 import requests
