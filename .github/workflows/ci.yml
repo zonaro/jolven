@@ -39,9 +39,12 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            build-essential meson ninja-build python3 python3-pip python3-gi \
-            python3-requests libgtk-4-dev libadwaita-1-dev blueprint-compiler \
-            gettext pkg-config xvfb libgl1-mesa-dri libegl1
+            build-essential meson ninja-build pkg-config \
+            libgtk-4-dev libadwaita-1-dev blueprint-compiler gettext libglib2.0-dev \
+            desktop-file-utils appstream \
+            python3 python3-gi python3-gi-cairo python3-pil python3-requests \
+            python3-yaml python3-attr python3-jinja2 \
+            xvfb xauth libgl1-mesa-dri libegl1
       - name: Configurar o build (meson)
         run: meson setup build
       - name: Compilar
