@@ -18,7 +18,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Test Linux paths, authentication, ROM transfer and RetroArch diagnostics
-        run: python -m unittest tests.test_platform_paths tests.test_platform_authentication tests.test_retroarch_diagnostics tests.test_nearby_manifest tests.test_retroarch_nci tests.test_nearby_sender tests.test_nearby_receiver -v
+        run: python -m unittest tests.test_linux_desktop_contract tests.test_platform_paths tests.test_platform_authentication tests.test_retroarch_diagnostics tests.test_nearby_manifest tests.test_retroarch_nci tests.test_nearby_sender tests.test_nearby_receiver -v
 
   flatpak:
     name: Flatpak
