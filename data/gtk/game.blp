@@ -51,6 +51,28 @@ template $Game: Box {
         }
       }
 
+      [overlay]
+      Revealer selection_revealer {
+        transition-type: crossfade;
+        halign: center;
+        valign: center;
+        reveal-child: false;
+
+        Box selection_badge {
+          halign: center;
+          valign: center;
+
+          Image selection_badge_icon {
+            icon-name: "object-select-symbolic";
+            pixel-size: 22;
+          }
+
+          styles [
+            "selection-badge",
+          ]
+        }
+      }
+
       Button cover_button {
         name: "cover_button";
         overflow: hidden;
@@ -58,6 +80,11 @@ template $Game: Box {
         accessibility {
           labelled-by: title;
         }
+
+        styles [
+          "card",
+          "tile-cover",
+        ]
 
         Box {
           orientation: vertical;
@@ -103,10 +130,6 @@ template $Game: Box {
             margin-end: 12;
           }
         }
-
-        styles [
-          "card",
-        ]
       }
     }
   }

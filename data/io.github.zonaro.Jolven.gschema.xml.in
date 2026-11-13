@@ -556,6 +556,14 @@
       </choices>
       <default>"last_played"</default>
     </key>
+    <key name="view-mode" type="s">
+      <choices>
+        <choice value="cover" />
+        <choice value="compact" />
+        <choice value="cartridge" />
+      </choices>
+      <default>"cover"</default>
+    </key>
     <key name="show-sidebar" type="b">
       <default>false</default>
     </key>

@@ -556,3 +556,90 @@ button.gamepad-tile-focus-rgb {
     color: currentColor;
   }
 }
+
+/* ── Modos de visualização da biblioteca (issue #155) ──────────────────────
+   O modo é uma classe na FlowBox (view-cover / view-compact /
+   view-cartridge) aplicada pelo window.py; o tamanho dos tiles compactos
+   também é ajustado em código (pedido de tamanho do Gtk.Picture, que o CSS
+   não consegue reduzir). Só cores do tema: nada de valor fixo que quebre o
+   tema escuro ou alto contraste. */
+
+/* Compacto: títulos discretos, fileira mais densa. */
+.view-compact flowboxchild {
+  border-radius: 8px;
+}
+
+.view-compact flowboxchild label {
+  font-size: 0.92em;
+}
+
+/* Cartucho: a capa vive dentro de uma moldura desenhada só com CSS, como a
+   carcaça de um cartucho; o título abaixo é a etiqueta impressa. Nenhuma
+   arte de terceiros: borda, relevo e cores vêm do tema. */
+.view-cartridge flowboxchild {
+  border-radius: 10px;
+  padding: 6px;
+  border: 1px solid alpha(currentColor, 0.22);
+  background-color: alpha(@window_fg_color, 0.06);
+  box-shadow: 0 2px 6px alpha(currentColor, 0.14);
+}
+
+.view-cartridge flowboxchild .tile-cover {
+  border-radius: 6px;
+  border: 2px solid alpha(@window_fg_color, 0.28);
+  background-color: @window_bg_color;
+}
+
+.view-cartridge flowboxchild label {
+  font-size: 0.92em;
+  border-radius: 4px;
+  background-color: alpha(@window_fg_color, 0.08);
+  color: @window_fg_color;
+}
+
+/* ── Seleção múltipla (issue #155) ─────────────────────────────────────────
+   O tile marcado ganha anel de seleção e um selo central (Gtk.Revealer do
+   game.blp, revelado por código). O anel usa accent do tema; em alto
+   contraste ele vira o próprio currentColor. */
+
+flowboxchild tile-selected {
+  outline: 3px solid @accent_color;
+  outline-offset: 2px;
+  border-radius: 12px;
+}
+
+flowboxchild tile-selected .tile-cover {
+  outline: 3px solid @accent_color;
+  outline-offset: 1px;
+}
+
+.selection-badge {
+  min-width: 40px;
+  min-height: 40px;
+  border-radius: 9999px;
+  background-color: @accent_bg_color;
+  color: @accent_fg_color;
+  box-shadow: 0 2px 8px alpha(currentColor, 0.35);
+}
+
+.selection-badge image {
+  -gtk-icon-size: 22px;
+}
+
+@media (prefers-contrast: more) {
+  .view-cartridge flowboxchild {
+    border: 2px solid currentColor;
+    background-color: transparent;
+  }
+
+  flowboxchild tile-selected,
+  flowboxchild tile-selected .tile-cover {
+    outline: 3px solid currentColor;
+  }
+
+  .selection-badge {
+    background-color: @window_bg_color;
+    color: @window_fg_color;
+    border: 2px solid currentColor;
+  }
+}

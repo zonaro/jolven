@@ -90,11 +90,14 @@ class Game(Gtk.Box):
     menu_button = Gtk.Template.Child()
     play_revealer = Gtk.Template.Child()
     menu_revealer = Gtk.Template.Child()
+    selection_revealer = Gtk.Template.Child()
     game_options = Gtk.Template.Child()
     hidden_game_options = Gtk.Template.Child()
 
     loading: int = 0
     filtered: bool = False
+    # Estado do modo de seleção múltipla (issue #155); por instância.
+    _selected: bool = False
 
     added: int
     executable: str
@@ -286,6 +289,52 @@ class Game(Gtk.Box):
         self.play_button.connect("clicked", self.main_button_clicked, True)
 
         shared.schema.connect("changed", self.schema_changed)
+
+        # O modo de visualização da biblioteca (cover/compact/cartridge) é
+        # aplicado a cada tile quando muda; um tile novo herda o modo atual.
+        try:
+            self.aplicar_modo_visual(shared.state_schema.get_string("view-mode"))
+        except Exception:  # pylint: disable=broad-exception-caught
+            pass
+
+    def aplicar_modo_visual(self, modo: str) -> None:
+        """Veste o tile conforme o modo da biblioteca (issue #155).
+
+        Compacto encolhe a capa e aperta o título; cartucho mantém o tamanho
+        e deixa o CSS desenhar a moldura. Só toca em propriedades de pedido
+        de tamanho: nada de rede nem de arte de terceiros.
+        """
+        if self.selection_revealer is not None:
+            self.selection_revealer.set_reveal_child(self._selected)
+        for classe in ("tile-compact", "tile-cartridge"):
+            self.remove_css_class(classe)
+        if modo == "compact":
+            self.add_css_class("tile-compact")
+            self.cover.set_size_request(120, 180)
+            for margin in ("margin_top", "margin_bottom", "margin_start", "margin_end"):
+                setattr(self.title, margin, 6)
+        elif modo == "cartridge":
+            self.add_css_class("tile-cartridge")
+            self.cover.set_size_request(200, 300)
+            for margin in ("margin_top", "margin_bottom", "margin_start", "margin_end"):
+                setattr(self.title, margin, 12)
+        else:
+            self.cover.set_size_request(200, 300)
+            for margin in ("margin_top", "margin_bottom", "margin_start", "margin_end"):
+                setattr(self.title, margin, 12)
+
+    def set_selected(self, selecionado: bool) -> None:
+        """Marca ou desmarca o tile no modo de seleção múltipla."""
+        self._selected = selecionado
+        if selecionado:
+            self.add_css_class("tile-selected")
+        else:
+            self.remove_css_class("tile-selected")
+        if self.selection_revealer is not None:
+            self.selection_revealer.set_reveal_child(selecionado)
+
+    def esta_selecionado(self) -> bool:
+        return self._selected
 
     def update_values(self, data: dict[str, Any]) -> None:
         for key, value in data.items():
@@ -594,6 +643,12 @@ class Game(Gtk.Box):
             return
 
     def main_button_clicked(self, _widget: Any, button: bool) -> None:
+        win = shared.win
+        if win is not None and getattr(win, "_selection_mode", False):
+            # No modo de seleção, ativar um card marca/desmarca em vez de
+            # abrir ou lançar (issue #155).
+            win.toggle_tile_selected(self)
+            return
         if shared.schema.get_boolean("cover-launches-game") ^ button:
             shared.win.launch_library_game(self)
         else:
