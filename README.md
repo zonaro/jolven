@@ -158,21 +158,45 @@ Your existing data is safe: on first launch, Jolven copies the library, covers, 
 
 # Installation
 
-Jolven roda apenas em Linux. Baixe o binário da última
-[GitHub Release](https://github.com/zonaro/jolven/releases) ou compile do
-código-fonte (veja [CONTRIBUTING.md](CONTRIBUTING.md#building)).
+Jolven is a **Linux desktop application**. Get the latest prebuilt package
+from [GitHub Releases](https://github.com/zonaro/jolven/releases/latest).
+All packages for the same release use **one UTC build version** in
+`YY.DDD.HHmm` format (two-digit year, ordinal day 001–366 and 24-hour
+hour/minute, e.g. `26.317.0132`). The tag is `vYY.DDD.HHmm`.
 
-On Fedora, install the latest binary release for your user with:
+| Package | Recommended for | Installation |
+| --- | --- | --- |
+| **AppImage** (`x86_64`) | Compatible Linux desktops, without a package-manager install | Download, make executable and run |
+| **RPM** (`x86_64`) | Fedora and RPM distributions with suitable GTK4/libadwaita versions | `sudo dnf install ./jolven-*.rpm` |
+| **DEB** (`amd64`) | Debian 13 and compatible distributions with suitable GTK4/libadwaita versions | `sudo apt install ./jolven_*.deb` |
+
+For the AppImage:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/zonaro/jolven/main/install.sh | bash
+chmod +x Jolven-*.AppImage
+./Jolven-*.AppImage
 ```
 
-The installer downloads the prebuilt binary from the latest GitHub Release,
-installs any missing runtime dependencies and extracts Jolven under
-`~/.local`. To compile from source instead, pipe into `bash -s -- --source`.
-Each build is versioned `YY.DDD.HHMM` (2-digit year, day of year, 24h
-hour+minute of the compilation) — see `scripts/publish-release.sh`.
+The RPM and DEB packages install the desktop entry, GSettings schemas and
+system integration files through the distribution package manager. **The
+AppImage is intended for desktop usage**: installing the privileged Jolven
+Session integration requires a system package, because an AppImage cannot
+install a trusted polkit policy/helper by simply being executed.
+
+The native packages depend on modern **GTK4, libadwaita, Python 3 and
+PyGObject**. Unsupported/older distributions may not satisfy the required
+versions. The AppImage bundles the Python/GTK runtime but also requires a
+compatible Linux graphical host; cross-distribution behavior must be verified
+on real systems. Neither package installer nor AppImage deletes your existing
+Jolven game library or settings.
+
+Every GitHub Release includes a `SHA256SUMS` file for verifying downloaded
+artifacts. Desktop releases are published manually through the
+[Release Desktop workflow](https://github.com/zonaro/jolven/actions/workflows/release-desktop.yml)
+after all three packages build successfully. Release notes are written
+**in English**.
+
+To build from source instead, see [CONTRIBUTING.md](CONTRIBUTING.md#building).
 
 ## Appearance and themes
 
