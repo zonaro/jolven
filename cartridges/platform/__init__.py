@@ -20,16 +20,14 @@
 """Primitivas que mudam entre plataformas.
 
 Camada de baixo nivel e **sem `gi`**: cada modulo expoe a mesma interface no
-Linux e no Windows. So o que realmente diverge mora aqui; o modo de execucao
-continua em `cartridges.runtime` e nao deve ser reimplementado.
+Linux. O modo de execucao (desktop/sessao/nested) continua em
+`cartridges.runtime` e nao deve ser reimplementado.
 """
 
 from __future__ import annotations
 
-import os
 import sys
 
-IS_WINDOWS = os.name == "nt"
 IS_LINUX = sys.platform.startswith("linux")
 
-__all__ = ["IS_WINDOWS", "IS_LINUX"]
+__all__ = ["IS_LINUX"]
