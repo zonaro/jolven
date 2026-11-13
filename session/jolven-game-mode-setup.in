@@ -260,12 +260,12 @@ case "${ID:-}" in
         if (( ${#missing[@]} )); then
             # The calling user explicitly requested a privileged Session install.
             # APT will still fail safely if the release lacks an eligible package.
-            DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends "${missing[@]}"
+            DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-remove --no-install-recommends "${missing[@]}"
         fi
         ;;
     cachyos)
         if ! command -v gamescope >/dev/null 2>&1; then
-            printf 'Gamescope is missing. Update/install CachyOS dependencies explicitly with pacman -Syu --needed gamescope gamemode libmanette desktop-file-utils polkit wireplumber, then retry.\n' >&2
+            printf 'Gamescope is missing. Use CachyOS Hello > Apps/Tweaks > Install Gaming packages (recommended), or update/install dependencies explicitly with sudo pacman -Syu --needed gamescope gamemode libmanette desktop-file-utils polkit wireplumber, then retry.\n' >&2
             exit 69
         fi
         ;;
