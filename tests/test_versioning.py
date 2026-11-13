@@ -36,8 +36,8 @@ class JolvenVersionTests(unittest.TestCase):
 
     def test_current_utc_version_is_legal(self) -> None:
         with patch.dict(os.environ, {"JOLVEN_VERSION": "", "CARTRIDGES_VERSION": ""}):
-            self.assertEqual(versioning.validate_version(versioning.build_version()),
-                             versioning.build_version())
+            generated = versioning.build_version()
+            self.assertEqual(versioning.validate_version(generated), generated)
 
     def test_get_and_write_use_same_version(self) -> None:
         env = {**os.environ, "JOLVEN_VERSION": "26.317.0132"}
