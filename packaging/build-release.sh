@@ -30,7 +30,7 @@ else
   if [[ "$format" == deb ]]; then
     apt-get install -y --no-install-recommends ruby ruby-dev make dpkg-dev build-essential
   else
-    apt-get install -y --no-install-recommends xvfb xauth
+    apt-get install -y --no-install-recommends squashfs-tools binutils patchelf xvfb xauth
   fi
 fi
 
