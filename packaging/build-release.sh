@@ -45,7 +45,11 @@ meson compile -C .release/build
 # files on the packaging runner or touching host dconf.
 glib-compile-schemas .release/build/data
 export GSETTINGS_SCHEMA_DIR="$PWD/.release/build/data"
-meson test -C .release/build --print-errorlogs
+# The full unittest suite includes GTK UI instantiation and needs a real display.
+# Do not run GUI integration tests inside the headless packaging containers;
+# run Meson validators here and the pure-stdlib contracts separately in CI.
+meson test -C .release/build --print-errorlogs \
+  "Validate desktop file" "Validate appstream file" "Validate schema file"
 
 if [[ "$format" == appimage ]]; then
   stage="$PWD/AppDir"
