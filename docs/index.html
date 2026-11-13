@@ -291,7 +291,7 @@
         <div class="section-heading">
           <span class="eyebrow" data-i18n="distroEyebrow">Distribuições recomendadas</span>
           <h2 id="distro-title" data-i18n="distroTitle">Seu Linux. Seu console.</h2>
-          <p data-i18n="distroLead">O Jolven não substitui seu sistema. Estas são duas ótimas opções para começar, mas você continua livre para usar outra distribuição Linux compatível.</p>
+          <p data-i18n="distroLead">O Jolven não substitui seu sistema. Fedora, Nobara, CachyOS e Ubuntu são quatro opções recomendadas, cada uma com seu perfil.</p>
         </div>
         <div class="distro-grid">
           <article class="distro-card distro-card-fedora">
@@ -312,8 +312,26 @@
             <p data-i18n="distroNobaraText">Uma alternativa baseada no Fedora, com ferramentas de jogos, drivers e multimídia pré-configurados. A Jolven Session no Nobara ainda precisa de validação específica.</p>
             <a class="distro-link" href="https://nobaraproject.org/" target="_blank" rel="noopener noreferrer" data-i18n="distroNobaraLink">Conhecer o Nobara ↗</a>
           </article>
+          <article class="distro-card distro-card-cachyos">
+            <div class="distro-card-head">
+              <span class="distro-mark" aria-hidden="true">C</span>
+              <span class="distro-tag" data-i18n="distroCachyTag">Arch otimizado para desempenho</span>
+            </div>
+            <h3>CachyOS</h3>
+            <p data-i18n="distroCachyText">Baseado em Arch, com atualizações contínuas e foco em desempenho. A Jolven Session ainda requer testes no gerenciador de login usado.</p>
+            <a class="distro-link" href="https://cachyos.org/" target="_blank" rel="noopener noreferrer" data-i18n="distroCachyLink">Conhecer o CachyOS ↗</a>
+          </article>
+          <article class="distro-card distro-card-ubuntu">
+            <div class="distro-card-head">
+              <span class="distro-mark" aria-hidden="true">U</span>
+              <span class="distro-tag" data-i18n="distroUbuntuTag">Desktop acessível e popular</span>
+            </div>
+            <h3>Ubuntu</h3>
+            <p data-i18n="distroUbuntuText">Uma opção familiar para uso diário, com APT e GNOME. Confira a versão e os requisitos de GTK/libadwaita antes de instalar.</p>
+            <a class="distro-link" href="https://ubuntu.com/desktop" target="_blank" rel="noopener noreferrer" data-i18n="distroUbuntuLink">Conhecer o Ubuntu ↗</a>
+          </article>
         </div>
-        <p class="distro-note" data-i18n="distroNote">O aplicativo também pode funcionar em outras distribuições Linux compatíveis. Fora do Fedora, a Jolven Session e dependências opcionais podem exigir configuração manual. O Jolven é independente dos projetos Fedora e Nobara.</p>
+        <p class="distro-note" data-i18n="distroNote">Recomendação não significa suporte certificado: desktop, pacotes e Jolven Session têm requisitos diferentes. A automação da sessão ainda é priorizada no Fedora; as demais exigem validação. Projeto independente das quatro distribuições.</p>
       </section>
 
       <section class="section gallery" aria-labelledby="gallery-title">
@@ -345,7 +363,7 @@
           <h2 data-i18n="installTitle">Instale o Jolven.</h2>
           <p data-i18n="installLead">Baixe o Jolven para Linux em AppImage, RPM ou DEB diretamente no GitHub Releases.</p>
           <a class="button primary" id="install-command" href="https://github.com/zonaro/jolven/releases/latest" target="_blank" rel="noopener noreferrer" data-i18n="downloadRelease">Baixar última versão ↗</a>
-          <p class="command-note" data-i18n="installNote">Escolha AppImage (portátil), RPM (Fedora) ou DEB (Debian). Os pacotes nativos instalam as dependências pelo gerenciador do sistema.</p>
+          <p class="command-note" data-i18n="installNote">Escolha AppImage (portátil), RPM (Fedora/Nobara) ou DEB (Debian/Ubuntu com versões compatíveis). A Jolven Session requer instalação e dependências de sistema.</p>
         </div>
         <div class="install-card">
           <img src="assets/favicon.svg" alt="">
@@ -366,7 +384,7 @@
           <details><summary data-i18n="faqThreeQ">Posso usar o Jolven sem a sessão dedicada?</summary><p data-i18n="faqThreeA">Sim. O Jolven funciona como aplicativo desktop normal dentro do GNOME, KDE ou outro ambiente gráfico.</p></details>
           <details><summary data-i18n="faqFourQ">Posso voltar ao GNOME ou KDE?</summary><p data-i18n="faqFourA">Sim. A Jolven Session é opcional. Ao sair dela, você volta à tela de login, mantendo seu ambiente de trabalho intacto.</p></details>
           <details><summary data-i18n="faqFiveQ">Vou perder minha biblioteca ao migrar do fork Cartridges?</summary><p data-i18n="faqFiveA">Não. Na primeira execução, o Jolven copia sua biblioteca, capas, ajustes e metadados para as próprias pastas. Seus dados originais nunca são apagados.</p></details>
-          <details><summary data-i18n="faqSixQ">Quais sistemas são suportados?</summary><p data-i18n="faqSixA">O Jolven é desenvolvido para Linux. Recomendamos Fedora Workstation e Nobara para começar. O aplicativo pode funcionar em outras distribuições compatíveis; a instalação automatizada da Jolven Session é preparada para Fedora.</p></details>
+          <details><summary data-i18n="faqSixQ">Quais sistemas são suportados?</summary><p data-i18n="faqSixA">O Jolven é desenvolvido para Linux. Recomendamos Fedora Workstation, Nobara, CachyOS e Ubuntu. O app desktop pode funcionar em outras distros; instalação automatizada da Jolven Session ainda é focada no Fedora.</p></details>
           <details><summary data-i18n="faqSevenQ">Como funciona o Xbox Cloud Gaming?</summary><p data-i18n="faqSevenA">O catálogo do Xbox Cloud Gaming aparece na biblioteca e, ao apertar Play, o jogo abre no navegador que você escolher, numa janela em tela cheia (modo quiosque). Escolha o navegador nas Preferências — o Jolven detecta os instalados, incluindo Flatpak. O login da Microsoft acontece no próprio navegador, nunca dentro do Jolven. A nuvem exige Game Pass Ultimate; streaming do seu console em casa também funciona. Recurso experimental.</p></details>
           <details><summary data-i18n="faqEightQ">Como funciona a integração com o Sunshine?</summary><p data-i18n="faqEightA">No menu de cada jogo, use Adicionar ao Sunshine — ou ligue a sincronização automática nas Preferências para exportar tudo de uma vez. O Jolven escreve no apps.json do Sunshine local, sem conta e sem rede. Depois é só abrir o Moonlight em outro aparelho e jogar.</p></details>
         </div>
