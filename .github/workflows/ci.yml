@@ -18,7 +18,9 @@ jobs:
         with:
           python-version: '3.12'
       - name: Validate session helper shell syntax
-        run: bash -n session/jolven-game-mode-setup.in session/jolven-session.in
+        run: |
+          bash -n session/jolven-game-mode-setup.in
+          bash -n session/jolven-session.in
       - name: Test session helper contracts
         run: python -m unittest tests.test_session_helper -v
       - name: Test Linux paths, authentication, ROM transfer and RetroArch diagnostics
