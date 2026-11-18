@@ -41,6 +41,15 @@ logger = logging.getLogger(__name__)
 _WebKit: Any = None
 _webkit_checked = False
 
+# Versão do protocolo da ponte WebKit <-> Python. O renderer deve enviar o
+# mesmo valor; caso contrário a mensagem é rejeitada. Permite evoluir o
+# contrato sem quebrar clientes antigos (etapa #182).
+PONTE_VERSAO = "1"
+
+# Comandos que o renderer está autorizado a solicitar. Qualquer comando fora
+# desta lista é rejeitado (segurança: nenhuma execução arbitrária).
+COMANDOS_AUTORIZADOS = frozenset({"ping", "echo"})
+
 
 def _carregar_webkit() -> bool:
     """Importa WebKitGTK 6.0 apenas quando necessário."""
@@ -164,6 +173,14 @@ class ConsoleShell(Adw.ApplicationWindow):
         view.connect("load-changed", self._on_load_changed)
         manager.connect("script-message-received::jolven", self._on_mensagem)
 
+        # Comandos built-in da ponte (disponíveis para qualquer renderer do
+        # Console). Comandos de negócio (jogar/parar, biblioteca, etc.) são
+        # registrados por quem cria a janela, nas etapas seguintes (#183+).
+        self.registrar_comando("ping", lambda _p: "pong")
+        self.registrar_comando(
+            "echo", lambda p: p if isinstance(p, dict) else {"valor": p}
+        )
+
     def set_gamepad_devices(self, devices: list) -> None:
         """Aceita a lista de gamepads (sem uso direto no esqueleto do Console)."""
 
@@ -196,6 +213,17 @@ class ConsoleShell(Adw.ApplicationWindow):
         except json.JSONDecodeError:
             logger.warning("Mensagem do Console não é JSON: %r", texto[:200])
             return
+        # Valida a versão do protocolo antes de processar qualquer comando.
+        if mensagem.get("versao") != PONTE_VERSAO:
+            logger.warning(
+                "Versão da ponte não suportada: %r (esperada %s)",
+                mensagem.get("versao"),
+                PONTE_VERSAO,
+            )
+            self._responder(
+                mensagem.get("id"), None, erro="versão da ponte não suportada"
+            )
+            return
         comando = mensagem.get("comando")
         parametros = mensagem.get("parametros", {}) or {}
         msg_id = mensagem.get("id")
@@ -213,17 +241,34 @@ class ConsoleShell(Adw.ApplicationWindow):
             self._responder(msg_id, None, erro=str(error))
 
     def _responder(self, msg_id: Any, resultado: Any, erro: str | None = None) -> None:
-        """Ainda sem callback JS completo: registre o resultado no log.
+        """Responde ao renderer resolvendo/rejeitando a promessa JS do comando.
 
-        O tratamento completo de promessas JS (resolver/rejeitar callbacks do
-        renderer) fica para a etapa #182 (ponte tipada e assíncrona).
+        O renderer (app.js, função ``canal``) cria uma Promise por comando e
+        registra os callbacks ``resolve``/``reject`` em
+        ``window.__jolven_cb[id]``. Este método executa um script que chama o
+        callback adequado e depois o remove, evitando vazamento de memória.
         """
 
-        logger.debug(
-            "Console resposta ao comando (sem callback JS ainda): id=%s erro=%s",
-            msg_id,
-            erro,
+        id_json = json.dumps(str(msg_id)) if msg_id is not None else "null"
+        if erro is not None:
+            resultado_json = "null"
+            erro_json = json.dumps(erro)
+            chama = "cb.reject(" + erro_json + ")"
+        else:
+            resultado_json = json.dumps(resultado)
+            erro_json = "null"
+            chama = "cb.resolve(" + resultado_json + ")"
+        script = (
+            "(function(){"
+            "var cb=window.__jolven_cb&&window.__jolven_cb[" + id_json + "];"
+            "if(cb){" + chama + ";delete window.__jolven_cb[" + id_json + "];}"
+            "})();"
         )
+        logger.debug(
+            "Console responde comando id=%s erro=%s", msg_id, erro
+        )
+        if hasattr(self._view, "run_javascript"):
+            self._view.run_javascript(script)
 
     def registrar_comando(self, nome: str, handler: Callable[[dict], Any]) -> None:
         """Registra um comando autorizado que o renderer pode invocar."""

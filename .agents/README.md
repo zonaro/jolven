@@ -17,6 +17,8 @@ contexto e as decisões.
   temas, glows do tema padrão Jolven e a integração opcional com a skin da Steam.
 - [Compatibilidade e plataforma](compatibility.md): ambientes suportados,
   dependências opcionais, Flatpak, sessão e legado.
+- [Dependências do GNOME](gnome-dependencies.md): inventário e plano por fases
+  para menos acoplamento com o ecossistema GNOME (issue #167).
 - [Serviços e integrações](integrations.md): APIs, launchers, sistema operacional,
   credenciais, privacidade e falhas.
 - [Auditoria de independência do GNOME](gnome-independence-audit.md): diagnóstico

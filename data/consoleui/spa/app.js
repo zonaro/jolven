@@ -14,7 +14,7 @@
       avisarPonte("indisponível");
       return;
     }
-    const msg = { comando, parametros, id: Math.random().toString(36).slice(2) };
+    const msg = { versao: "1", comando, parametros, id: Math.random().toString(36).slice(2) };
     handler.postMessage(JSON.stringify(msg));
   }
 
