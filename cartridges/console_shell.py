@@ -32,7 +32,7 @@ import logging
 from pathlib import Path
 from typing import Any, Callable
 
-from cartridges import shared
+from cartridges import console_adapter, shared
 
 from gi.repository import Adw, GObject, Gtk, Gio
 
@@ -48,7 +48,7 @@ PONTE_VERSAO = "1"
 
 # Comandos que o renderer está autorizado a solicitar. Qualquer comando fora
 # desta lista é rejeitado (segurança: nenhuma execução arbitrária).
-COMANDOS_AUTORIZADOS = frozenset({"ping", "echo"})
+COMANDOS_AUTORIZADOS = frozenset({"library.get", "library.list", "ping", "echo"})
 
 
 def _carregar_webkit() -> bool:
@@ -174,12 +174,13 @@ class ConsoleShell(Adw.ApplicationWindow):
         manager.connect("script-message-received::jolven", self._on_mensagem)
 
         # Comandos built-in da ponte (disponíveis para qualquer renderer do
-        # Console). Comandos de negócio (jogar/parar, biblioteca, etc.) são
-        # registrados por quem cria a janela, nas etapas seguintes (#183+).
+        # Console). Comandos de negócio usam o adaptador de leitura (#183).
         self.registrar_comando("ping", lambda _p: "pong")
         self.registrar_comando(
             "echo", lambda p: p if isinstance(p, dict) else {"valor": p}
         )
+        self.registrar_comando("library.list", self._library_list)
+        self.registrar_comando("library.get", self._library_get)
 
     def set_gamepad_devices(self, devices: list) -> None:
         """Aceita a lista de gamepads (sem uso direto no esqueleto do Console)."""
@@ -270,9 +271,72 @@ class ConsoleShell(Adw.ApplicationWindow):
         if hasattr(self._view, "run_javascript"):
             self._view.run_javascript(script)
 
+    def _library_list(self, params: dict | None) -> dict:
+        """Lista a biblioteca do Console como DTOs imutáveis.
+
+        Devolve um snapshot paginado (``offset``/``limit``) com a revisão
+        atual da Store. Quando o Store ainda não foi criado ou não está
+        disponível, devolve uma lista vazia com ``revision`` 0, evitando
+        erro para o renderer.
+        """
+
+        params = params if isinstance(params, dict) else {}
+        offset = _int_param(params, "offset", 0)
+        limit = _int_param(params, "limit", 100)
+        limit = max(1, min(limit, 500))
+        include_hidden = bool(params.get("include_hidden", False))
+
+        store = getattr(shared, "store", None)
+        if store is None:
+            return {"revision": 0, "total": 0, "offset": offset, "limit": limit, "items": []}
+
+        try:
+            snapshot = console_adapter.list_snapshot(
+                store,
+                revision=getattr(store, "revision", 0),
+                offset=max(0, offset),
+                limit=limit,
+                include_hidden=include_hidden,
+            )
+        except Exception as error:
+            logger.exception("Falha ao listar a biblioteca do Console")
+            return {
+                "revision": 0,
+                "total": 0,
+                "offset": offset,
+                "limit": limit,
+                "items": [],
+                "error": f"não foi possível ler a biblioteca: {error}",
+            }
+        return snapshot.to_dict()
+
+    def _library_get(self, params: dict | None) -> dict | None:
+        """Devolve os detalhes de um jogo pelo ``game_id``."""
+
+        params = params if isinstance(params, dict) else {}
+        game_id = str(params.get("game_id", "") or "").strip()
+        if not game_id:
+            return None
+
+        store = getattr(shared, "store", None)
+        if store is None:
+            return None
+
+        try:
+            details = console_adapter.details_by_id(store, game_id)
+        except Exception as error:
+            logger.exception("Falha ao obter detalhes do jogo %s do Console", game_id)
+            return {"error": f"não foi possível ler o jogo: {error}"}
+
+        if details is None:
+            return None
+        return _details_to_dict(details)
+
     def registrar_comando(self, nome: str, handler: Callable[[dict], Any]) -> None:
         """Registra um comando autorizado que o renderer pode invocar."""
 
+        if nome not in COMANDOS_AUTORIZADOS:
+            raise ValueError(f"comando não autorizado: {nome}")
         self._handlers[nome] = handler
 
     def enviar_evento(self, nome: str, payload: Any = None) -> None:
@@ -287,6 +351,39 @@ class ConsoleShell(Adw.ApplicationWindow):
         )
         if hasattr(self._view, "run_javascript"):
             self._view.run_javascript(script)
+
+
+def _int_param(params: dict, key: str, default: int) -> int:
+    """Lê um inteiro do payload com fallback seguro."""
+
+    value = params.get(key, default)
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _details_to_dict(details: Any) -> dict[str, Any]:
+    """Serializa ``GameDetails`` como JSON quando possível."""
+
+    try:
+        from dataclasses import asdict
+
+        data = asdict(details)
+        # Tags/Screenshots/Mods podem ser tuples; JSON converte via lista.
+        def _tuple_to_list(obj: Any) -> Any:
+            if isinstance(obj, tuple):
+                return [_tuple_to_list(item) for item in obj]
+            if isinstance(obj, dict):
+                return {key: _tuple_to_list(value) for key, value in obj.items()}
+            if isinstance(obj, list):
+                return [_tuple_to_list(item) for item in obj]
+            return obj
+
+        return _tuple_to_list(data)
+    except Exception:
+        logger.exception("Falha ao serializar detalhes do jogo")
+        return {"error": "não foi possível serializar os detalhes"}
 
 
 def criar_janela_console(application: Adw.Application) -> ConsoleShell | None:

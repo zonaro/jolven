@@ -6,16 +6,23 @@
   "use strict";
 
   // ---------- Canal bidirecional com o Python ----------
+  let __cbContador = 0;
+  window.__jolven_cb = {};
+
   function enviarComando(comando, parametros = {}) {
     const handler = window.webkit && window.webkit.messageHandlers
       ? window.webkit.messageHandlers.jolven
       : null;
     if (!handler) {
       avisarPonte("indisponível");
-      return;
+      return Promise.reject(new Error("ponte indisponível"));
     }
-    const msg = { versao: "1", comando, parametros, id: Math.random().toString(36).slice(2) };
-    handler.postMessage(JSON.stringify(msg));
+    const id = "cmd_" + (++__cbContador) + "_" + Date.now().toString(36);
+    return new Promise((resolve, reject) => {
+      window.__jolven_cb[id] = { resolve, reject };
+      const msg = { versao: "1", comando, parametros, id };
+      handler.postMessage(JSON.stringify(msg));
+    });
   }
 
   function avisarPonte(status) {
@@ -30,15 +37,8 @@
     avisarPonte("ativa");
   }
 
-  // ---------- Dados de jogos (mock — substituído pelo adaptador #183) ----------
-  const JOGOS = [
-    { id: "1", nome: "Beneath a Steel Sky", descricao: "Aventura point-and-click cyberpunk.", plataforma: "linux", capa: "https://placehold.co/400x600/1a1a22/e8e8f0?text=Beneath+a+Steel+Sky" },
-    { id: "2", nome: "Disco Elysium", descricao: "RPG de detetive com mundo aberto e habilidades.", plataforma: "linux", capa: "https://placehold.co/400x600/1a1a22/e8e8f0?text=Disco+Elysium" },
-    { id: "3", nome: "Celeste", descricao: "Plataforma desafiadora sobre montanhas internas.", plataforma: "linux", capa: "https://placehold.co/400x600/1a1a22/e8e8f0?text=Celeste" },
-    { id: "4", nome: "Hades", descricao: "Roguelike de ação no submundo grego.", plataforma: "linux", capa: "https://placehold.co/400x600/1a1a22/e8e8f0?text=Hades" },
-    { id: "5", nome: "Stardew Valley", descricao: "Simulador de fazenda e vida no interior.", plataforma: "linux", capa: "https://placehold.co/400x600/1a1a22/e8e8f0?text=Stardew+Valley" },
-  ];
-
+  // ---------- Dados de jogos (adaptador #183) ----------
+  const JOGOS = [];
   let indiceSelecionado = 0;
   let jogoEmExecucao = false;
 
@@ -55,7 +55,7 @@
     tile.className = "tile";
     tile.tabIndex = indice === indiceSelecionado ? 0 : -1;
     tile.setAttribute("role", "listitem");
-    tile.setAttribute("aria-label", jogo.nome + ", " + jogo.plataforma);
+    tile.setAttribute("aria-label", jogo.nome + ", " + (jogo.plataforma || jogo.base_source));
     tile.dataset.id = jogo.id;
 
     const img = document.createElement("img");
@@ -102,7 +102,7 @@
       }
     });
     const jogo = JOGOS[indiceSelecionado];
-    atualizarHero(jogo);
+    if (jogo) atualizarHero(jogo);
   }
 
   function atualizarHero(jogo) {
@@ -120,10 +120,12 @@
   }
 
   function proximo() {
+    if (!JOGOS.length) return;
     selecionar((indiceSelecionado + 1) % JOGOS.length);
   }
 
   function anterior() {
+    if (!JOGOS.length) return;
     selecionar((indiceSelecionado - 1 + JOGOS.length) % JOGOS.length);
   }
 
@@ -137,11 +139,12 @@
   // ---------- Ações ----------
   btnJogar.addEventListener("click", () => {
     const jogo = JOGOS[indiceSelecionado];
+    if (!jogo) return;
     jogoEmExecucao = true;
     btnJogar.disabled = true;
     btnParar.disabled = false;
     heroDescricao.textContent = jogo.nome + " está em execução…";
-    enviarComando("jogar", { jogo_id: jogo.id, nome: jogo.nome });
+    enviarComando("jogar", { jogo_id: jogo.id, nome: jogo.nome }).catch(() => {});
   });
 
   btnParar.addEventListener("click", () => {
@@ -149,8 +152,8 @@
     btnJogar.disabled = false;
     btnParar.disabled = true;
     const jogo = JOGOS[indiceSelecionado];
-    heroDescricao.textContent = jogo.descricao;
-    enviarComando("parar", { jogo_id: jogo.id });
+    if (jogo) heroDescricao.textContent = jogo.descricao;
+    enviarComando("parar", { jogo_id: jogo ? jogo.id : "" }).catch(() => {});
   });
 
   // ---------- Relógio no header ----------
@@ -164,6 +167,29 @@
   atualizarRelogio();
 
   // ---------- Inicialização ----------
-  renderCarrossel();
   sinalizarPronto();
+
+  // Carrega a biblioteca real do Jolven via adaptador (#183).
+  enviarComando("library.list", { offset: 0, limit: 500 })
+    .then((snap) => {
+      const itens = (snap && snap.items) || [];
+      JOGOS.length = 0;
+      for (const jogo of itens) {
+        JOGOS.push({
+          id: jogo.game_id,
+          nome: jogo.name || "Sem nome",
+          descricao: jogo.description || "Sem descrição.",
+          plataforma: jogo.base_source || jogo.source || "desconhecida",
+          base_source: jogo.base_source,
+          capa: "https://placehold.co/400x600/1a1a22/e8e8f0?text=" + encodeURIComponent(jogo.name || jogo.game_id),
+        });
+      }
+      indiceSelecionado = 0;
+      renderCarrossel();
+      avisarPonte(itens.length ? `${itens.length} jogo(s)` : "biblioteca vazia");
+    })
+    .catch((erro) => {
+      console.error("Falha ao carregar a biblioteca do Console", erro);
+      triagem.innerHTML = '<p class="vazio">Não foi possível carregar a biblioteca.</p>';
+    });
 })();
