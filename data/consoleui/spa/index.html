@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jolven Console</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Fundo full-bleed (AppBackground do Aurora, adaptado ao Jolven) -->
+  <div id="fundo"></div>
+
+  <header id="cabecalho">
+    <div id="marca">
+      <span id="icone-marca">🎮</span>
+      <span id="nome-marca">Jolven Console</span>
+    </div>
+    <div id="controles-cabecalho">
+      <span id="relogio">--:--:--</span>
+      <button id="btn-modo" type="button" aria-pressed="false">
+        Flat
+      </button>
+    </div>
+  </header>
+
+  <main id="principal" tabindex="0">
+    <!-- Carrossel horizontal de jogos (GameCarouselItem do Aurora) -->
+    <section id="carrossel" aria-label="Biblioteca de jogos">
+      <button id="carrossel-anterior" type="button" aria-label="Jogo anterior">&#9664;</button>
+      <div id="triagem" role="list">
+        <!-- Tiles injetados por app.js -->
+      </div>
+      <button id="carrossel-proximo" type="button" aria-label="Proximo jogo">&#9654;</button>
+    </section>
+
+    <!-- Hero: capa, titulo, descricao, Play/Stop (GameHeroSection do Aurora) -->
+    <section id="hero" aria-live="polite">
+      <div id="hero-capa"></div>
+      <div id="hero-degrade"></div>
+      <div id="hero-conteudo">
+        <h1 id="hero-titulo">Selecione um jogo</h1>
+        <p id="hero-descricao">Nenhum jogo destacado no momento.</p>
+        <div id="hero-acoes">
+          <button id="btn-jogar" type="button">Jogar</button>
+          <button id="btn-parar" type="button" disabled>Parar</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer id="rodape">
+    <span id="status-ponte">Ponte WebKit: carregando...</span>
+    <span id="versao">Jolven Console · mínima (offline)</span>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

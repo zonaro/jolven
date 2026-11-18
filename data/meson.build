@@ -207,3 +207,8 @@ configure_file(
   install: _polkit_install,
   install_dir: _polkit_dir,
 )
+
+# SPA estática do Jolven Console (WebKitGTK), instalada como dados comuns e
+# carregada por cartridges/console_shell.py. Node/Vue só no build; aqui vão
+# arquivos HTML/CSS/JS puros, sem dependência de runtime.
+subdir('consoleui')

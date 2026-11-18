@@ -1,0 +1,313 @@
+/* style.css — Jolven Console SPA (mínima, offline)
+ *
+ * Inspiração visual: Aurora Launcher (GPL-3.0, codebyallan), adaptado com a
+ * identidade Jolven (cores semânticas, foco visível, navegação por teclado).
+ */
+
+:root {
+  --fundo: #0f0f13;
+  --superficie: #1a1a22;
+  --borda: #333344;
+  --texto: #e8e8f0;
+  --texto-suave: #a8a8b8;
+  --destaque: #7aa2f7;
+  --destaque-hover: #9bb6ff;
+  --perigo: #e5484d;
+  --sombra: rgba(0, 0, 0, 0.5);
+  --raio: 14px;
+  --transicao: 220ms ease;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--fundo);
+  color: var(--texto);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+              "Helvetica Neue", Arial, sans-serif;
+  overflow: hidden;
+}
+
+/* Fundo full-bleed */
+#fundo {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: radial-gradient(circle at 30% 30%, #23233a 0%, transparent 55%),
+              radial-gradient(circle at 80% 75%, #1f1f30 0%, transparent 50%),
+              var(--fundo);
+  filter: blur(40px);
+  opacity: 0.85;
+}
+
+/* Header */
+#cabecalho {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 1.5rem;
+  border-bottom: 1px solid var(--borda);
+  background: linear-gradient(to bottom, rgba(26,26,34,0.85), rgba(26,26,34,0.6));
+  backdrop-filter: blur(12px);
+}
+
+#marca {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--destaque);
+}
+
+#icone-marca { font-size: 1.35rem; }
+
+#controles-cabecalho {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+#relogio {
+  font-variant-numeric: tabular-nums;
+  color: var(--texto-suave);
+  font-size: 0.95rem;
+}
+
+button {
+  border: none;
+  border-radius: 8px;
+  background: var(--superficie);
+  color: var(--texto);
+  padding: 0.5rem 0.9rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transicao), box-shadow var(--transicao);
+  border: 1px solid transparent;
+}
+
+button:hover { background: #262633; }
+
+button:focus-visible {
+  outline: 2px solid var(--destaque);
+  outline-offset: 2px;
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+#btn-modo {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border: 1px solid var(--borda);
+}
+
+/* Main */
+#principal {
+  position: relative;
+  z-index: 5;
+  height: 100vh;
+  padding-top: 64px;
+  padding-bottom: 48px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Carrossel */
+#carrossel {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  padding: 0.5rem 1.5rem;
+  gap: 0.75rem;
+}
+
+#carrossel::-webkit-scrollbar { height: 8px; }
+#carrossel::-webkit-scrollbar-thumb {
+  background: var(--borda);
+  border-radius: 4px;
+}
+
+#carrossel-anterior, #carrossel-proximo {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 20;
+  width: 40px; height: 40px;
+  font-size: 1.1rem;
+  padding: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+
+#carrossel-anterior { left: 0.25rem; }
+#carrossel-proximo { right: 0.25rem; }
+
+#triagem {
+  display: flex;
+  gap: 0.75rem;
+  min-width: max-content;
+  padding: 0 0.4rem;
+  overflow: visible;
+}
+
+/* Tile de jogo */
+.tile {
+  position: relative;
+  width: 210px; height: 140px;
+  border-radius: var(--raio);
+  overflow: hidden;
+  border: 1px solid var(--borda);
+  background: var(--superficie);
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: transform var(--transicao), border-color var(--transicao),
+              box-shadow var(--transicao);
+}
+
+.tile img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+  opacity: 0.85;
+  transition: opacity var(--transicao);
+}
+
+.tile:focus-visible {
+  outline: 3px solid var(--destaque);
+  outline-offset: 2px;
+}
+
+.tile:hover img { opacity: 1; }
+
+.tile.selecionado {
+  border-color: var(--destaque);
+  box-shadow: 0 0 0 4px rgba(122, 162, 247, 0.35);
+  transform: scale(1.05);
+  z-index: 15;
+}
+
+.tile .rotulo {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  padding: 0.55rem 0.7rem;
+  background: linear-gradient(to top, rgba(0,0,0,0.75), transparent);
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #fff;
+}
+
+/* Hero */
+#hero {
+  position: relative;
+  z-index: 8;
+  margin-top: 1.5rem;
+  padding: 0 1.5rem;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1.5rem;
+  min-height: 250px;
+}
+
+#hero-capa {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(to right, #0f0f13, transparent 60%),
+              url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22><rect width=%22200%22 height=%22200%22 fill=%22%2316161e%22/></svg>') center/cover no-repeat;
+  border-radius: var(--raio);
+  opacity: 0.55;
+}
+
+#hero-degrade {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: linear-gradient(to right, #0f0f13 0%, transparent 55%);
+  border-radius: var(--raio);
+}
+
+#hero-conteudo {
+  position: relative;
+  z-index: 3;
+  max-width: 520px;
+  color: #fff;
+}
+
+#hero-titulo {
+  font-size: 1.9rem;
+  font-weight: 800;
+  margin-bottom: 0.45rem;
+  letter-spacing: 0.02em;
+  line-height: 1.15;
+}
+
+#hero-descricao {
+  font-size: 1rem;
+  color: var(--texto-suave);
+  margin-bottom: 1.1rem;
+  line-height: 1.45;
+}
+
+#hero-acoes {
+  display: flex; gap: 0.6rem;
+}
+
+#btn-jogar {
+  background: var(--destaque);
+  color: #111;
+  padding: 0.75rem 1.4rem;
+  font-size: 1rem;
+}
+
+#btn-jogar:hover { background: var(--destaque-hover); }
+
+#btn-parar {
+  background: var(--perigo);
+  color: #fff;
+  padding: 0.75rem 1.1rem;
+  font-size: 1rem;
+}
+
+#btn-parar:hover { background: #c93a3f; }
+
+/* Rodapé */
+#rodape {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.45rem 1.5rem;
+  border-top: 1px solid var(--borda);
+  background: linear-gradient(to top, rgba(26,26,34,0.85), rgba(26,26,34,0.6));
+  backdrop-filter: blur(12px);
+  font-size: 0.8rem;
+  color: var(--texto-suave);
+}
+
+/* Estados de carga/vazio */
+.vazio {
+  text-align: center;
+  padding-top: 20vh;
+  color: var(--texto-suave);
+}
+
+/* Navegação por teclado no carrossel: destacar item focado */
+.tile:focus { outline: 2px solid var(--destaque); outline-offset: -2px; }

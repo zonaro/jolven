@@ -16,16 +16,23 @@ A WebKitGTK só é importada sob demanda: se não estiver instalada, o módulo
 segue importável e :func:`criar_janela_console` devolve ``None``, cabendo ao
 chamador (``cartridges/main.py``) cair de volta ao Jolven Flat.
 
-Este arquivo é um esqueleto da etapa F1: a SPA real e o conjunto completo de
-comandos vêm nas etapas #181 a #198. Até lá, a janela carrega uma página mínima
-que demonstra a ponte (``ping`` / ``echo``).
+A SPA estática é instalada em ``<pkgdatadir>/consoleui/spa/`` (etapa #181) e
+carregada via ``file://``. Quando o arquivo não está disponível (ambiente de
+desenvolvimento antes do ``meson install``), cai de volta a um HTML mínimo
+embutido, para que o módulo continue importável e testável.
+
+Este arquivo é um esqueleto da etapa F1: a SPA real (extraída do Aurora) e o
+conjunto completo de comandos vêm nas etapas #181 a #198.
 """
 
 from __future__ import annotations
 
 import json
 import logging
+from pathlib import Path
 from typing import Any, Callable
+
+from cartridges import shared
 
 from gi.repository import Adw, GObject, Gtk, Gio
 
@@ -48,7 +55,7 @@ def _carregar_webkit() -> bool:
         _WebKit = _wk
         return True
     except (ValueError, ImportError) as error:
-        logger.debug("WebKitGTK nao disponivel para o Console: %s", error)
+        logger.debug("WebKitGTK nao disponível para o Console: %s", error)
         return False
 
 
@@ -60,77 +67,63 @@ def webkit_disponivel() -> bool:
     return _WebKit is not None
 
 
-# Minha SPA de demonstração embutida. Substituída pela SPA extraída do Aurora
-# na etapa #181 (Extrair frontend Vue e gerar SPA estática offline).
-_SPA_HTML = """\
+# SPA mínima de fallback, usada somente quando o arquivo instalado não está
+# disponível (ex.: executando direto do fonte antes do ``meson install``).
+_SPA_FALLBACK = """\
 <!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="utf-8">
-<title>Jolven Console</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: system-ui, sans-serif; background: #1e1e2e; color: #cdd6f4;
-         height: 100vh; display: flex; flex-direction: column; }
-  header { padding: 1rem 1.5rem; border-bottom: 1px solid #45475a;
-           display: flex; justify-content: space-between; align-items: center; }
-  h1 { font-size: 1.25rem; font-weight: 700; letter-spacing: 0.05em; }
-  main { flex: 1; padding: 2rem; display: grid; gap: 1rem; }
-  .card { background: #313244; border: 1px solid #45475a; border-radius: 12px;
-          padding: 1.5rem; }
-  button { background: #89b4fa; color: #11111b; border: none; border-radius: 8px;
-           padding: 0.75rem 1.5rem; font-weight: 700; cursor: pointer; }
-  button:hover { background: #b4befe; }
-  #saida { margin-top: 1rem; font-family: ui-monospace, monospace; font-size: 0.9rem;
-           color: #a6e3a1; white-space: pre-wrap; }
-</style>
-</head>
-<body>
-<header><h1>Jolven Console</h1><div id="status">ponte: aguardando</div></header>
-<main>
-  <section class="card">
-    <h2>Ponte WebKit <-> Python</h2>
-    <p>Escolha uma acao para validar o canal bidirecional.</p>
-    <button id="ping">Ping</button>
-    <button id="echo">Echo</button>
-    <div id="saida"></div>
-  </section>
-</main>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>Jolven Console</title>
+<style>body{font-family:system-ui,sans-serif;background:#0f0f13;color:#e8e8f0;
+display:flex;flex-direction:column;height:100vh;padding:2rem;gap:1rem;}
+header{border-bottom:1px solid #333;padding:1rem;display:flex;
+justify-content:space-between;align-items:center;}
+button{background:#7aa2f7;color:#111;border:none;border-radius:8px;
+padding:0.7rem 1.3rem;font-weight:700;cursor:pointer;}
+#saida{margin-top:1rem;font-family:ui-monospace;color:#a6e3a1;
+white-space:pre-wrap;}</style></head>
+<body><header><div>Jolven Console</div><div id="status">carregando…</div></header>
+<main><div id="saida">SPA não encontrada em <span id="caminho"></span>.</div></main>
 <script>
-// Canal de comandos: chama o Python via window.webkit.messageHandlers.jolven.
-function canal(comando, parametros = {}) {
-  return new Promise((resolve, rejeitar) => {
-    const msg = { comando, parametros, id: Math.random().toString(36).slice(2) };
-    const handler = window.webkit?.messageHandlers?.jolven;
-    if (!handler) { rejeitar(new Error("ponte nao disponível")); return; }
-    window.__jolven_cb = window.__jolven_cb || {};
-    window.__jolven_cb[msg.id] = { resolve, rejeitar };
-    handler.postMessage(JSON.stringify(msg));
-  });
-}
-async function acao(id, label) {
-  const saida = document.getElementById("saida");
-  try {
-    const resposta = await canal(id, { origem: "console-demo" });
-    saida.textContent = label + " => " + JSON.stringify(resposta);
-  } catch (erro) {
-    saida.textContent = "erro: " + erro.message;
-  }
-}
-document.getElementById("ping").onclick = () => acao("ping", "ping");
-document.getElementById("echo").onclick = () => acao("echo", { texto: "ola do console" });
+document.getElementById("caminho").textContent = window.location.href;
 window.dispatchEvent(new Event("jolven-pronto"));
-</script>
-</body>
-</html>
+</script></body></html>
 """
+
+
+def _caminho_spa() -> Path:
+    """Resolve o caminho do index.html da SPA instalada.
+
+    A SPA é instalada em ``<prefix>/share/jolven/consoleui/spa/`` pelo
+    ``data/consoleui/meson.build``. A partir do próprio módulo
+    (``<prefix>/lib/pythonX.Y/site-packages/cartridges/console_shell.py``),
+    sobe até o prefixo de instalação e localiza o share. Quando não é
+    possível, devolve um caminho inexistente para acionar o fallback.
+    """
+
+    try:
+        aqui = Path(__file__).resolve()
+        # console_shell.py -> cartridges -> site-packages -> python3.X -> lib -> <prefix>
+        prefix = aqui.parents[4]
+        candidato = prefix / "share" / "jolven" / "consoleui" / "spa" / "index.html"
+        if candidato.is_file():
+            return candidato
+    except Exception:
+        pass
+    try:
+        prefix = getattr(shared, "PREFIX", None)
+    except Exception:
+        prefix = None
+    if prefix:
+        candidato = Path(prefix) / "share" / "jolven" / "consoleui" / "spa" / "index.html"
+        if candidato.is_file():
+            return candidato
+    return Path("/nonexistent/consoleui/spa/index.html")
 
 
 class ConsoleShell(Adw.ApplicationWindow):
     """Janela do Jolven Console.
 
     Para criar, use :func:`criar_janela_console`, que devolve ``None`` quando
-    o WebKitGTK nao esta disponivel.
+    o WebKitGTK não está disponível.
     """
 
     __gsignals__ = {
@@ -150,6 +143,7 @@ class ConsoleShell(Adw.ApplicationWindow):
         self._handlers: dict[str, Callable[[dict], Any]] = {}
         self._pendentes: dict[str, tuple[Callable, Callable]] = {}
         self._contador = 0
+        self._caminho_spa = str(_caminho_spa())
 
         if not webkit_disponivel():
             self._sem_webkit()
@@ -157,7 +151,7 @@ class ConsoleShell(Adw.ApplicationWindow):
 
         assert _WebKit is not None
         view = _WebKit.WebView()
-        view.load_html(_SPA_HTML, "file:///")
+        view.load_uri("file://" + self._caminho_spa)
 
         # Registro do handler de mensagens do renderer para o Python.
         manager = view.get_user_content_manager()
@@ -174,11 +168,10 @@ class ConsoleShell(Adw.ApplicationWindow):
         """Aceita a lista de gamepads (sem uso direto no esqueleto do Console)."""
 
         self._gamepad_devices = list(devices or [])
-        manager.connect("script-message-received::jolven", self._on_mensagem)
 
     def _sem_webkit(self) -> None:
         label = Gtk.Label(
-            label="Jolven Console nao disponível: o WebKitGTK 6 não está instalado."
+            label="Jolven Console não disponível: o WebKitGTK 6 não está instalado."
         )
         label.set_hexpand(True)
         label.set_vexpand(True)
@@ -190,7 +183,7 @@ class ConsoleShell(Adw.ApplicationWindow):
 
     def _on_load_changed(self, view: Any, event: Any) -> None:
         if event == _WebKit.LoadEvent.FINISHED:
-            logger.debug("Console SPA carregada")
+            logger.debug("Console SPA carregada: %s", self._caminho_spa)
 
     def _on_mensagem(self, manager: Any, result: Any) -> None:
         js_value = result.get_js_value()
@@ -201,7 +194,7 @@ class ConsoleShell(Adw.ApplicationWindow):
         try:
             mensagem = json.loads(texto)
         except json.JSONDecodeError:
-            logger.warning("Mensagem do Console nao e JSON: %r", texto[:200])
+            logger.warning("Mensagem do Console não é JSON: %r", texto[:200])
             return
         comando = mensagem.get("comando")
         parametros = mensagem.get("parametros", {}) or {}
@@ -210,13 +203,10 @@ class ConsoleShell(Adw.ApplicationWindow):
         self.emit("comando-recebido", comando, parametros)
         handler = self._handlers.get(comando)
         if handler is None:
-            self._responder(msg_id, None, erro="comando nao autorizado")
+            self._responder(msg_id, None, erro="comando não autorizado")
             return
         try:
             resposta = handler(parametros)
-            if hasattr(resposta, "__await__"):
-                # Handlers assíncronos não são esperados neste esqueleto.
-                resposta = None
             self._responder(msg_id, resposta)
         except Exception as error:  # pylint: disable=broad-exception-caught
             logger.exception("Falha ao executar comando %s do Console", comando)
@@ -257,7 +247,7 @@ class ConsoleShell(Adw.ApplicationWindow):
 def criar_janela_console(application: Adw.Application) -> ConsoleShell | None:
     """Cria a janela do Jolven Console.
 
-    Devolve ``None`` quando o WebKitGTK 6 nao esta disponível, para que o
+    Devolve ``None`` quando o WebKitGTK 6 não está disponível, para que o
     chamador caia de volta ao Jolven Flat.
     """
 
