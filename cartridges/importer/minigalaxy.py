@@ -513,3 +513,100 @@ def _slug(value: str) -> str:
     ascii_only = normalized.encode("ascii", "ignore").decode("ascii").lower()
     slug = _UNSAFE_ID_CHARS.sub("-", ascii_only).strip("-")
     return slug[:40] or "instalacao"
+
+
+#: Chave de grupo usada em arquivos ``.desktop`` da área de trabalho.
+_DESKTOP_GROUP = "Desktop Entry"
+
+#: Prefixo que o Minigalaxy usa no ``Exec`` de um atalho que ele mesmo criou.
+_GOGGAME_EXEC = re.compile(r"goggame-(?P<game_id>[0-9]+)")
+
+
+def _parse_desktop_entry(path: Path) -> Optional[dict[str, str]]:
+    """Lê só a seção ``[Desktop Entry]`` de um ``.desktop``.
+
+    Nunca executa e nem segue caminhos: apenas extrai pares ``Chave=Valor``
+    do grupo principal. Retorna ``None`` se o arquivo não for um desktop entry
+    legível ou não tiver o grupo esperado.
+    """
+
+    try:
+        raw = _read_metadata_bytes(path)
+    except InvalidGameMetadata:
+        return None
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+    in_entry = False
+    fields: dict[str, str] = {}
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("[") and line.endswith("]"):
+            in_entry = line[1:-1] == _DESKTOP_GROUP
+            continue
+        if not in_entry or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        fields[key.strip()] = value.strip().strip('"')
+    if not fields:
+        return None
+    return fields
+
+
+def _exec_game_id(exec_value: str) -> Optional[str]:
+    """Extrai o ID GOG de um ``Exec`` como ``goggame-<id>``, quando houver."""
+
+    match = _GOGGAME_EXEC.search(exec_value)
+    if not match:
+        return None
+    game_id = match.group("game_id")
+    return game_id if game_id != "0" else None
+
+
+def detect_minigalaxy_desktop(desktop_path: Path) -> Optional[dict]:
+    """Reconhece um ``.desktop`` criado pelo cliente Minigalaxy.
+
+    A assinatura confiável é o ``Exec`` conter ``goggame-<id>`` (o cliente
+    referencia o jogo pelo ID GOG) ou o ``Path`` apontar para o diretório de
+    instalação de um jogo já conhecido. Atalhos pessoais sem essa assinatura
+    devolvem ``None`` e nunca são tocados.
+
+    O dicionário devolvido traz ``gog_id`` (ou ``None``), ``name``,
+    ``icon`` e ``path`` (o próprio ``.desktop``). O ``directory`` só é
+    preenchido quando a chave ``Path`` é um diretório absoluto existente,
+    evitando caminhos não confiáveis.
+    """
+
+    fields = _parse_desktop_entry(desktop_path)
+    if fields is None:
+        return None
+
+    exec_value = fields.get("Exec", "")
+    name = fields.get("Name") or desktop_path.stem
+    gog_id = _exec_game_id(exec_value)
+
+    # Sem ID GOG e sem referência explícita à instalação: pode ser um atalho
+    # pessoal do usuário; não assumimos que é do Minigalaxy.
+    if not gog_id:
+        path_value = fields.get("Path", "")
+        combined = f"{exec_value} {path_value}".lower()
+        if "minigalaxy" not in combined and "goggame" not in combined:
+            return None
+
+    directory: Optional[Path] = None
+    path_value = fields.get("Path")
+    if path_value:
+        candidate = Path(path_value).expanduser()
+        if candidate.is_absolute() and candidate.is_dir():
+            directory = candidate
+
+    return {
+        "gog_id": gog_id,
+        "name": name.strip() or None,
+        "icon": fields.get("Icon") or None,
+        "directory": directory,
+        "path": desktop_path,
+    }
