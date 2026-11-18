@@ -33,8 +33,10 @@ lista simples sem agrupamento, nunca falhando.
 
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
@@ -216,13 +218,39 @@ def _carregar_agrupamento() -> Any:
         return None
 
 
-def _restauracao_pendente(game_id: str) -> bool:
-    try:
-        from cartridges.utils import restauracao
+_restauracao_cache: dict[str, tuple[float, frozenset[str]]] = {}
 
-        return bool(restauracao.e_pendente(game_id))
+
+def _restauracao_pendentes() -> frozenset[str]:
+    """Lê ``restauracao_pendente.json`` do app_dir instalado.
+
+    Replica ``cartridges.utils.restauracao.e_pendente`` sem importar
+    ``cartridges.game`` (que arrasta GTK e texturas do GResource), para o
+    adaptador continuar seguro em ambientes sem a aplicação instalada.
+   """
+
+    try:
+        from cartridges import shared
+
+        caminho = Path(shared.app_dir) / "restauracao_pendente.json"
+        mtime = caminho.stat().st_mtime
     except Exception:
-        return False
+        return frozenset()
+    chave = str(caminho)
+    cached = _restauracao_cache.get(chave)
+    if cached and cached[0] == mtime:
+        return cached[1]
+    try:
+        dados = json.loads(caminho.read_text(encoding="utf-8"))
+        ids = frozenset(str(game_id) for game_id in dados.get("jogos", []))
+    except Exception:
+        ids = frozenset()
+    _restauracao_cache[chave] = (mtime, ids)
+    return ids
+
+
+def _restauracao_pendente(game_id: str) -> bool:
+    return str(game_id) in _restauracao_pendentes()
 
 
 def _xcloud_habilitado() -> bool:
