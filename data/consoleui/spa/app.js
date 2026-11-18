@@ -1,6 +1,7 @@
 // app.js — Jolven Console SPA (mínima, offline)
 // Referência visual: Aurora Launcher (GPL-3.0, codebyallan), adaptado ao Jolven.
 // A ponte com o Python usa window.webkit.messageHandlers.jolven (WebKitGTK).
+// Artes: esquema interno jolven-art:// (issue #184) — nunca URLs remotas.
 
 (function () {
   "use strict";
@@ -37,16 +38,35 @@
     avisarPonte("ativa");
   }
 
-  // ---------- Dados de jogos (adaptador #183) ----------
+  // ---------- Artes (jolven-art://) ----------
+  function arteUrl(kind, id, tag) {
+    return (
+      "jolven-art://" + kind + "/" +
+      encodeURIComponent(String(id || "")) +
+      "?v=" + encodeURIComponent(String(tag || "0"))
+    );
+  }
+
+  function cssUrl(url) {
+    return "url('" + String(url).replace(/'/g, "%27") + "')";
+  }
+
+  // Só o item ativo e os vizinhos próximos ganham URL de imagem.
+  const PRELOAD_RAIO = 2;
+
+  // ---------- Dados de jogos (adaptadores #183/#184) ----------
   const JOGOS = [];
   let indiceSelecionado = 0;
   let jogoEmExecucao = false;
+  let carregando = false;
 
   // ---------- Render ----------
   const triagem = document.getElementById("triagem");
   const heroTitulo = document.getElementById("hero-titulo");
   const heroDescricao = document.getElementById("hero-descricao");
   const heroCapa = document.getElementById("hero-capa");
+  const heroLogo = document.getElementById("hero-logo");
+  const fundo = document.getElementById("fundo");
   const btnJogar = document.getElementById("btn-jogar");
   const btnParar = document.getElementById("btn-parar");
 
@@ -59,9 +79,16 @@
     tile.dataset.id = jogo.id;
 
     const img = document.createElement("img");
-    img.src = jogo.capa;
     img.alt = jogo.nome;
-    img.loading = "lazy";
+    img.dataset.indice = String(indice);
+    img.dataset.src = arteUrl("cover", jogo.id, jogo.art_tag);
+    img.addEventListener("load", () => img.classList.add("carregada"));
+    img.addEventListener("error", () => {
+      if (img.dataset.fallback) return;
+      img.dataset.fallback = "1";
+      img.classList.remove("carregada");
+      img.src = arteUrl("placeholder", "cover", "0");
+    });
 
     const rotulo = document.createElement("div");
     rotulo.className = "rotulo";
@@ -101,14 +128,45 @@
         tile.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
       }
     });
+    atualizarPreload();
     const jogo = JOGOS[indiceSelecionado];
     if (jogo) atualizarHero(jogo);
+  }
+
+  function atualizarPreload() {
+    const imgs = triagem.querySelectorAll(".tile img");
+    imgs.forEach((img) => {
+      const indice = Number(img.dataset.indice);
+      const perto = Math.abs(indice - indiceSelecionado) <= PRELOAD_RAIO;
+      if (perto && !img.getAttribute("src")) {
+        img.src = img.dataset.src;
+      } else if (!perto && img.hasAttribute("src") && !img.classList.contains("carregada")) {
+        img.removeAttribute("src");
+      }
+    });
   }
 
   function atualizarHero(jogo) {
     heroTitulo.textContent = jogo.nome;
     heroDescricao.textContent = jogo.descricao;
-    heroCapa.style.backgroundImage = "url('" + jogo.capa + "')";
+
+    const tag = jogo.art_tag || "0";
+    const heroUrl = arteUrl("hero", jogo.id, tag);
+    heroCapa.style.backgroundImage =
+      "linear-gradient(to right, #0f0f13, transparent 60%), " +
+      cssUrl(heroUrl) + " center/cover no-repeat";
+    if (fundo) {
+      fundo.style.backgroundImage =
+        "linear-gradient(rgba(15,15,19,0.55), rgba(15,15,19,0.78)), " +
+        cssUrl(heroUrl) + " center/cover no-repeat";
+    }
+    if (heroLogo) {
+      heroLogo.hidden = true;
+      heroLogo.onload = () => { heroLogo.hidden = heroLogo.naturalWidth <= 4; };
+      heroLogo.onerror = () => { heroLogo.hidden = true; };
+      heroLogo.src = arteUrl("logo", jogo.id, tag);
+    }
+
     btnJogar.disabled = jogoEmExecucao;
     btnParar.disabled = !jogoEmExecucao;
   }
@@ -129,7 +187,6 @@
     selecionar((indiceSelecionado - 1 + JOGOS.length) % JOGOS.length);
   }
 
-  // ---------- Navegação por teclado global ----------
   document.addEventListener("keydown", (ev) => {
     if (ev.target.tagName === "BUTTON" && ev.target.id === "btn-modo") return;
     if (ev.key === "ArrowRight") { ev.preventDefault(); proximo(); }
@@ -169,27 +226,53 @@
   // ---------- Inicialização ----------
   sinalizarPronto();
 
-  // Carrega a biblioteca real do Jolven via adaptador (#183).
-  enviarComando("library.list", { offset: 0, limit: 500 })
-    .then((snap) => {
-      const itens = (snap && snap.items) || [];
-      JOGOS.length = 0;
-      for (const jogo of itens) {
-        JOGOS.push({
-          id: jogo.game_id,
-          nome: jogo.name || "Sem nome",
-          descricao: jogo.description || "Sem descrição.",
-          plataforma: jogo.base_source || jogo.source || "desconhecida",
-          base_source: jogo.base_source,
-          capa: "https://placehold.co/400x600/1a1a22/e8e8f0?text=" + encodeURIComponent(jogo.name || jogo.game_id),
-        });
-      }
-      indiceSelecionado = 0;
-      renderCarrossel();
-      avisarPonte(itens.length ? `${itens.length} jogo(s)` : "biblioteca vazia");
-    })
-    .catch((erro) => {
-      console.error("Falha ao carregar a biblioteca do Console", erro);
-      triagem.innerHTML = '<p class="vazio">Não foi possível carregar a biblioteca.</p>';
-    });
+  // Carrega a biblioteca real do Jolven via adaptador (#183). Recarregada ao
+  // voltar o foco (#184) para refletir mudanças de capa feitas na Flat.
+  function carregarBiblioteca(manterSelecao) {
+    if (carregando) return;
+    carregando = true;
+    const selecionadoId = manterSelecao && JOGOS[indiceSelecionado]
+      ? JOGOS[indiceSelecionado].id
+      : null;
+
+    enviarComando("library.list", { offset: 0, limit: 500 })
+      .then((snap) => {
+        const itens = (snap && snap.items) || [];
+        JOGOS.length = 0;
+        for (const jogo of itens) {
+          JOGOS.push({
+            id: jogo.game_id,
+            nome: jogo.name || "Sem nome",
+            descricao: jogo.description || "Sem descrição.",
+            plataforma: jogo.base_source || jogo.source || "desconhecida",
+            base_source: jogo.base_source,
+            art_tag: jogo.art_tag || "0",
+          });
+        }
+        if (selecionadoId) {
+          const novo = JOGOS.findIndex((j) => j.id === selecionadoId);
+          indiceSelecionado = novo >= 0 ? novo : 0;
+        } else {
+          indiceSelecionado = 0;
+        }
+        renderCarrossel();
+        avisarPonte(itens.length ? `${itens.length} jogo(s)` : "biblioteca vazia");
+      })
+      .catch((erro) => {
+        console.error("Falha ao carregar a biblioteca do Console", erro);
+        if (!JOGOS.length) {
+          triagem.innerHTML = '<p class="vazio">Não foi possível carregar a biblioteca.</p>';
+        }
+      })
+      .finally(() => { carregando = false; });
+  }
+
+  let focoTimer = null;
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState !== "visible") return;
+    clearTimeout(focoTimer);
+    focoTimer = setTimeout(() => carregarBiblioteca(true), 300);
+  });
+
+  carregarBiblioteca(false);
 })();

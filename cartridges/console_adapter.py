@@ -77,6 +77,9 @@ class GameSummary:
     # camada Game/ProcessSession for conectada (issue #189). Por enquanto,
     # não assumimos que o jogo está rodando.
     running: bool = False
+    # Tag opaca de conteúdo da arte (jolven-art://, issue #184). Muda quando
+    # capa/fundo/logo mudam; o SPA embute ?v=<tag> nas URLs.
+    art_tag: str = ""
 
 
 @dataclass(frozen=True)
@@ -153,6 +156,15 @@ def _game_base_source(game: Any) -> str:
     return source.split("_")[0] if source else ""
 
 
+def _art_tag(game: Any) -> str:
+    try:
+        from cartridges import console_art
+
+        return console_art.art_tag(game)
+    except Exception:
+        return ""
+
+
 def to_summary(game: Any) -> GameSummary:
     """Serializa um ``Game`` (ou objeto duck-typed) em ``GameSummary``.
 
@@ -184,6 +196,7 @@ def to_summary(game: Any) -> GameSummary:
         tags=_as_tags(getattr(game, "tags", ())),
         has_update=_as_bool(getattr(game, "track_updates", False)) and _as_int(getattr(game, "update_available_ts", 0)) > 0,
         update_url=str(getattr(game, "update_url", "") or ""),
+        art_tag=_art_tag(game),
     )
     return summary
 

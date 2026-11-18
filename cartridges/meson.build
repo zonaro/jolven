@@ -73,6 +73,7 @@ install_data(
     'ui_mode.py',
     'console_shell.py',
     'console_adapter.py',
+    'console_art.py',
     configure_file(input: 'shared.py.in', output: 'shared.py', configuration: conf),
   ],
   install_dir: moduledir,

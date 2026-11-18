@@ -34,7 +34,7 @@ from typing import Any, Callable
 
 from cartridges import console_adapter, shared
 
-from gi.repository import Adw, GObject, Gtk, Gio
+from gi.repository import Adw, GObject, Gtk, Gio, GLib
 
 logger = logging.getLogger(__name__)
 
@@ -151,6 +151,7 @@ class ConsoleShell(Adw.ApplicationWindow):
 
         self._handlers: dict[str, Callable[[dict], Any]] = {}
         self._pendentes: dict[str, tuple[Callable, Callable]] = {}
+        self._png_cache: dict[tuple[str, int, int], bytes] = {}
         self._contador = 0
         self._caminho_spa = str(_caminho_spa())
 
@@ -160,6 +161,13 @@ class ConsoleShell(Adw.ApplicationWindow):
 
         assert _WebKit is not None
         view = _WebKit.WebView()
+        try:
+            view.get_context().register_uri_scheme(
+                "jolven-art", self._handle_art_request
+            )
+            logger.debug("Esquema jolven-art:// registrado no WebKit")
+        except Exception:
+            logger.warning("Não foi possível registrar o esquema jolven-art://", exc_info=True)
         view.load_uri("file://" + self._caminho_spa)
 
         # Registro do handler de mensagens do renderer para o Python.
@@ -186,6 +194,50 @@ class ConsoleShell(Adw.ApplicationWindow):
         """Aceita a lista de gamepads (sem uso direto no esqueleto do Console)."""
 
         self._gamepad_devices = list(devices or [])
+
+    def _art_to_png(self, path: Path) -> bytes | None:
+        """Converte a imagem para PNG (TIFF não é decodificado pela WebView;
+        GIF só anima quando ``sgdb-animated`` está ativo)."""
+
+        try:
+            st = path.stat()
+        except OSError:
+            return None
+        key = (str(path), st.st_mtime_ns, st.st_size)
+        cached = self._png_cache.get(key)
+        if cached is not None:
+            return cached
+        try:
+            from gi.repository import GdkPixbuf
+
+            pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(str(path), 4096, 4096, True)
+            ok, buffer = pixbuf.save_to_bufferv("png", [], [])
+            data = bytes(buffer) if ok else None
+        except Exception:
+            logger.info("Não foi possível decodificar %s para PNG", path, exc_info=True)
+            return None
+        if data is None:
+            return None
+        if len(self._png_cache) >= 48:
+            self._png_cache.pop(next(iter(self._png_cache)))
+        self._png_cache[key] = data
+        return data
+
+    def _handle_art_request(self, request: Any) -> None:
+        """Responde pedidos ``jolven-art://`` com bytes e content-type."""
+
+        from cartridges import console_art
+
+        try:
+            dados, tipo = console_art.serve_art(request.get_uri(), to_png=self._art_to_png)
+        except Exception:
+            logger.exception("Falha ao resolver jolven-art://")
+            dados, tipo = console_art.placeholder_bytes("cover"), "image/svg+xml"
+        try:
+            stream = Gio.MemoryInputStream.new_from_bytes(GLib.Bytes.new(dados))
+            request.finish(stream, len(dados), tipo)
+        except Exception:
+            logger.exception("Falha ao entregar a arte para a WebView")
 
     def _sem_webkit(self) -> None:
         label = Gtk.Label(

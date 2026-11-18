@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src jolven-art: data:; connect-src 'none'">
 <title>Jolven Console</title>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -38,6 +40,7 @@
       <div id="hero-capa"></div>
       <div id="hero-degrade"></div>
       <div id="hero-conteudo">
+        <img id="hero-logo" alt="" hidden>
         <h1 id="hero-titulo">Selecione um jogo</h1>
         <p id="hero-descricao">Nenhum jogo destacado no momento.</p>
         <div id="hero-acoes">
