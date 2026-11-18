@@ -13,16 +13,31 @@ O adaptador é **somente leitura**. Não cria ``library.json`` paralelo, não us
 (FileManager, SgdbManager, TheGamesDBManager, DisplayManager). Toda escrita
 continua sendo feita pelos mecanismos existentes da Store.
 
-Este módulo não importa ``cartridges.game`` nem qualquer widget GTK, para que
-possa ser carregado em testes headless e na sessão do Console sem dependência
-de display.
+A visibilidade e o agrupamento espelham as regras do Jolven Flat:
+
+* a Store é a fonte única de verdade — ambos os frontends leem o mesmo
+  ``shared.store``;
+* jogos escondidos, removidos ou blacklisted não aparecem na biblioteca
+  padrão; jogos xCloud só aparecem com ``xbox-cloud-gaming`` ligado;
+  launchers embutidos também ficam fora da grade principal;
+* jogos que são cópia de outro do mesmo grupo (agrupamento por nome/identidade)
+  aparecem uma única vez, como o card primário do grupo;
+* jogos "Zerados" (removidos, não blacklisted, ``status == "beaten"``) ficam
+  fora da biblioteca principal, igual à aba Zerados do Flat.
+
+Este módulo não importa GTK. ``cartridges.utils.agrupamento`` e
+``cartridges.utils.restauracao`` são importados sob demanda e, quando não
+estão disponíveis (ambientes de teste mínimos), o adaptador degrada para uma
+lista simples sem agrupamento, nunca falhando.
 """
 
 from __future__ import annotations
 
-import time
-from dataclasses import asdict, dataclass, replace
+import logging
+from dataclasses import asdict, dataclass
 from typing import Any, Optional
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -128,6 +143,14 @@ def _zerado(game: Any) -> bool:
     return bool(getattr(game, "removed", False)) and not bool(getattr(game, "blacklisted", False)) and str(getattr(game, "status", "") or "") == "beaten"
 
 
+def _game_base_source(game: Any) -> str:
+    base = _as_str(getattr(game, "base_source", None))
+    if base:
+        return base
+    source = _as_str(getattr(game, "source", "")) or ""
+    return source.split("_")[0] if source else ""
+
+
 def to_summary(game: Any) -> GameSummary:
     """Serializa um ``Game`` (ou objeto duck-typed) em ``GameSummary``.
 
@@ -135,11 +158,11 @@ def to_summary(game: Any) -> GameSummary:
     recebem defaults compatíveis com o schema histórico do Jolven.
     """
 
-    return GameSummary(
+    summary = GameSummary(
         game_id=str(getattr(game, "game_id", "")),
         name=str(getattr(game, "name", "")),
         source=str(getattr(game, "source", "")),
-        base_source=str(getattr(game, "base_source", str(getattr(game, "source", "")).split("_")[0] if str(getattr(game, "source", "")) else "")),
+        base_source=_game_base_source(game),
         description=_as_str(getattr(game, "description", None)),
         developer=_as_str(getattr(game, "developer", None)),
         publisher=_as_str(getattr(game, "publisher", None)),
@@ -160,6 +183,7 @@ def to_summary(game: Any) -> GameSummary:
         has_update=_as_bool(getattr(game, "track_updates", False)) and _as_int(getattr(game, "update_available_ts", 0)) > 0,
         update_url=str(getattr(game, "update_url", "") or ""),
     )
+    return summary
 
 
 def to_details(game: Any) -> GameDetails:
@@ -183,12 +207,46 @@ def to_details(game: Any) -> GameDetails:
     )
 
 
-def visible_for_console(game: Any, *, include_hidden: bool = False) -> bool:
-    """Define se o jogo aparece na biblioteca padrão do Console.
+def _carregar_agrupamento() -> Any:
+    try:
+        from cartridges.utils import agrupamento
 
-    Jogos removidos da biblioteca (``removed`` sem ``blacklisted``) e jogos
-    catalogados como escondidos não devem aparecer. Jogos blacklisted nunca
-    aparecem. A decisão de filtrar por fonte/playlist fica com a UI.
+        return agrupamento
+    except Exception:
+        return None
+
+
+def _restauracao_pendente(game_id: str) -> bool:
+    try:
+        from cartridges.utils import restauracao
+
+        return bool(restauracao.e_pendente(game_id))
+    except Exception:
+        return False
+
+
+def _xcloud_habilitado() -> bool:
+    try:
+        from cartridges import shared
+
+        return bool(shared.schema.get_boolean("xbox-cloud-gaming"))
+    except Exception:
+        return False
+
+
+def visible_for_console(
+    game: Any,
+    *,
+    include_hidden: bool = False,
+    xcloud_enabled: Optional[bool] = None,
+) -> bool:
+    """Define se o jogo pode aparecer na biblioteca padrão do Console.
+
+    Espelha os filtros da biblioteca principal do Flat: blacklisted,
+    removidos, escondidos, launchers embutidos, xCloud sem a chave ligada e
+    jogos com restauração pendente ficam fora. ``include_hidden`` devolve
+    também os escondidos (aba Ocultos); removidos e blacklisted nunca
+    aparecem na biblioteca principal.
     """
 
     if _as_bool(getattr(game, "blacklisted", False)):
@@ -197,7 +255,50 @@ def visible_for_console(game: Any, *, include_hidden: bool = False) -> bool:
         return False
     if not include_hidden and _as_bool(getattr(game, "hidden", False)):
         return False
+    if _as_bool(getattr(game, "is_launcher", False)) and not _as_bool(getattr(game, "hidden", False)):
+        return False
+    base_source = _game_base_source(game)
+    if base_source == "xcloud":
+        enabled = _xcloud_habilitado() if xcloud_enabled is None else xcloud_enabled
+        if not enabled:
+            return False
+    if _restauracao_pendente(str(getattr(game, "game_id", ""))):
+        return False
     return True
+
+
+def _name_sort_key(name: Any) -> str:
+    return str(name or "").strip().casefold().removeprefix("the ")
+
+
+def _primary_ids(ag: Any, all_games: list[Any]) -> Optional[set[int]]:
+    """Devolve os ``id()`` dos cards primários de cada grupo de variantes.
+
+    ``None`` quando o agrupamento não está disponível — nesse caso o
+    chamador mantém a lista original sem desduplicar.
+    """
+
+    if ag is None:
+        return None
+    try:
+        indice = ag.construir_indice(all_games, agrupar=ag.ativo())
+    except Exception:
+        logger.debug("Agrupamento indisponível; listando sem agrupar", exc_info=True)
+        return None
+    primaries: set[int] = set()
+    for membros in indice.values():
+        try:
+            primaries.add(id(ag.primario(membros)))
+        except Exception:
+            primaries.update(id(game) for game in membros)
+    return primaries
+
+
+def _elegivel(ag: Any, game: Any) -> bool:
+    try:
+        return bool(ag.elegivel(game))
+    except Exception:
+        return True
 
 
 class LibrarySnapshot:
@@ -220,10 +321,6 @@ class LibrarySnapshot:
         }
 
 
-def _name_sort_key(name: Any) -> str:
-    return str(name or "").strip().casefold().removeprefix("the ")
-
-
 def list_snapshot(
     games: Any,
     *,
@@ -231,6 +328,8 @@ def list_snapshot(
     offset: int = 0,
     limit: int = 100,
     include_hidden: bool = False,
+    xcloud_enabled: Optional[bool] = None,
+    usar_agrupamento: bool = True,
 ) -> LibrarySnapshot:
     """Gera um snapshot limitado/paginado da biblioteca.
 
@@ -239,9 +338,33 @@ def list_snapshot(
     O snapshot não é fortemente consistente com alterações concorrentes; para
     isso, o SPA deve lidar com eventos ``library.changed`` em conjunto com
     invalidação de revisão.
+
+    O agrupamento por variantes (como no Flat) descarta os cards não-primários
+    do grupo; escondidos/removidos/blacklisted continuam fora da biblioteca
+    padrão mesmo que sejam os primários de um grupo.
     """
 
-    visible = [game for game in games if visible_for_console(game, include_hidden=include_hidden)]
+    all_games = list(games)
+    ag = _carregar_agrupamento() if usar_agrupamento else None
+    primaries = _primary_ids(ag, all_games)
+
+    def _flat_visible(game: Any) -> bool:
+        return visible_for_console(game, include_hidden=include_hidden, xcloud_enabled=xcloud_enabled)
+
+    visible: list[Any] = []
+    for game in all_games:
+        if not _flat_visible(game):
+            continue
+        if primaries is not None and ag is not None:
+            # Jogos que nem entram no índice de agrupamento (launchers,
+            # hidden, removed...) são cards independentes: mantêm-se.
+            if not _elegivel(ag, game):
+                visible.append(game)
+                continue
+            if id(game) not in primaries:
+                continue
+        visible.append(game)
+
     # Espelha a ordenação padrão da Flat: last_played decrescente com
     # desempate por name (case-insensitive, ignorando "the " inicial).
     visible.sort(key=lambda game: (-_as_int(getattr(game, "last_played", 0)), _name_sort_key(getattr(game, "name", ""))))

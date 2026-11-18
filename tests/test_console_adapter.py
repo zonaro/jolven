@@ -145,5 +145,121 @@ class SnapshotTests(unittest.TestCase):
         self.assertIsNone(console_adapter.details_by_id(self.games, "missing"))
 
 
+class GroupingTests(unittest.TestCase):
+    def setUp(self):
+        self._orig = console_adapter._carregar_agrupamento
+
+    def tearDown(self):
+        console_adapter._carregar_agrupamento = self._orig
+
+    @staticmethod
+    def _fake_ag(mapping):
+        """Fake mínimo do módulo agrupamento para testes headless."""
+
+        class FakeAg:
+            @staticmethod
+            def ativo():
+                return True
+
+            @staticmethod
+            def elegivel(game):
+                return not (
+                    getattr(game, "removed", False)
+                    or getattr(game, "blacklisted", False)
+                    or getattr(game, "hidden", False)
+                    or getattr(game, "is_launcher", False)
+                )
+
+            @staticmethod
+            def construir_indice(all_games, agrupar=True):
+                grupos = {}
+                for game in all_games:
+                    if not agrupar or not FakeAg.elegivel(game):
+                        continue
+                    key = mapping.get(game.game_id, game.game_id)
+                    grupos.setdefault(key, []).append(game)
+                return {key: members for key, members in grupos.items()}
+
+            @staticmethod
+            def primario(members):
+                return members[0]
+
+        return FakeAg
+
+    def test_variant_group_shows_only_primary(self):
+        mapping = {"a": "DOOM", "b": "DOOM"}
+        console_adapter._carregar_agrupamento = lambda: self._fake_ag(mapping)
+        games = [
+            make_game(name="DOOM", game_id="a", base_source="uzdoom"),
+            make_game(name="DOOM", game_id="b", base_source="steam"),
+        ]
+        snapshot = console_adapter.list_snapshot(games)
+        self.assertEqual([item.game_id for item in snapshot.items], ["a"])
+
+    def test_grouping_fallback_without_module(self):
+        console_adapter._carregar_agrupamento = lambda: None
+        games = [
+            make_game(name="DOOM", game_id="a", base_source="uzdoom"),
+            make_game(name="DOOM", game_id="b", base_source="steam"),
+        ]
+        snapshot = console_adapter.list_snapshot(games)
+        self.assertEqual({item.game_id for item in snapshot.items}, {"a", "b"})
+
+    def test_grouping_disabled_by_param(self):
+        mapping = {"a": "DOOM", "b": "DOOM"}
+        console_adapter._carregar_agrupamento = lambda: self._fake_ag(mapping)
+        games = [
+            make_game(name="DOOM", game_id="a", base_source="uzdoom"),
+            make_game(name="DOOM", game_id="b", base_source="steam"),
+        ]
+        snapshot = console_adapter.list_snapshot(games, usar_agrupamento=False)
+        self.assertEqual({item.game_id for item in snapshot.items}, {"a", "b"})
+
+
+class FilterParityTests(unittest.TestCase):
+    def setUp(self):
+        self._orig_restauracao = console_adapter._restauracao_pendente
+        console_adapter._restauracao_pendente = lambda _id: False
+
+    def tearDown(self):
+        console_adapter._restauracao_pendente = self._orig_restauracao
+
+    def test_launcher_hidden_from_main_library(self):
+        games = [
+            make_game(name="Steam", game_id="l", is_launcher=True),
+            make_game(name="Quake", game_id="q"),
+        ]
+        snapshot = console_adapter.list_snapshot(games, usar_agrupamento=False)
+        self.assertEqual([item.game_id for item in snapshot.items], ["q"])
+
+    def test_hidden_launcher_appears_in_include_hidden(self):
+        games = [make_game(name="Steam", game_id="l", is_launcher=True, hidden=True)]
+        snapshot = console_adapter.list_snapshot(games, include_hidden=True, usar_agrupamento=False)
+        self.assertEqual([item.game_id for item in snapshot.items], ["l"])
+
+    def test_xcloud_hidden_without_schema_flag(self):
+        games = [make_game(name="xCloud Game", game_id="x", base_source="xcloud", source="xcloud_gamepass")]
+        snapshot = console_adapter.list_snapshot(games, xcloud_enabled=False, usar_agrupamento=False)
+        self.assertEqual(snapshot.items, ())
+        snapshot = console_adapter.list_snapshot(games, xcloud_enabled=True, usar_agrupamento=False)
+        self.assertEqual([item.game_id for item in snapshot.items], ["x"])
+
+    def test_restore_pending_filtered(self):
+        console_adapter._restauracao_pendente = lambda game_id: game_id == "p"
+        games = [make_game(name="Pending", game_id="p"), make_game(name="Other", game_id="o")]
+        snapshot = console_adapter.list_snapshot(games, usar_agrupamento=False)
+        self.assertEqual([item.game_id for item in snapshot.items], ["o"])
+
+    def test_metadata_refresh_between_snapshots(self):
+        game = make_game(name="Late", game_id="t", playtime=10)
+        first = console_adapter.to_summary(game)
+        game.playtime = 40
+        game.last_played = 123
+        second = console_adapter.to_summary(game)
+        self.assertEqual(first.playtime, 10)
+        self.assertEqual(second.playtime, 40)
+        self.assertEqual(second.last_played, 123)
+
+
 if __name__ == "__main__":
     unittest.main()
