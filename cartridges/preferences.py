@@ -508,6 +508,7 @@ class CartridgesPreferences(Adw.PreferencesDialog):
     game_mode_start_library_switch: Adw.SwitchRow = Gtk.Template.Child()
     game_mode_hide_mouse_cursor_switch: Adw.SwitchRow = Gtk.Template.Child()
     game_overlay_button_row: Adw.ComboRow = Gtk.Template.Child()
+    ui_mode_row: Adw.ComboRow = Gtk.Template.Child()
     game_mode_monitor_entry_row: Adw.ComboRow = Gtk.Template.Child()
     window_monitor_entry_row: Adw.ComboRow = Gtk.Template.Child()
     game_mode_audio_output_entry_row: Adw.ComboRow = Gtk.Template.Child()
@@ -987,6 +988,7 @@ class CartridgesPreferences(Adw.PreferencesDialog):
         gamescope_available = which("gamescope") is not None
         self.game_mode_enable_fps_limiter_switch.set_sensitive(gamescope_available)
         self.setup_game_overlay_button_row()
+        self.setup_ui_mode_row()
 
         # Jolven Session: instalar ou remover a sessão do display manager é
         # privilégio do helper autorizado (pkexec). A leitura do estado real
@@ -3596,6 +3598,23 @@ class CartridgesPreferences(Adw.PreferencesDialog):
                 shared.schema.set_string("game-overlay-button", choices[selected])
 
         self.game_overlay_button_row.connect("notify::selected", selected_changed)
+
+    def setup_ui_mode_row(self) -> None:
+        """Seletor da interface da sessão: Jolven Flat (GTK) ou Jolven Console (WebKitGTK)."""
+
+        choices = ("flat", "console")
+        labels = [_("Jolven Flat (GTK)"), _("Jolven Console (WebKitGTK)")]
+        self.ui_mode_row.set_model(Gtk.StringList.new(labels))
+        saved = shared.state_schema.get_string("ui-mode")
+        selected = choices.index(saved) if saved in choices else choices.index("flat")
+        self.ui_mode_row.set_selected(selected)
+
+        def selected_changed(widget: Adw.ComboRow, *_args: Any) -> None:
+            selected = widget.get_selected()
+            if selected < len(choices):
+                shared.state_schema.set_string("ui-mode", choices[selected])
+
+        self.ui_mode_row.connect("notify::selected", selected_changed)
 
     # ── Jolven Session (sessão do display manager) ──────────────────────────
 

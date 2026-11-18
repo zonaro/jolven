@@ -65,6 +65,8 @@ from cartridges.power import PowerManager
 from cartridges.preferences import CartridgesPreferences
 from cartridges.runtime import RuntimeContext
 from cartridges.user_profile import current_user_profile
+from cartridges import ui_mode
+from cartridges.console_shell import criar_janela_console
 from cartridges.store.managers.cover_manager import CoverManager
 from cartridges.store.managers.display_manager import DisplayManager
 from cartridges.store.managers.file_manager import FileManager
@@ -471,13 +473,21 @@ class CartridgesApplication(Adw.Application):
         else:
             logging.debug("Manette not available, gamepad support disabled")
 
-        # Create the main window
+        # Create the main window. O modo de interface (Jolven Flat vs Jolven
+        # Console) e escolhido pelo usuario e persistido em ui-mode (#179 do
+        # epic #176). Quando o Console e escolhido e o WebKitGTK esta
+        # disponível, usa o shell WebKit; caso contrario, cai de volta ao Flat.
         win = self.props.active_window  # pylint: disable=no-member
-        if not win:
+        console_win = None
+        if not win and ui_mode.is_console():
+            console_win = criar_janela_console(self)
+        if console_win is not None:
+            shared.win = win = console_win
+        elif not win:
             shared.win = win = CartridgesWindow(application=self)
         self.update_gamepad_devices()
 
-        if shared.runtime.is_game_mode:
+        if shared.runtime.is_game_mode and isinstance(win, CartridgesWindow):
             win.add_css_class("game-mode")
             profile = current_user_profile()
             win.sidebar_navigation_page.set_title(

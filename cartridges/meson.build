@@ -70,6 +70,8 @@ install_data(
     'wallhaven_filter_bar.py',
     'uzdoom_mods_dialog.py',
     'telegram_chat_page.py',
+    'ui_mode.py',
+    'console_shell.py',
     configure_file(input: 'shared.py.in', output: 'shared.py', configuration: conf),
   ],
   install_dir: moduledir,

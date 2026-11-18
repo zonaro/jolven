@@ -17,6 +17,8 @@ data/gtk/wallpaper-picker.blp
 data/gtk/window.blp
 
 cartridges/main.py
+cartridges/console_shell.py
+cartridges/ui_mode.py
 cartridges/window.py
 cartridges/gamepad_visual.py
 cartridges/details_dialog.py

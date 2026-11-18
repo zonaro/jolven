@@ -552,6 +552,13 @@
       </choices>
       <default>"cover"</default>
     </key>
+    <key name="ui-mode" type="s">
+      <choices>
+        <choice value="flat" />
+        <choice value="console" />
+      </choices>
+      <default>"flat"</default>
+    </key>
     <key name="show-sidebar" type="b">
       <default>false</default>
     </key>

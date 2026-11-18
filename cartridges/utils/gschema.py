@@ -29,6 +29,26 @@ para o fallback em vez de derrubar o aplicativo em uma maquina que nao os tem.
 
 from __future__ import annotations
 
+from typing import Any, Optional
+
+
+def schema_lookup(schema_id: str) -> Optional[Any]:
+    """Devolve o objeto do schema ou None quando nao esta instalado.
+
+    Nunca levanta: schema ausente, ``gi`` indisponivel ou qualquer falha de
+    introspeccao devolve None, para que quem chama siga pelo fallback.
+    """
+
+    try:
+        from gi.repository import Gio  # noqa: PLC0415
+
+        source = Gio.SettingsSchemaSource.get_default()
+        if source is None:
+            return None
+        return source.lookup(schema_id, True)
+    except Exception:  # pylint: disable=broad-exception-caught
+        return None
+
 
 def schema_available(schema_id: str) -> bool:
     """True quando ``schema_id`` esta instalado nesta maquina.
@@ -36,10 +56,5 @@ def schema_available(schema_id: str) -> bool:
     Sem ``gi`` disponivel a resposta e False: quem chama segue pelo mesmo
     caminho de fallback de uma maquina sem o schema.
     """
-    try:
-        from gi.repository import Gio  # noqa: PLC0415
 
-        source = Gio.SettingsSchemaSource.get_default()
-        return bool(source is not None and source.lookup(schema_id, True))
-    except Exception:  # pylint: disable=broad-exception-caught
-        return False
+    return schema_lookup(schema_id) is not None

@@ -659,6 +659,11 @@ template $CartridgesPreferences: Adw.PreferencesDialog {
         title: _("Open the in-game overlay with");
         subtitle: _("Choose which controller system button opens Jolven while a game is running");
       }
+
+      Adw.ComboRow ui_mode_row {
+        title: _("Interface da sessão");
+        subtitle: _("Jolven Flat (GTK) ou Jolven Console (WebKitGTK)");
+      }
     }
 
     Adw.PreferencesGroup game_session_install_group {
