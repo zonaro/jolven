@@ -1,0 +1,111 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "servers": {
+      "browsermcp": {
+        "type": "local",
+        "command": [
+          "npx",
+          "-y",
+          "@browsermcp/mcp@latest"
+        ]
+      },
+      "photocraft": {
+        "type": "local",
+        "command": [
+          "/mnt/HD/AppImages/photocraft-0.23.1-linux-x86_64.AppImage",
+          "--cli",
+          "mcp"
+        ]
+      },
+      "vectorcraft": {
+        "type": "local",
+        "command": [
+          "/mnt/HD/AppImages/vectorcraft-0.24.1-linux-x86_64.AppImage",
+          "--cli",
+          "mcp"
+        ]
+      },
+      "deckcraft": {
+        "type": "local",
+        "command": [
+          "/mnt/HD/AppImages/deckcraft-0.18.1-linux-x86_64.AppImage",
+          "--cli",
+          "mcp"
+        ]
+      },
+      "designcraft": {
+        "type": "local",
+        "command": [
+          "/mnt/HD/AppImages/designcraft-0.20.1-linux-x86_64.AppImage",
+          "--cli",
+          "mcp"
+        ]
+      },
+      "effectcraft": {
+        "type": "local",
+        "command": [
+          "/mnt/HD/AppImages/effectcraft-0.24.1-linux-x86_64.AppImage",
+          "--cli",
+          "mcp"
+        ]
+      },
+      "figcraft": {
+        "type": "local",
+        "command": [
+          "/mnt/HD/AppImages/figcraft-0.18.1-linux-x86_64.AppImage",
+          "--cli",
+          "mcp"
+        ]
+      },
+      "filmcraft": {
+        "type": "local",
+        "command": [
+          "/mnt/HD/AppImages/filmcraft-0.20.1-linux-x86_64.AppImage",
+          "--cli",
+          "mcp"
+        ]
+      },
+      "wordcraft": {
+        "type": "local",
+        "command": [
+          "/mnt/HD/AppImages/wordcraft-0.18.1-linux-x86_64.AppImage",
+          "--cli",
+          "mcp"
+        ]
+      },
+      "soundcraft": {
+        "type": "local",
+        "command": [
+          "/mnt/HD/AppImages/soundcraft-0.20.1-linux-x86_64.AppImage",
+          "--cli",
+          "mcp"
+        ]
+      },
+      "gridcraft": {
+        "type": "local",
+        "command": [
+          "/mnt/HD/AppImages/gridcraft-0.19.1-linux-x86_64.AppImage",
+          "--cli",
+          "mcp"
+        ]
+      },
+      "pdfcraft": {
+        "type": "local",
+        "command": [
+          "/mnt/HD/AppImages/pdfcraft-0.21.1-linux-x86_64.AppImage",
+          "--cli",
+          "mcp"
+        ]
+      },
+      "anicraft": {
+        "type": "local",
+        "command": [
+          "/mnt/HD/AppImages/anicraft-0.2.1-linux-x86_64.AppImage",
+          "--cli",
+          "mcp"
+        ]
+      }
+    }
+  }
+}
